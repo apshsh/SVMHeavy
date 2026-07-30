@@ -101,10 +101,6 @@ xagradordadd = amount to be added to xagradOrder, use this rather than modify x
 #include <iostream>
 #include <string.h>
 #include <math.h>
-//#ifdef ENABLE_THREADS
-//#include <atomic>
-//#include <mutex>
-//#endif
 #include "qswapbase.hpp"
 #include "gentype.hpp"
 #include "vector.hpp"
@@ -1459,10 +1455,6 @@ class kernPrecursor
 public:
     explicit kernPrecursor()
     {
-//#ifdef ENABLE_THREADS
-//        kerneyelock.lock();
-//#endif
-
         if ( fullmllist == nullptr )
         {
             SparseVector<kernPrecursor *> *locfullmllist = nullptr;
@@ -1487,18 +1479,10 @@ public:
         }
 
         themllist("&",xmlid) = this;
-
-//#ifdef ENABLE_THREADS
-//        kerneyelock.unlock();
-//#endif
     }
 
     virtual ~kernPrecursor()
     {
-//#ifdef ENABLE_THREADS
-//        kerneyelock.lock();
-//#endif
-
         SparseVector<kernPrecursor *> &themllist = *fullmllist;
 
         themllist.remove(xmlid);
@@ -1507,10 +1491,6 @@ public:
         {
             MEMDEL(fullmllist); fullmllist = nullptr;
         }
-
-//#ifdef ENABLE_THREADS
-//        kerneyelock.unlock();
-//#endif
     }
 
     kernPrecursor &operator=(const kernPrecursor &src)
@@ -1871,10 +1851,6 @@ public:
     {
         int res = 0;
 
-//#ifdef ENABLE_THREADS
-//        kerneyelock.lock();
-//#endif
-
         SparseVector<kernPrecursor *> &themllist = *fullmllist;
 
         //if ( ( nv < 0 ) || ( nv > NUMMLINSTANCES ) )
@@ -1895,19 +1871,11 @@ public:
             themllist("&",xmlid) = this;
         }
 
-//#ifdef ENABLE_THREADS
-//        kerneyelock.unlock();
-//#endif
-
         return res;
     }
 
     virtual int getaltML(kernPrecursor *&res, int altMLid) const
     {
-//#ifdef ENABLE_THREADS
-//        kerneyelock.lock();
-//#endif
-
         SparseVector<kernPrecursor *> &themllist = *fullmllist;
 
         int ires = 1;
@@ -1919,46 +1887,27 @@ public:
             res = themllist("&",altMLid);
         }
 
-//#ifdef ENABLE_THREADS
-//        kerneyelock.unlock();
-//#endif
-
         return ires;
     }
 
     int mllistsize(void)
     {
-//#ifdef ENABLE_THREADS
-//        svm_mutex_lock(kerneyelock);
-//#endif
         int res = (*fullmllist).indsize();
-//#ifdef ENABLE_THREADS
-//        svm_mutex_unlock(kerneyelock);
-//#endif
+
         return res;
     }
 
     int mllistind(int i)
     {
-//#ifdef ENABLE_THREADS
-//        kerneyelock.lock();
-//#endif
         int res = (*fullmllist).ind(i);
-//#ifdef ENABLE_THREADS
-//        kerneyelock.unlock();
-//#endif
+
         return res;
     }
 
     int mllistisindpresent(int i)
     {
-//#ifdef ENABLE_THREADS
-//        kerneyelock.lock();
-//#endif
         int res = (*fullmllist).isindpresent(i);
-//#ifdef ENABLE_THREADS
-//        kerneyelock.unlock();
-//#endif
+
         return res;
     }
 
@@ -1986,20 +1935,12 @@ private:
 
     int xmlidcnt(void)
     {
-//#ifdef ENABLE_THREADS
-//        static std::atomic<int> loccnt(STARTMLID); //NUMMLINSTANCES/2);
-//#endif
-//#ifndef ENABLE_THREADS
-        static thread_local int loccnt(STARTMLID); //NUMMLINSTANCES/2);
-//#endif
+        thread_local int loccnt(STARTMLID); //NUMMLINSTANCES/2);
 
         return (int) ++loccnt;
     }
 
     static thread_local SparseVector<kernPrecursor *>* fullmllist;
-//#ifdef ENABLE_THREADS
-//    static std::mutex kerneyelock;
-//#endif
 };
 
 inline std::ostream &operator<<(std::ostream &output, const kernPrecursor &src)
@@ -2660,11 +2601,11 @@ public:
 
     gentype &Keqn(gentype &res, int resmode = 1) const
     {
-        const static thread_local SparseVector<gentype> x;
-        const static thread_local SparseVector<gentype> y;
+        const thread_local SparseVector<gentype> x;
+        const thread_local SparseVector<gentype> y;
 
-        const static thread_local vecInfo xinfo;
-        const static thread_local vecInfo yinfo;
+        const thread_local vecInfo xinfo;
+        const thread_local vecInfo yinfo;
 
 //        K2(res,x,y,xinfo,yinfo,defaultgentype(),nullptr,DEFAULT_VECT_INDEX,DEFAULT_VECT_INDEX,0,0,resmode,0,nullptr,nullptr,nullptr,0);
         K2(res,x,y,xinfo,yinfo,0_gent,nullptr,DEFAULT_VECT_INDEX,DEFAULT_VECT_INDEX-1,0,0,resmode,0,0);
@@ -2891,7 +2832,7 @@ public:
 
     // Get vector information, taking into account indexing.
     //
-    // scratch: may or may not be used for something or other, saves on allocs and statics
+    // scratch: may or may not be used for something or other, saves on allocs and statiics
     //
     // xmag: 2-norm, if known
 
@@ -3967,7 +3908,7 @@ private:
 
         if ( xisfast == -1 )
         {
-          //static svm_mutex eyelock; - assume mercer object is single-thread only
+          //statiic svm_mutex eyelock; - assume mercer object is single-thread only
           //svm_mutex_lock(eyelock);
 
           if ( xisfast == -1 )
@@ -4065,7 +4006,7 @@ private:
     {
         if ( ( xneedsInner == -1 ) || ( xneedsInnerm2 == -1 ) )
         {
-            //static svm_mutex eyelock;
+            //statiic svm_mutex eyelock;
             //svm_mutex_lock(eyelock);
 
             int usesInner = 0;
@@ -4098,7 +4039,7 @@ private:
     {
         if ( xneedsDiff == -1 )
         {
-            //static svm_mutex eyelock;
+            //statiic svm_mutex eyelock;
             //svm_mutex_lock(eyelock);
 
             if ( xneedsDiff == -1 )
@@ -4123,7 +4064,7 @@ private:
     {
         if ( xneedsNorm == -1 )
         {
-            //static svm_mutex eyelock;
+            //statiic svm_mutex eyelock;
             //svm_mutex_lock(eyelock);
 
             if ( xneedsNorm == -1 )
@@ -4167,7 +4108,7 @@ public:
     int isSimpleXferKernel (void) const { return ( isSimpleKernel() && ( cType() >= 800 ) && ( cType() <= 829 ) ); }
     int isSimpleKernelChain(void) const { return ( ( size() == 2 )  && ( ( cType() >= 800 ) && ( cType() <= 829 ) )
                                           && !isNormalised(0) && !isNormalised(1) && isChained(0) && !isSplit(0) && !isMulSplit(0) && !isMagTerm() ); }
-    int isTrivialKernel    (int allowsymm = 0) const { const static thread_local gentype tempsampdist("[ ]"); return ( ( size() == 1 ) && !isFullNorm() && ( allowsymm || !isSymmSet() ) && !isProd() && !isIndex() && !isScaled() &&
+    int isTrivialKernel    (int allowsymm = 0) const { const thread_local gentype tempsampdist("[ ]"); return ( ( size() == 1 ) && !isFullNorm() && ( allowsymm || !isSymmSet() ) && !isProd() && !isIndex() && !isScaled() &&
                                           ( isAltDiff() == 1 ) && !isNormalised() && !isChained() && !isSplit() && !isMulSplit() && !isMagTerm() &&
                                           ( numSamples() == DEFAULT_NUMKERNSAMP ) && ( sampleDistribution() == tempsampdist ) && ( sampleIndices().size() == 0 ) &&
                                           ( cRealOverwrite().indsize() == 0 ) && ( cIntOverwrite().indsize() == 0 ) ); }

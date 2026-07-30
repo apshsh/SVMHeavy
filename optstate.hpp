@@ -47,6 +47,8 @@
 //
 // Stored here are:
 //
+// - pivAlphaRestrictZ: index vector for alphaRestrict[i] = 3
+// - pivAlphaRestrictNZ: index vector for alphaRestrict[i] != 3
 // - alpha: the alpha vector
 // - beta: the beta vector
 // - alphagrad: the gradient wrt to the alpha vector
@@ -359,6 +361,9 @@ public:
     int aNUF(void) const { return probContext.aNUF();  }
     int aNUB(void) const { return probContext.aNUB();  }
 
+    int aNRZ (void) const { return dpivalphaRestrictZ .size(); }
+    int aNRNZ(void) const { return dpivalphaRestrictNZ.size(); }
+
     int bN  (void) const { return dbeta.size();        }
     int bNF (void) const { return (pivBetaF()).size(); }
     int bNC (void) const { return (pivBetaC()).size(); }
@@ -366,7 +371,8 @@ public:
     double zerotol(void) const { return probContext.zt(); }
     double opttol (void) const { return dopttol;          }
 
-    int keepfact(void) const { return probContext.keepfact(); }
+    int keepfact   (void) const { return probContext.keepfact(); }
+    int updateAllGC(void) const { return dupdateAllGC;           }
 
     // Returns true if factorisation available but not complete in Gp part.
     // Note short-circuit.
@@ -383,6 +389,9 @@ public:
 
     const Vector<int> &alphaRestrict(void) const { return dalphaRestrict; }
     const Vector<int> &betaRestrict (void) const { return dbetaRestrict;  }
+
+    const Vector<int> &pivalphaRestrictZ (void) const { return dpivalphaRestrictZ;  }
+    const Vector<int> &pivalphaRestrictNZ(void) const { return dpivalphaRestrictNZ; }
 
     const Vector<int> &alphaState(void) const { return probContext.alphaState(); }
     const Vector<int> &betaState (void) const { return probContext.betaState();  }
@@ -401,6 +410,9 @@ public:
 
     int alphaRestrict(int i) const { return dalphaRestrict.v(i); }
     int betaRestrict (int i) const { return dbetaRestrict.v(i);  }
+
+    int pivalphaRestrictZ (int i) const { return dpivalphaRestrictZ .v(i); }
+    int pivalphaRestrictNZ(int i) const { return dpivalphaRestrictNZ.v(i); }
 
     // Uncorrected gradients
     //
@@ -699,8 +711,18 @@ private:
     Vector<int> dalphaRestrict;
     Vector<int> dbetaRestrict;
 
+    Vector<int> dpivalphaRestrictZ;
+    Vector<int> dpivalphaRestrictNZ;
+
     double dopttol;
     optContext probContext;
+
+    // updateAllGC: 1 for normal behaviour on gradient cache
+    //              0 to only maintain the gradient cache for potentially free (positive, netative or both) alphas
+
+public:
+    int dupdateAllGC;
+private:
 
     // gradstate: -2  means all free (or more than one) gradients are nonzero
     //            -1  means all free gradients are zero
@@ -765,21 +787,24 @@ private:
 
 template <class T, class S> void qswap(optState<T,S> &a, optState<T,S> &b)
 {
-    qswap(a.dalpha         ,b.dalpha         );
-    qswap(a.dbeta          ,b.dbeta          );
-    qswap(a.dalphaGrad     ,b.dalphaGrad     );
-    qswap(a.dbetaGrad      ,b.dbetaGrad      );
-    qswap(a.dalphaRestrict ,b.dalphaRestrict );
-    qswap(a.dbetaRestrict  ,b.dbetaRestrict  );
-    qswap(a.dopttol        ,b.dopttol        );
-    qswap(a.probContext    ,b.probContext    );
-    qswap(a.alphagradstate ,b.alphagradstate );
-    qswap(a.betagradstate  ,b.betagradstate  );
-    qswap(a.gradFixAlphaInd,b.gradFixAlphaInd);
-    qswap(a.gradFixBetaInd ,b.gradFixBetaInd );
-    qswap(a.gradFixAlpha   ,b.gradFixAlpha   );
-    qswap(a.gradFixBeta    ,b.gradFixBeta    );
-    qswap(a.cumgraderr     ,b.cumgraderr     );
+    qswap(a.dalpha             ,b.dalpha             );
+    qswap(a.dbeta              ,b.dbeta              );
+    qswap(a.dalphaGrad         ,b.dalphaGrad         );
+    qswap(a.dbetaGrad          ,b.dbetaGrad          );
+    qswap(a.dalphaRestrict     ,b.dalphaRestrict     );
+    qswap(a.dbetaRestrict      ,b.dbetaRestrict      );
+    qswap(a.dpivalphaRestrictZ ,b.dpivalphaRestrictZ );
+    qswap(a.dpivalphaRestrictNZ,b.dpivalphaRestrictNZ);
+    qswap(a.dopttol            ,b.dopttol            );
+    qswap(a.dupdateAllGC       ,b.dupdateAllGC       );
+    qswap(a.probContext        ,b.probContext        );
+    qswap(a.alphagradstate     ,b.alphagradstate     );
+    qswap(a.betagradstate      ,b.betagradstate      );
+    qswap(a.gradFixAlphaInd    ,b.gradFixAlphaInd    );
+    qswap(a.gradFixBetaInd     ,b.gradFixBetaInd     );
+    qswap(a.gradFixAlpha       ,b.gradFixAlpha       );
+    qswap(a.gradFixBeta        ,b.gradFixBeta        );
+    qswap(a.cumgraderr         ,b.cumgraderr         );
 }
 
 
@@ -787,6 +812,8 @@ template <class T, class S>
 optState<T,S>::optState(void)
 {
     dopttol = DEFAULT_OPTTOL;
+
+    dupdateAllGC = 1;
 
     alphagradstate = -2;
     betagradstate  = -2;
@@ -814,7 +841,11 @@ optState<T,S> &optState<T,S>::operator=(const optState<T,S> &src)
     dalphaRestrict = src.dalphaRestrict;
     dbetaRestrict  = src.dbetaRestrict;
 
-    dopttol = src.dopttol;
+    dpivalphaRestrictZ  = src.dpivalphaRestrictZ;
+    dpivalphaRestrictNZ = src.dpivalphaRestrictNZ;
+
+    dupdateAllGC = src.dupdateAllGC;
+    dopttol      = src.dopttol;
 
     probContext = src.probContext;
 
@@ -838,27 +869,23 @@ void optState<T,S>::setAlpha(const Vector<T> &newAlpha, const Matrix<double> &Gp
 
     ztoloverride = ( ztoloverride >= 0 ) ? ztoloverride : zerotol();
 
-    //if ( aN() )
+    int iP;
+
+    for ( int i = 0 ; i < aN() ; ++i )
     {
-	int i,iP;
+        if ( newAlpha(i) != alpha(i) )
+        {
+            alphaStep(i,newAlpha(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
 
-	for ( i = 0 ; i < aN() ; ++i )
-	{
-            if ( newAlpha(i) != alpha(i) )
+            if ( !ignorebound )
             {
-	      alphaStep(i,newAlpha(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-
-              if ( !ignorebound )
-              {
   	        if ( alphaState(i) == -2 )
 	        {
 		    iP = findInAlphaLB(i);
 
-		    if      (   newAlpha(i) > ub.v(i)-ztoloverride                                  ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaLBtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
-		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) >  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaLBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
-		    else if ( ( newAlpha(i) > -ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaLBtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);  }
+		    if      (   newAlpha(i) > ub.v(i)-ztoloverride                                  ) { iP = modAlphaLBtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) >  0.0     ) ) { iP = modAlphaLBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) > -ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaLBtoZ (iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
 		    else if ( ( newAlpha(i) >= lb.v(i)+ztoloverride ) && ( newAlpha(i) >  lb.v(i) ) ) { iP = modAlphaLBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
 	        }
 
@@ -866,11 +893,9 @@ void optState<T,S>::setAlpha(const Vector<T> &newAlpha, const Matrix<double> &Gp
 	        {
 		    iP = findInAlphaUB(i);
 
-		    if      (   newAlpha(i) <  lb.v(i)+ztoloverride                                 ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaUBtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
-		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) <  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaUBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
-		    else if ( ( newAlpha(i) <  ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaUBtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);  }
+		    if      (   newAlpha(i) <  lb.v(i)+ztoloverride                                 ) { iP = modAlphaUBtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) <  0.0     ) ) { iP = modAlphaUBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) <  ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaUBtoZ (iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
 		    else if ( ( newAlpha(i) <= ub.v(i)-ztoloverride ) && ( newAlpha(i) <  ub.v(i) ) ) { iP = modAlphaUBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
 	        }
 
@@ -878,11 +903,9 @@ void optState<T,S>::setAlpha(const Vector<T> &newAlpha, const Matrix<double> &Gp
 	        {
 		    iP = findInAlphaF(i);
 
-		    if      (   newAlpha(i) > ub.v(i)-ztoloverride                                  ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaLFtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,ub); }
-		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) >  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaLFtoUF(iP,GpGrad,Gn,Gpn,gp,gn,hp);       }
-		    else if ( ( newAlpha(i) > -ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaLFtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);     }
+		    if      (   newAlpha(i) > ub.v(i)-ztoloverride                                  ) { iP = modAlphaLFtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,ub); }
+		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) >  0.0     ) ) { iP = modAlphaLFtoUF(iP   ,GpGrad,Gn,Gpn,gp,gn,hp);       }
+		    else if ( ( newAlpha(i) > -ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaLFtoZ (iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);     }
 		    else if (   newAlpha(i) < lb.v(i)+ztoloverride                                  ) { iP = modAlphaLFtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,lb); }
 	        }
 
@@ -890,11 +913,9 @@ void optState<T,S>::setAlpha(const Vector<T> &newAlpha, const Matrix<double> &Gp
 	        {
 		    iP = findInAlphaF(i);
 
-		    if      (   newAlpha(i) <  lb.v(i)+ztoloverride                                 ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaUFtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,lb); }
-		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) <  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaUFtoLF(iP,GpGrad,Gn,Gpn,gp,gn,hp);       }
-		    else if ( ( newAlpha(i) <  ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaUFtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);     }
+		    if      (   newAlpha(i) <  lb.v(i)+ztoloverride                                 ) { iP = modAlphaUFtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,lb); }
+		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) <  0.0     ) ) { iP = modAlphaUFtoLF(iP   ,GpGrad,Gn,Gpn,gp,gn,hp);       }
+		    else if ( ( newAlpha(i) <  ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaUFtoZ (iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);     }
 		    else if (   newAlpha(i) >  ub.v(i)-ztoloverride )                                 { iP = modAlphaUFtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,ub); }
 	        }
 
@@ -902,29 +923,21 @@ void optState<T,S>::setAlpha(const Vector<T> &newAlpha, const Matrix<double> &Gp
 	        {
 		    iP = findInAlphaZ(i);
 
-		    if      (   newAlpha(i) <  lb.v(i)+ztoloverride                                 ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaZtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
-		    else if (   newAlpha(i) >  ub.v(i)-ztoloverride                                 ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaZtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
-		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) <  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaZtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
-		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) >  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                                                                        iP = modAlphaZtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    if      (   newAlpha(i) <  lb.v(i)+ztoloverride                                 ) { iP = modAlphaZtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if (   newAlpha(i) >  ub.v(i)-ztoloverride                                 ) { iP = modAlphaZtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) <  0.0     ) ) { iP = modAlphaZtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) >  0.0     ) ) { iP = modAlphaZtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
                 }
-              }
+            }
 
-
-
-
-              else
-              {
+            else
+            {
   	        if ( alphaState(i) == -2 )
 	        {
 		    iP = findInAlphaLB(i);
 
 		    if      ( newAlpha(i) > lb.v(i) ) { iP = modAlphaLBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
-		    else if ( newAlpha(i) > 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                        iP = modAlphaLBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( newAlpha(i) > 0.0     ) { iP = modAlphaLBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
 	        }
 
 	        else if ( alphaState(i) == +2 )
@@ -932,36 +945,30 @@ void optState<T,S>::setAlpha(const Vector<T> &newAlpha, const Matrix<double> &Gp
 		    iP = findInAlphaUB(i);
 
 		    if      ( newAlpha(i) < ub.v(i) ) { iP = modAlphaUBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
-		    else if ( newAlpha(i) < 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                        iP = modAlphaUBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( newAlpha(i) < 0.0     ) { iP = modAlphaUBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
 	        }
 
 	        else if ( alphaState(i) == -1 )
 	        {
 		    iP = findInAlphaF(i);
 
-		    if      ( newAlpha(i) > 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                        iP = modAlphaLFtoUF(iP,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    if      ( newAlpha(i) > 0.0 ) { iP = modAlphaLFtoUF(iP,GpGrad,Gn,Gpn,gp,gn,hp); }
 	        }
 
 	        else if ( alphaState(i) == +1 )
 	        {
 		    iP = findInAlphaF(i);
 
-		    if      ( newAlpha(i) < 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                        iP = modAlphaUFtoLF(iP,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    if      ( newAlpha(i) < 0.0 ) { iP = modAlphaUFtoLF(iP,GpGrad,Gn,Gpn,gp,gn,hp); }
 	        }
 
 	        else if ( alphaState(i) == 0 )
 	        {
 		    iP = findInAlphaZ(i);
 
-		    if      ( newAlpha(i) < 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                        iP = modAlphaZtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
-		    else if ( newAlpha(i) > 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-                                                        iP = modAlphaZtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    if      ( newAlpha(i) < 0.0 ) { iP = modAlphaZtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( newAlpha(i) > 0.0 ) { iP = modAlphaZtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
                 }
-              }
 	    }
 	}
     }
@@ -974,78 +981,72 @@ void optState<T,S>::setAlphaF(const Vector<T> &newAlpha, const Matrix<double> &,
 
     ztoloverride = ( ztoloverride >= 0 ) ? ztoloverride : zerotol();
 
-    //if ( aNF() )
+    for ( int iP = 0 ; iP < aNF() ; ++iP )
     {
-	int i,iP;
+        int i = pivAlphaF(iP);
+        const T &newval = newAlpha(i);
 
-	for ( iP = 0 ; iP < aNF() ; ++iP )
-	{
-            i = pivAlphaF(iP);
+        if ( newval != alpha(i) )
+        {
+	    if ( alphaState(i) == -1 )
+	    {
+		if ( newval > ub.v(i) )
+		{
+                    NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
 
-            const T &newval = newAlpha(i);
+                    alphaStep(i,-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
+		    iP = modAlphaLFtoUF(iP,GpGrad,Gn,Gpn,gp,gn,hp);
+                    alphaStep(i,ub.v(i)  ,GpGrad,Gn,Gpn,gp,gn,hp,1);
+		}
 
-            if ( newval != alpha(i) )
-            {
-	        if ( alphaState(i) == -1 )
-	        {
-		    if ( newval > ub.v(i) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+		else if ( newval > 0.0 )
+		{
+                    NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
 
-                        alphaStep(i,-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-		        iP = modAlphaLFtoUF(iP,GpGrad,Gn,Gpn,gp,gn,hp);
-                        alphaStep(i,ub.v(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-		    }
+                    alphaStep(i,-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
+		    iP = modAlphaLFtoUF(iP,GpGrad,Gn,Gpn,gp,gn,hp);
+                    alphaStep(i,newval   ,GpGrad,Gn,Gpn,gp,gn,hp,1);
+		}
 
-		    else if ( newval > 0.0 )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+                else if ( newval >= lb.v(i) )
+                {
+                    alphaStep(i,newval-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
+                }
 
-                        alphaStep(i,-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-		        iP = modAlphaLFtoUF(iP,GpGrad,Gn,Gpn,gp,gn,hp);
-                        alphaStep(i,newval,GpGrad,Gn,Gpn,gp,gn,hp,1);
-		    }
+		else
+		{
+                    alphaStep(i,lb.v(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
+		}
+	    }
 
-                    else if ( newval >= lb.v(i) )
-                    {
-                        alphaStep(i,newval-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-                    }
+	    else if ( alphaState(i) == +1 )
+	    {
+		if ( newval < lb.v(i) )
+		{
+                    NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
 
-		    else
-		    {
-                        alphaStep(i,lb.v(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-		    }
-	        }
+                    alphaStep(i,-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
+		    iP = modAlphaUFtoLF(iP,GpGrad,Gn,Gpn,gp,gn,hp);
+                    alphaStep(i,lb.v(i)  ,GpGrad,Gn,Gpn,gp,gn,hp,1);
+		}
 
-	        else if ( alphaState(i) == +1 )
-	        {
-		    if ( newval < lb.v(i) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+		else if ( newval < 0.0 )
+		{
+                    NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
 
-                        alphaStep(i,-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-		        iP = modAlphaUFtoLF(iP,GpGrad,Gn,Gpn,gp,gn,hp);
-                        alphaStep(i,lb.v(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-		    }
+                    alphaStep(i,-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
+	            iP = modAlphaUFtoLF(iP,GpGrad,Gn,Gpn,gp,gn,hp);
+                    alphaStep(i,newval   ,GpGrad,Gn,Gpn,gp,gn,hp,1);
+                }
 
-		    else if ( newval < 0.0 )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+                else if ( newval <= ub.v(i) )
+                {
+                    alphaStep(i,newval-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
+                }
 
-                        alphaStep(i,-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-		        iP = modAlphaUFtoLF(iP,GpGrad,Gn,Gpn,gp,gn,hp);
-                        alphaStep(i,newval,GpGrad,Gn,Gpn,gp,gn,hp,1);
-		    }
-
-                    else if ( newval <= ub.v(i) )
-                    {
-                        alphaStep(i,newval-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-                    }
-
-                    else
-                    {
-                        alphaStep(i,ub.v(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-                    }
+                else
+                {
+                    alphaStep(i,ub.v(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
 	        }
 	    }
 	}
@@ -1059,36 +1060,33 @@ void optState<T,S>::setBeta(const Vector<T> &newBeta, const Matrix<double> &Gp, 
 
     ztoloverride = ( ztoloverride >= 0 ) ? ztoloverride : zerotol();
 
-    //if ( bN() )
+    int iP;
+
+    for ( int i = 0 ; i < bN() ; ++i )
     {
-	int i,iP;
-
-	for ( i = 0 ; i < bN() ; ++i )
+	if ( ( betaState(i) == 0 ) && ( ( newBeta(i) >= ztoloverride ) || ( newBeta(i) <= -ztoloverride ) ) )
 	{
-	    if ( ( betaState(i) == 0 ) && ( ( newBeta(i) >= ztoloverride ) || ( newBeta(i) <= -ztoloverride ) ) )
-	    {
-		iP = findInBetaC(i);
-		iP = modBetaCtoF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-	    }
+	    iP = findInBetaC(i);
+	    iP = modBetaCtoF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
+	}
 
-	    if ( newBeta(i) >= ztoloverride )
-	    {
-                NiceAssert( ( dbetaRestrict.v(i) != 2 ) && ( dbetaRestrict.v(i) != 3 ) );
+	if ( newBeta(i) >= ztoloverride )
+	{
+            NiceAssert( ( dbetaRestrict.v(i) != 2 ) && ( dbetaRestrict.v(i) != 3 ) );
 
-		betaStep(i,newBeta(i)-beta(i),GpGrad,Gn,Gpn,gp,gn,hp);
-	    }
+	    betaStep(i,newBeta(i)-beta(i),GpGrad,Gn,Gpn,gp,gn,hp);
+	}
 
-	    else if ( newBeta(i) <= -ztoloverride )
-	    {
-                NiceAssert( ( dbetaRestrict.v(i) != 1 ) && ( dbetaRestrict.v(i) != 3 ) );
+	else if ( newBeta(i) <= -ztoloverride )
+	{
+            NiceAssert( ( dbetaRestrict.v(i) != 1 ) && ( dbetaRestrict.v(i) != 3 ) );
 
-		betaStep(i,newBeta(i)-beta(i),GpGrad,Gn,Gpn,gp,gn,hp);
-	    }
+	    betaStep(i,newBeta(i)-beta(i),GpGrad,Gn,Gpn,gp,gn,hp);
+	}
 
-	    else
-	    {
-		betaStep(i,newBeta(i)-beta(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
-	    }
+	else
+	{
+            betaStep(i,newBeta(i)-beta(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
 	}
     }
 }
@@ -1121,288 +1119,116 @@ void optState<T,S>::setAlphahpzero(const Vector<T> &newAlpha, const Matrix<doubl
     // if isTVector(dummy) set then T is vectorial type and should not be
     // compared to scalars.  Everything is either Z or UF in this case
 
-    //if ( aN() )
+    int iP;
+
+    for ( int i = 0 ; i < aN() ; ++i )
     {
-	int i,iP;
+        if ( newAlpha(i) != alpha(i) )
+        {
+            alphaStephpzero(i,newAlpha(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,1);
 
-	for ( i = 0 ; i < aN() ; ++i )
-	{
-            if ( newAlpha(i) != alpha(i) )
+            if ( !ignorebound )
             {
-              alphaStephpzero(i,newAlpha(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,1);
-
-              if ( !ignorebound )
-              {
 	        if ( alphaState(i) == -2 )
 	        {
                     NiceAssert( !isTVector(dummy) );
-
 		    iP = findInAlphaLB(i);
 
-		    if ( newAlpha(i) > ub.v(i)-ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaLBtoUBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( ( newAlpha(i) >= ztoloverride ) && ( newAlpha(i) > 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaLBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( ( newAlpha(i) > -ztoloverride ) || ( newAlpha(i) == 0.0 ) )
-		    {
-                        iP = modAlphaLBtoZhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( ( newAlpha(i) >= lb.v(i)+ztoloverride ) && ( newAlpha(i) > lb.v(i) ) )
-		    {
-                        iP = modAlphaLBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
+		    if      (   newAlpha(i) >  ub.v(i)-ztoloverride                                 ) { iP = modAlphaLBtoUBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) >  0.0     ) ) { iP = modAlphaLBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+		    else if ( ( newAlpha(i) > -ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaLBtoZhpzero (iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+		    else if ( ( newAlpha(i) >= lb.v(i)+ztoloverride ) && ( newAlpha(i) >  lb.v(i) ) ) { iP = modAlphaLBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
 	        }
 
 	        else if ( alphaState(i) == +2 )
 	        {
                     NiceAssert( !isTVector(dummy) );
-
 		    iP = findInAlphaUB(i);
 
-		    if ( newAlpha(i) < lb.v(i)+ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaUBtoLBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( ( newAlpha(i) <= -ztoloverride ) && ( newAlpha(i) < 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaUBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( ( newAlpha(i) < ztoloverride ) || ( newAlpha(i) == 0.0 ) )
-		    {
-                        iP = modAlphaUBtoZhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( ( newAlpha(i) <= ub.v(i)-ztoloverride ) && ( newAlpha(i) < ub.v(i) ) )
-		    {
-                        iP = modAlphaUBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
+		    if      (   newAlpha(i) <  lb.v(i)+ztoloverride                                 ) { iP = modAlphaUBtoLBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) <  0.0     ) ) { iP = modAlphaUBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+		    else if ( ( newAlpha(i) <  ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaUBtoZhpzero (iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+		    else if ( ( newAlpha(i) <= ub.v(i)-ztoloverride ) && ( newAlpha(i) <  ub.v(i) ) ) { iP = modAlphaUBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
 	        }
 
 	        else if ( alphaState(i) == -1 )
 	        {
                     NiceAssert( !isTVector(dummy) );
-
 		    iP = findInAlphaF(i);
 
-		    if ( newAlpha(i) > ub.v(i)-ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaLFtoUBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn,ub);
-		    }
-
-		    else if ( ( newAlpha(i) >= ztoloverride ) && ( newAlpha(i) > 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaLFtoUFhpzero(iP,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( ( newAlpha(i) > -ztoloverride ) || ( newAlpha(i) == 0.0 ) )
-		    {
-                        iP = modAlphaLFtoZhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( newAlpha(i) < lb.v(i)+ztoloverride )
-		    {
-                        iP = modAlphaLFtoLBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn,lb);
-		    }
+		    if      (   newAlpha(i) >  ub.v(i)-ztoloverride                             ) { iP = modAlphaLFtoUBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn,ub); }
+		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) >  0.0 ) ) { iP = modAlphaLFtoUFhpzero(iP,   GpGrad,Gn,Gpn,gp,gn   ); }
+		    else if ( ( newAlpha(i) > -ztoloverride         ) || ( newAlpha(i) == 0.0 ) ) { iP = modAlphaLFtoZhpzero (iP,Gp,GpGrad,Gn,Gpn,gp,gn   ); }
+		    else if (   newAlpha(i) < lb.v(i)+ztoloverride                              ) { iP = modAlphaLFtoLBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn,lb); }
 	        }
 
 	        else if ( alphaState(i) == +1 )
 	        {
 		    iP = findInAlphaF(i);
 
-                    if ( isTVector(dummy) )
-                    {
-                        if ( abs2(newAlpha(i)) <= ztoloverride )
-                        {
-                            iP = modAlphaUFtoZhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-                        }
-                    }
-
-                    else if ( newAlpha(i) < lb.v(i)+ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaUFtoLBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn,lb);
-		    }
-
-		    else if ( ( newAlpha(i) <= -ztoloverride ) && ( newAlpha(i) < 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaUFtoLFhpzero(iP,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( ( newAlpha(i) < ztoloverride ) || ( newAlpha(i) == 0.0 ) )
-		    {
-                        iP = modAlphaUFtoZhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( newAlpha(i) > ub.v(i)-ztoloverride )
-		    {
-                        iP = modAlphaUFtoUBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn,ub);
-		    }
+                    if      ( isTVector(dummy) ) { if ( abs2(newAlpha(i)) <= ztoloverride       ) { iP = modAlphaUFtoZhpzero (iP,Gp,GpGrad,Gn,Gpn,gp,gn   ); } }
+                    else if (   newAlpha(i) <  lb.v(i)+ztoloverride                             ) { iP = modAlphaUFtoLBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn,lb); }
+		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) < 0.0  ) ) { iP = modAlphaUFtoLFhpzero(iP,GpGrad,Gn,Gpn,gp,   gn   ); }
+		    else if ( ( newAlpha(i) <  ztoloverride         ) || ( newAlpha(i) == 0.0 ) ) { iP = modAlphaUFtoZhpzero (iP,Gp,GpGrad,Gn,Gpn,gp,gn   ); }
+		    else if (   newAlpha(i) >  ub.v(i)-ztoloverride                             ) { iP = modAlphaUFtoUBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn,ub); }
 	        }
 
 	        else if ( alphaState(i) == 0 )
 	        {
 		    iP = findInAlphaZ(i);
 
-                    if ( isTVector(dummy) )
-                    {
-                        if ( abs2(newAlpha(i)) > ztoloverride )
-                        {
-                            iP = modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-                        }
-                    }
-
-                    else if ( newAlpha(i) < lb.v(i)+ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaZtoLBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-	    	    }
-
-	    	    else if ( newAlpha(i) > ub.v(i)-ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaZtoUBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( ( newAlpha(i) <= -ztoloverride ) && ( newAlpha(i) < 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaZtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( ( newAlpha(i) >= ztoloverride ) && ( newAlpha(i) > 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
+                    if      ( isTVector(dummy) ) { if ( abs2(newAlpha(i)) > ztoloverride       ) { iP = modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); } }
+                    else if (   newAlpha(i) <  lb.v(i)+ztoloverride                            ) { iP = modAlphaZtoLBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+	    	    else if (   newAlpha(i) >  ub.v(i)-ztoloverride                            ) { iP = modAlphaZtoUBhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) < 0.0 ) ) { iP = modAlphaZtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) > 0.0 ) ) { iP = modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
 	        }
-              }
+            }
 
-              else
-              {
+            else
+            {
 	        if ( alphaState(i) == -2 )
 	        {
                     NiceAssert( !isTVector(dummy) );
-
 		    iP = findInAlphaLB(i);
 
-		    if ( newAlpha(i) > 0.0 )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaLBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( newAlpha(i) > lb.v(i) )
-		    {
-                        iP = modAlphaLBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
+		    if      ( newAlpha(i) > 0.0     ) { iP = modAlphaLBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+		    else if ( newAlpha(i) > lb.v(i) ) { iP = modAlphaLBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
 	        }
 
 	        else if ( alphaState(i) == +2 )
 	        {
                     NiceAssert( !isTVector(dummy) );
-
 		    iP = findInAlphaUB(i);
 
-		    if ( newAlpha(i) < 0.0 )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaUBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( newAlpha(i) < ub.v(i) )
-		    {
-                        iP = modAlphaUBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
+		    if      ( newAlpha(i) < 0.0     ) { iP = modAlphaUBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+		    else if ( newAlpha(i) < ub.v(i) ) { iP = modAlphaUBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
 	        }
 
 	        else if ( alphaState(i) == -1 )
 	        {
                     NiceAssert( !isTVector(dummy) );
-
 		    iP = findInAlphaF(i);
 
-		    if ( newAlpha(i) > 0.0 )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaLFtoUFhpzero(iP,GpGrad,Gn,Gpn,gp,gn);
-		    }
+		    if ( newAlpha(i) > 0.0 ) { iP = modAlphaLFtoUFhpzero(iP,GpGrad,Gn,Gpn,gp,gn); }
 	        }
 
 	        else if ( alphaState(i) == +1 )
 	        {
 		    iP = findInAlphaF(i);
 
-                    if ( isTVector(dummy) )
-                    {
-                        ;
-                    }
-
-		    else if ( newAlpha(i) < 0.0 )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaUFtoLFhpzero(iP,GpGrad,Gn,Gpn,gp,gn);
-		    }
+                    if      ( isTVector(dummy)  ) { ; }
+		    else if ( newAlpha(i) < 0.0 ) { iP = modAlphaUFtoLFhpzero(iP,GpGrad,Gn,Gpn,gp,gn); }
 	        }
 
 	        else if ( alphaState(i) == 0 )
 	        {
 		    iP = findInAlphaZ(i);
 
-                    if ( isTVector(dummy) )
-                    {
-                        if ( abs2(newAlpha(i)) > ztoloverride )
-                        {
-                            iP = modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-                        }
-                    }
-
-		    else if ( newAlpha(i) < 0.0 )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaZtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
-
-		    else if ( newAlpha(i) > 0.0 )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-                        iP = modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-		    }
+                    if      ( isTVector(dummy) ) { if ( abs2(newAlpha(i)) > ztoloverride ) { iP = modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); } }
+		    else if ( newAlpha(i) < 0.0                                          ) { iP = modAlphaZtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);   }
+		    else if ( newAlpha(i) > 0.0                                          ) { iP = modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);   }
 	        }
-              }
 	    }
 	}
     }
@@ -1415,11 +1241,9 @@ void optState<T,S>::setBetahpzero(const Vector<T> &newBeta, const Matrix<double>
 
     ztoloverride = ( ztoloverride >= 0 ) ? ztoloverride : zerotol();
 
-    //if ( bN() )
-    {
-	int i,iP;
+	int iP;
 
-	for ( i = 0 ; i < bN() ; ++i )
+	for ( int i = 0 ; i < bN() ; ++i )
 	{
 	    if ( ( betaState(i) == 0 ) && ( ( newBeta(i) >= ztoloverride ) || ( newBeta(i) <= -ztoloverride ) ) )
 	    {
@@ -1446,7 +1270,6 @@ void optState<T,S>::setBetahpzero(const Vector<T> &newBeta, const Matrix<double>
                 betaStephpzero(i,newBeta(i)-beta(i),GpGrad,Gn,Gpn,gp,gn,1);
 	    }
 	}
-    }
 }
 
 template <class T, class S>
@@ -1510,8 +1333,6 @@ void optState<T,S>::refactGpn(const Matrix<double> &Gp, const Matrix<S> &GpGrad,
 	fixGrad(GpGrad,Gn,GpnOld,gp,gn,hp);
     }
 
-    int i,j,iP;
-
     if ( bN() && aN() )
     {
         T temp;
@@ -1519,13 +1340,13 @@ void optState<T,S>::refactGpn(const Matrix<double> &Gp, const Matrix<S> &GpGrad,
         retVector<T> tmpva;
         retVector<T> tmpvb;
 
-	for ( j = 0 ; j < aN() ; ++j )
+	for ( int j = 0 ; j < aN() ; ++j )
 	{
             dalphaGrad("&",j) -= twoProduct(temp,GpnOld(j,tmpva,tmpvb),dbeta);
             dalphaGrad("&",j) += twoProduct(temp,GpnNew(j,tmpva,tmpvb),dbeta);
 
-	    for ( i = 0 ; i < bN() ; ++i )
-	    {
+            for ( int i = 0 ; i < bN() ; ++i )
+            {
                 dbetaGrad("&",i) -= GpnOld(j,i)*alpha(j);
                 dbetaGrad("&",i) -= GpnNew(j,i)*alpha(j);
 	    }
@@ -1539,24 +1360,12 @@ void optState<T,S>::refactGpn(const Matrix<double> &Gp, const Matrix<S> &GpGrad,
 	alphagradstate = -2;
 	betagradstate  = -1;
 
-	//if ( bNF() )
-	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
-	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
+        {
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
+            {
+	        if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -1585,20 +1394,18 @@ void optState<T,S>::refactGpnhpzero(const Matrix<double> &Gp, const Matrix<S> &G
         fixGradhpzero(GpGrad,Gn,GpnOld,gp,gn);
     }
 
-    int i,j,iP;
-
     if ( bN() && aN() )
     {
         T temp;
 
         retVector<T> tmpva;
 
-        for ( j = 0 ; j < aN() ; ++j )
+        for ( int j = 0 ; j < aN() ; ++j )
 	{
             dalphaGrad("&",j) -= twoProduct(temp,GpnOld(j,tmpva),dbeta);
             dalphaGrad("&",j) += twoProduct(temp,GpnNew(j,tmpva),dbeta);
 
-	    for ( i = 0 ; i < bN() ; ++i )
+	    for ( int i = 0 ; i < bN() ; ++i )
 	    {
                 dbetaGrad("&",i) -= GpnOld(j,i)*alpha(j);
                 dbetaGrad("&",i) -= GpnNew(j,i)*alpha(j);
@@ -1613,24 +1420,12 @@ void optState<T,S>::refactGpnhpzero(const Matrix<double> &Gp, const Matrix<S> &G
 	alphagradstate = -2;
 	betagradstate  = -1;
 
-	//if ( bNF() )
-	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
-	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
+        {
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
+            {
+	        if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -1649,8 +1444,6 @@ void optState<T,S>::refactlin(const Matrix<S> &GpGrad, const Matrix<double> &Gn,
     NiceAssert( gn.size() == bN() );
     NiceAssert( hp.size() == aN() );
 
-    int i,iP;
-
     gradFixAlphaInd = 0;
     gradFixBetaInd  = 0;
     gradFixAlpha.zero();
@@ -1658,20 +1451,16 @@ void optState<T,S>::refactlin(const Matrix<S> &GpGrad, const Matrix<double> &Gn,
 
     // Fix gradients
 
-    //if ( aN() )
+    if ( dupdateAllGC )
     {
-	for ( i = 0 ; i < aN() ; ++i )
-	{
-            recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i);
-	}
+        for ( int i = 0 ; i < aN() ; ++i ) { recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i); }
+        for ( int i = 0 ; i < bN() ; ++i ) { recalcBetaGrad (dbetaGrad ("&",i),Gn    ,Gpn,gn   ,i); }
     }
 
-    //if ( bN() )
+    else
     {
-	for ( i = 0 ; i < bN() ; ++i )
-	{
-            recalcBetaGrad(dbetaGrad("&",i),Gn,Gpn,gn,i);
-	}
+        for ( int iP = 0 ; iP < aNRNZ() ; ++iP ) { int i = dpivalphaRestrictNZ.v(iP); recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i); }
+        for ( int i  = 0 ; i  < bN()    ; ++i  ) {                                    recalcBetaGrad (dbetaGrad ("&",i),Gn    ,Gpn,gn   ,i); }
     }
 
     if ( keepfact() )
@@ -1681,24 +1470,12 @@ void optState<T,S>::refactlin(const Matrix<S> &GpGrad, const Matrix<double> &Gn,
 	alphagradstate = -2;
 	betagradstate  = -1;
 
-	//if ( bNF() )
-	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
-	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
+        {
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
+            {
+	        if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -1718,8 +1495,6 @@ void optState<T,S>::refactlinhpzero(const Matrix<S> &GpGrad, const Matrix<double
     NiceAssert( gp.size() == aN() );
     NiceAssert( gn.size() == bN() );
 
-    int i,iP;
-
     gradFixAlphaInd = 0;
     gradFixBetaInd  = 0;
     gradFixAlpha.zero();
@@ -1727,20 +1502,16 @@ void optState<T,S>::refactlinhpzero(const Matrix<S> &GpGrad, const Matrix<double
 
     // Fix gradients
 
-    //if ( aN() )
+    if ( dupdateAllGC )
     {
-	for ( i = 0 ; i < aN() ; ++i )
-	{
-            recalcAlphaGradhpzero(dalphaGrad("&",i),GpGrad,Gpn,gp,i);
-	}
+        for ( int i = 0 ; i < aN() ; ++i ) { recalcAlphaGradhpzero(dalphaGrad("&",i),GpGrad,Gpn,gp,i); }
+        for ( int i = 0 ; i < bN() ; ++i ) { recalcBetaGrad       (dbetaGrad ("&",i),Gn    ,Gpn,gn,i); }
     }
 
-    //if ( bN() )
+    else
     {
-	for ( i = 0 ; i < bN() ; ++i )
-	{
-            recalcBetaGrad(dbetaGrad("&",i),Gn,Gpn,gn,i);
-	}
+        for ( int iP = 0 ; iP < aNRNZ() ; ++iP ) { int i = dpivalphaRestrictNZ.v(iP); recalcAlphaGradhpzero(dalphaGrad("&",i),GpGrad,Gpn,gp,i); }
+        for ( int i  = 0 ; i  < bN()    ; ++i  ) {                                    recalcBetaGrad       (dbetaGrad ("&",i),Gn    ,Gpn,gn,i); }
     }
 
     if ( keepfact() )
@@ -1750,24 +1521,12 @@ void optState<T,S>::refactlinhpzero(const Matrix<S> &GpGrad, const Matrix<double
 	alphagradstate = -2;
 	betagradstate  = -1;
 
-	//if ( bNF() )
-	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
-	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
+        {
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
+            {
+                if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -1813,15 +1572,8 @@ void optState<T,S>::refactgp(const Matrix<S> &GpGrad, const Matrix<double> &Gn, 
 
 	if ( keepfact() )
 	{
-	    if ( alphagradstate == -1 )
-	    {
-		alphagradstate = iv;
-	    }
-
-	    else if ( alphagradstate >= 0 )
-	    {
-		alphagradstate = -2;
-	    }
+	    if      ( alphagradstate == -1 ) { alphagradstate = iv; }
+	    else if ( alphagradstate >= 0  ) { alphagradstate = -2; }
 	}
     }
 }
@@ -1863,15 +1615,8 @@ void optState<T,S>::refactgphpzero(const Matrix<S> &GpGrad, const Matrix<double>
 
 	if ( keepfact() )
 	{
-	    if ( alphagradstate == -1 )
-	    {
-		alphagradstate = iv;
-	    }
-
-	    else if ( alphagradstate >= 0 )
-	    {
-		alphagradstate = -2;
-	    }
+	    if      ( alphagradstate == -1 ) { alphagradstate = iv; }
+	    else if ( alphagradstate >= 0  ) { alphagradstate = -2; }
 	}
     }
 }
@@ -1906,15 +1651,8 @@ void optState<T,S>::refactGpnElm(const Matrix<S> &GpGrad, const Matrix<double> &
 
     if ( keepfact() )
     {
-	if ( alphagradstate == -1 )
-	{
-	    alphagradstate = i;
-	}
-
-	else if ( alphagradstate >= 0 )
-	{
-	    alphagradstate = -2;
-	}
+	if      ( alphagradstate == -1 ) { alphagradstate = i;  }
+	else if ( alphagradstate >= 0  ) { alphagradstate = -2; }
     }
 }
 
@@ -1962,15 +1700,8 @@ void optState<T,S>::factstepgp(const Matrix<S> &GpGrad, const Matrix<double> &Gn
 
     if ( keepfact() )
     {
-	if ( alphagradstate == -1 )
-	{
-	    alphagradstate = iv;
-	}
-
-	else if ( alphagradstate >= 0 )
-	{
-	    alphagradstate = -2;
-	}
+	if      ( alphagradstate == -1 ) { alphagradstate = iv; }
+	else if ( alphagradstate >= 0  ) { alphagradstate = -2; }
     }
 }
 
@@ -2010,24 +1741,12 @@ void optState<T,S>::refactgn(const Matrix<S> &GpGrad, const Matrix<double> &Gn, 
     {
 	betagradstate  = -1;
 
-	//if ( bNF() )
-	{
-	    for ( int iP = 0 ; iP < bNF() ; ++iP )
-	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
+        {
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
+            {
+	        if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -2068,24 +1787,12 @@ void optState<T,S>::refactgnhpzero(const Matrix<S> &GpGrad, const Matrix<double>
     {
 	betagradstate  = -1;
 
-	//if ( bNF() )
-	{
-	    for ( int iP = 0 ; iP < bNF() ; ++iP )
-	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
+        {
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
+            {
+	        if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -2116,24 +1823,12 @@ void optState<T,S>::factstepgn(const Matrix<S> &GpGrad, const Matrix<double> &Gn
     {
 	betagradstate  = -1;
 
-	//if ( bNF() )
-	{
-	    for ( int iP = 0 ; iP < bNF() ; ++iP )
-	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
+        {
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
+            {
+	        if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -2162,28 +1857,13 @@ void optState<T,S>::refacthp(const Matrix<S> &GpGrad, const Matrix<double> &Gn, 
 
     if ( iv == -1 )
     {
-	//if ( aN() )
-	{
-	    for ( int i = 0 ; i < aN() ; ++i )
-	    {
-		if ( alphaState(i) > 0 )
-		{
-		    dalphaGrad("&",i) -= hpOld(i);
-		    dalphaGrad("&",i) += hpNew(i);
-		}
-
-		else if ( alphaState(i) < 0 )
-		{
-		    dalphaGrad("&",i) += hpOld(i);
-		    dalphaGrad("&",i) -= hpNew(i);
-		}
-	    }
+        for ( int i = 0 ; i < aN() ; ++i )
+        {
+            if      ( alphaState(i) > 0 ) { dalphaGrad("&",i) -= hpOld(i); dalphaGrad("&",i) += hpNew(i); }
+            else if ( alphaState(i) < 0 ) { dalphaGrad("&",i) += hpOld(i); dalphaGrad("&",i) -= hpNew(i); }
 	}
 
-	if ( keepfact() )
-	{
-	    alphagradstate = -2;
-	}
+	if ( keepfact() ) { alphagradstate = -2; }
     }
 
     else
@@ -2195,15 +1875,8 @@ void optState<T,S>::refacthp(const Matrix<S> &GpGrad, const Matrix<double> &Gn, 
 
 	    if ( keepfact() )
 	    {
-		if ( alphagradstate == -1 )
-		{
-		    alphagradstate = iv;
-		}
-
-		else if ( alphagradstate >= 0 )
-		{
-		    alphagradstate = -2;
-		}
+		if      ( alphagradstate == -1 ) { alphagradstate = iv; }
+		else if ( alphagradstate >= 0  ) { alphagradstate = -2; }
 	    }
 	}
 
@@ -2214,15 +1887,8 @@ void optState<T,S>::refacthp(const Matrix<S> &GpGrad, const Matrix<double> &Gn, 
 
 	    if ( keepfact() )
 	    {
-		if ( alphagradstate == -1 )
-		{
-		    alphagradstate = iv;
-		}
-
-		else if ( alphagradstate >= 0 )
-		{
-		    alphagradstate = -2;
-		}
+		if      ( alphagradstate == -1 ) { alphagradstate = iv; }
+		else if ( alphagradstate >= 0  ) { alphagradstate = -2; }
 	    }
 	}
     }
@@ -2249,28 +1915,16 @@ void optState<T,S>::reset(const Matrix<double> &Gp, const Matrix<double> &Gn, co
     dalphaGrad = gp;
     dbetaGrad  = gn;
 
-    int iP;
-
     retVector<T> tmpva;
     retVector<T> tmpvb;
 
     dalphaGrad("&",pivAlphaUB(),tmpva) += hp(pivAlphaUB(),tmpvb);
     dalphaGrad("&",pivAlphaLB(),tmpva) -= hp(pivAlphaLB(),tmpvb);
 
-    //if ( aNF() )
+    for ( int iP = 0 ; iP < aNF() ; ++iP )
     {
-	for ( iP = 0 ; iP < aNF() ; ++iP )
-	{
-	    if ( alphaState(pivAlphaF(iP)) > 0 )
-	    {
-		dalphaGrad("&",pivAlphaF(iP)) += hp(pivAlphaF(iP));
-	    }
-
-            else
-	    {
-		dalphaGrad("&",pivAlphaF(iP)) -= hp(pivAlphaF(iP));
-	    }
-	}
+        if ( alphaState(pivAlphaF(iP)) > 0 ) { dalphaGrad("&",pivAlphaF(iP)) += hp(pivAlphaF(iP)); }
+        else                                 { dalphaGrad("&",pivAlphaF(iP)) -= hp(pivAlphaF(iP)); }
     }
 
     cumgraderr = 0.0;
@@ -2288,24 +1942,12 @@ void optState<T,S>::reset(const Matrix<double> &Gp, const Matrix<double> &Gn, co
 	alphagradstate = -2;
 	betagradstate  = -1;
 
-	//if ( bNF() )
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+                if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -2332,8 +1974,6 @@ void optState<T,S>::resethpzero(const Matrix<double> &Gp, const Matrix<double> &
     dalphaGrad = gp;
     dbetaGrad  = gn;
 
-    int iP;
-
     cumgraderr = 0.0;
 
     gradFixAlphaInd = 0;
@@ -2349,24 +1989,12 @@ void optState<T,S>::resethpzero(const Matrix<double> &Gp, const Matrix<double> &
 	alphagradstate = -2;
 	betagradstate  = -1;
 
-	//if ( bNF() )
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+	        if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -2391,8 +2019,6 @@ void optState<T,S>::setopttol(const Matrix<S> &GpGrad, const Matrix<double> &Gn,
 	fixGrad(GpGrad,Gn,Gpn,gp,gn,hp);
     }
 
-    int iP;
-
     dopttol = xopttol;
 
     if ( keepfact() )
@@ -2400,45 +2026,21 @@ void optState<T,S>::setopttol(const Matrix<S> &GpGrad, const Matrix<double> &Gn,
 	alphagradstate = -1;
 	betagradstate  = -1;
 
-	//if ( aNF() )
-	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
+        for ( int iP = 0 ; iP < aNF() ; ++iP )
+        {
+            if ( abs2(alphaGrad(pivAlphaF(iP))) > dopttol )
 	    {
-                if ( abs2(alphaGrad(pivAlphaF(iP))) > dopttol )
-		{
-		    if ( alphagradstate == -1 )
-		    {
-			alphagradstate = iP;
-		    }
-
-		    else if ( alphagradstate >= 0 )
-		    {
-			alphagradstate = -2;
-
-			break;
-		    }
-		}
+		if      ( alphagradstate == -1 ) { alphagradstate = iP;        }
+		else if ( alphagradstate >= 0  ) { alphagradstate = -2; break; }
 	    }
 	}
 
-	//if ( bNF() )
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+		if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -2462,8 +2064,6 @@ void optState<T,S>::setopttolhpzero(const Matrix<S> &GpGrad, const Matrix<double
         fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
     }
 
-    int iP;
-
     dopttol = xopttol;
 
     if ( keepfact() )
@@ -2471,45 +2071,21 @@ void optState<T,S>::setopttolhpzero(const Matrix<S> &GpGrad, const Matrix<double
 	alphagradstate = -1;
 	betagradstate  = -1;
 
-	//if ( aNF() )
+	for ( int iP = 0 ; iP < aNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
+            if ( abs2(alphaGrad(pivAlphaF(iP))) > dopttol )
 	    {
-                if ( abs2(alphaGrad(pivAlphaF(iP))) > dopttol )
-		{
-		    if ( alphagradstate == -1 )
-		    {
-			alphagradstate = iP;
-		    }
-
-		    else if ( alphagradstate >= 0 )
-		    {
-			alphagradstate = -2;
-
-			break;
-		    }
-		}
+		if      ( alphagradstate == -1 ) { alphagradstate = iP;        }
+		else if ( alphagradstate >= 0  ) { alphagradstate = -2; break; }
 	    }
 	}
 
-	//if ( bNF() )
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+		if      ( betagradstate == -1 ) { betagradstate = iP;        }
+		else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -2544,29 +2120,15 @@ void optState<T,S>::setkeepfact(const Matrix<double> &Gp, const Matrix<double> &
     {
 	// Fix gradient state
 
-	int iP;
-
 	alphagradstate = -2;
 	betagradstate  = -1;
 
-	//if ( bNF() )
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+		if      ( betagradstate == -1 ) { betagradstate = iP;        }
+		else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -2589,9 +2151,7 @@ void optState<T,S>::refreshGrad_anyhow(const Matrix<S> &GpGrad, const Matrix<dou
 
     else
     {
-        int iP;
-
-        recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i);
+        if ( dupdateAllGC || ( alphaRestrict(i) != 3 ) ) { recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i); }
 
 	if ( keepfact() )
 	{
@@ -2600,24 +2160,12 @@ void optState<T,S>::refreshGrad_anyhow(const Matrix<S> &GpGrad, const Matrix<dou
 	    alphagradstate = -2;
 	    betagradstate  = -1;
 
-	    //if ( bNF() )
+            for ( int iP = 0 ; iP < bNF() ; ++iP )
 	    {
-		for ( iP = 0 ; iP < bNF() ; ++iP )
-		{
-                    if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		    {
-			if ( betagradstate == -1 )
-			{
-			    betagradstate = iP;
-			}
-
-			else if ( betagradstate >= 0 )
-			{
-			    betagradstate = -2;
-
-			    break;
-			}
-		    }
+                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
+	        {
+	            if      ( betagradstate == -1 ) { betagradstate = iP;        }
+		    else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 		}
 	    }
 	}
@@ -2637,21 +2185,21 @@ void optState<T,S>::refreshGrad(const Matrix<S> &GpGrad, const Matrix<double> &G
     NiceAssert( gn.size() == bN() );
     NiceAssert( hp.size() == aN() );
 
-    int i,iP;
-
     if ( cumgraderr > CUMGRADTRIGGER*dopttol )
     {
 	// Fix gradients
 
-        for ( i = 0 ; i < aN() ; ++i )
+        if ( dupdateAllGC )
         {
-            recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i);
-	}
+            for ( int i = 0 ; i < aN() ; ++i ) { recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i); }
+            for ( int i = 0 ; i < bN() ; ++i ) { recalcBetaGrad (dbetaGrad ("&",i),Gn,    Gpn,gn,   i); }
+        }
 
-        for ( i = 0 ; i < bN() ; ++i )
+        else
         {
-            recalcBetaGrad(dbetaGrad("&",i),Gn,Gpn,gn,i);
-	}
+            for ( int iP = 0 ; iP < aNRNZ() ; ++iP ) { int i = dpivalphaRestrictNZ.v(iP); recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i); }
+            for ( int i  = 0 ; i  < bN()    ; ++i  ) {                                    recalcBetaGrad (dbetaGrad ("&",i),Gn,    Gpn,gn,   i); }
+        }
 
 	if ( keepfact() )
 	{
@@ -2660,21 +2208,12 @@ void optState<T,S>::refreshGrad(const Matrix<S> &GpGrad, const Matrix<double> &G
 	    alphagradstate = -2;
 	    betagradstate  = -1;
 
-            for ( iP = 0 ; iP < bNF() ; ++iP )
+            for ( int iP = 0 ; iP < bNF() ; ++iP )
 	    {
                 if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 	        {
-	            if ( betagradstate == -1 )
-		    {
-		        betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-		        betagradstate = -2;
-
-		        break;
-		    }
+	            if      ( betagradstate == -1 ) { betagradstate = iP;        }
+		    else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 		}
 	    }
 	}
@@ -2700,9 +2239,7 @@ void optState<T,S>::refreshGradhpzero_anyhow(const Matrix<S> &GpGrad, const Matr
 
     else
     {
-        int iP;
-
-        recalcAlphaGradhpzero(dalphaGrad("&",i),GpGrad,Gpn,gp,i);
+        if ( dupdateAllGC || ( alphaRestrict(i) != 3 ) ) { recalcAlphaGradhpzero(dalphaGrad("&",i),GpGrad,Gpn,gp,i); }
 
 	if ( keepfact() )
 	{
@@ -2711,21 +2248,12 @@ void optState<T,S>::refreshGradhpzero_anyhow(const Matrix<S> &GpGrad, const Matr
 	    alphagradstate = -2;
 	    betagradstate  = -1;
 
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
+	    for ( int iP = 0 ; iP < bNF() ; ++iP )
 	    {
                 if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 		{
-		    if ( betagradstate == -1 )
-		    {
-		        betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-		        betagradstate = -2;
-
-		        break;
-		    }
+		    if      ( betagradstate == -1 ) { betagradstate = iP;        }
+		    else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 		}
 	    }
 	}
@@ -2744,27 +2272,21 @@ void optState<T,S>::refreshGradhpzero(const Matrix<S> &GpGrad, const Matrix<doub
     NiceAssert( gp.size() == aN() );
     NiceAssert( gn.size() == bN() );
 
-    int i,iP;
-
     if ( cumgraderr > CUMGRADTRIGGER*dopttol )
     {
 	// Fix gradients
 
-	//if ( aN() )
-	{
-	    for ( i = 0 ; i < aN() ; ++i )
-	    {
-		recalcAlphaGradhpzero(dalphaGrad("&",i),GpGrad,Gpn,gp,i);
-	    }
-	}
+        if ( dupdateAllGC )
+        {
+            for ( int i = 0 ; i < aN() ; ++i ) { recalcAlphaGradhpzero(dalphaGrad("&",i),GpGrad,Gpn,gp,i); }
+            for ( int i = 0 ; i < bN() ; ++i ) { recalcBetaGrad       (dbetaGrad ("&",i),Gn,    Gpn,gn,i); }
+        }
 
-	//if ( bN() )
-	{
-	    for ( i = 0 ; i < bN() ; ++i )
-	    {
-		recalcBetaGrad(dbetaGrad("&",i),Gn,Gpn,gn,i);
-	    }
-	}
+        else
+        {
+            for ( int iP = 0 ; iP < aNRNZ() ; ++iP ) { int i = dpivalphaRestrictNZ.v(iP); recalcAlphaGradhpzero(dalphaGrad("&",i),GpGrad,Gpn,gp,i); }
+            for ( int i  = 0 ; i  < bN()    ; ++i  ) {                                    recalcBetaGrad       (dbetaGrad ("&",i),Gn,    Gpn,gn,i); }
+        }
 
 	if ( keepfact() )
 	{
@@ -2773,24 +2295,12 @@ void optState<T,S>::refreshGradhpzero(const Matrix<S> &GpGrad, const Matrix<doub
 	    alphagradstate = -2;
 	    betagradstate  = -1;
 
-	    //if ( bNF() )
+            for ( int iP = 0 ; iP < bNF() ; ++iP )
 	    {
-		for ( iP = 0 ; iP < bNF() ; ++iP )
-		{
-                    if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		    {
-			if ( betagradstate == -1 )
-			{
-			    betagradstate = iP;
-			}
-
-			else if ( betagradstate >= 0 )
-			{
-			    betagradstate = -2;
-
-			    break;
-			}
-		    }
+                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
+	        {
+	            if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                    else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 		}
 	    }
 	}
@@ -2826,20 +2336,13 @@ void optState<T,S>::scalehpzero(double a, const Matrix<S> &GpGrad, const Matrix<
     dalpha.scale(a);
     dbeta.scale(a);
 
-
-
     if ( aN() )
     {
 	dalphaGrad -= gp;
-
 	dalphaGrad.scale(a);
-
         dalphaGrad += gp;
 
-	if ( keepfact() )
-	{
-	    alphagradstate = -2;
-	}
+	if ( keepfact() ) { alphagradstate = -2; }
     }
 
     if ( bN() )
@@ -2852,24 +2355,12 @@ void optState<T,S>::scalehpzero(double a, const Matrix<S> &GpGrad, const Matrix<
 	{
 	    betagradstate  = -1;
 
-	    //if ( bNF() )
+            for ( int iP = 0 ; iP < bNF() ; ++iP )
 	    {
-		for ( int iP = 0 ; iP < bNF() ; ++iP )
-		{
-                    if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		    {
-			if ( betagradstate == -1 )
-			{
-			    betagradstate = iP;
-			}
-
-			else if ( betagradstate >= 0 )
-			{
-			    betagradstate = -2;
-
-			    break;
-			}
-		    }
+                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
+	        {
+		    if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                    else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 		}
 	    }
 	}
@@ -2899,40 +2390,23 @@ void optState<T,S>::scale(double a, const Matrix<S> &GpGrad, const Matrix<double
     dalpha.scale(a);
     dbeta.scale(a);
 
-    int i;
-
     if ( aN() )
     {
 	dalphaGrad -= gp;
 
-	for ( i = 0 ; i < aN() ; ++i )
+	for ( int i = 0 ; i < aN() ; ++i )
 	{
-	    if ( alphaState(i) > 0 )
-	    {
-		dalphaGrad("&",i) -= hp(i);
-	    }
-
-	    else if ( alphaState(i) < 0 )
-	    {
-		dalphaGrad("&",i) += hp(i);
-	    }
+	    if      ( alphaState(i) > 0 ) { dalphaGrad("&",i) -= hp(i); }
+	    else if ( alphaState(i) < 0 ) { dalphaGrad("&",i) += hp(i); }
 	}
 
 	dalphaGrad.scale(a);
-
         dalphaGrad += gp;
 
-	for ( i = 0 ; i < aN() ; ++i )
+	for ( int i = 0 ; i < aN() ; ++i )
 	{
-	    if ( alphaState(i) > 0 )
-	    {
-		dalphaGrad("&",i) += hp(i);
-	    }
-
-	    else if ( alphaState(i) < 0 )
-	    {
-		dalphaGrad("&",i) -= hp(i);
-	    }
+	    if      ( alphaState(i) > 0 ) { dalphaGrad("&",i) += hp(i); }
+	    else if ( alphaState(i) < 0 ) { dalphaGrad("&",i) -= hp(i); }
 	}
 
 	if ( keepfact() )
@@ -2951,24 +2425,12 @@ void optState<T,S>::scale(double a, const Matrix<S> &GpGrad, const Matrix<double
 	{
 	    betagradstate  = -1;
 
-	    //if ( bNF() )
+            for ( int iP = 0 ; iP < bNF() ; ++iP )
 	    {
-		for ( int iP = 0 ; iP < bNF() ; ++iP )
+                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 		{
-                    if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		    {
-			if ( betagradstate == -1 )
-			{
-			    betagradstate = iP;
-			}
-
-			else if ( betagradstate >= 0 )
-			{
-			    betagradstate = -2;
-
-			    break;
-			}
-		    }
+		    if      ( betagradstate == -1 ) { betagradstate = iP;        }
+		    else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 		}
 	    }
 	}
@@ -2995,27 +2457,34 @@ void optState<T,S>::scaleAlphahpzero(double a, const Matrix<S> &GpGrad, const Ma
 
     dalpha.scale(a);
 
-    int i;
-
     if ( aN() )
     {
 	dalphaGrad -= gp;
 
         T temp;
 
-	for ( i = 0 ; i < aN() ; ++i )
-	{
-            dalphaGrad("&",i) -= twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF()));
-	}
+        if ( dupdateAllGC )
+        {
+            for ( int i = 0 ; i < aN() ; ++i ) { dalphaGrad("&",i) -= twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF())); }
+        }
+
+        else
+        {
+            for ( int iP = 0 ; iP < aNRNZ() ; ++iP ) { int i = dpivalphaRestrictNZ.v(iP); dalphaGrad("&",i) -= twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF())); }
+        }
 
 	dalphaGrad.scale(a);
-
         dalphaGrad += gp;
 
-	for ( i = 0 ; i < aN() ; ++i )
-	{
-            dalphaGrad("&",i) += twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF()));
+        if ( dupdateAllGC )
+        {
+            for ( int i = 0 ; i < aN() ; ++i ) { dalphaGrad("&",i) += twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF())); }
 	}
+
+        else
+        {
+            for ( int iP = 0 ; iP < aNRNZ() ; ++iP ) { int i = dpivalphaRestrictNZ.v(iP); dalphaGrad("&",i) += twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF())); }
+        }
 
 	if ( keepfact() )
 	{
@@ -3046,47 +2515,62 @@ void optState<T,S>::scaleAlpha(double a, const Matrix<S> &GpGrad, const Matrix<d
 
     dalpha.scale(a);
 
-    int i;
-
     if ( aN() )
     {
 	dalphaGrad -= gp;
 
         T temp;
 
-	for ( i = 0 ; i < aN() ; ++i )
-	{
-	    if ( alphaState(i) > 0 )
+        if ( dupdateAllGC )
+        {
+            for ( int i = 0 ; i < aN() ; ++i )
 	    {
-		dalphaGrad("&",i) -= hp(i);
-	    }
+	        if      ( alphaState(i) > 0 ) { dalphaGrad("&",i) -= hp(i); }
+  	        else if ( alphaState(i) < 0 ) { dalphaGrad("&",i) += hp(i); }
 
-	    else if ( alphaState(i) < 0 )
+                dalphaGrad("&",i) -= twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF()));
+            }
+        }
+
+        else
+        {
+	    for ( int iP = 0 ; iP < aNRNZ() ; ++iP )
 	    {
-		dalphaGrad("&",i) += hp(i);
-	    }
+                int i = dpivalphaRestrictNZ.v(iP);
 
-            dalphaGrad("&",i) -= twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF()));
-	}
+	        if      ( alphaState(i) > 0 ) { dalphaGrad("&",i) -= hp(i); }
+  	        else if ( alphaState(i) < 0 ) { dalphaGrad("&",i) += hp(i); }
+
+                dalphaGrad("&",i) -= twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF()));
+            }
+        }
 
 	dalphaGrad.scale(a);
-
         dalphaGrad += gp;
 
-	for ( i = 0 ; i < aN() ; ++i )
-	{
-	    if ( alphaState(i) > 0 )
+        if ( dupdateAllGC )
+        {
+	    for ( int i = 0 ; i < aN() ; ++i )
 	    {
-		dalphaGrad("&",i) += hp(i);
-	    }
+	        if      ( alphaState(i) > 0 ) { dalphaGrad("&",i) += hp(i); }
+	        else if ( alphaState(i) < 0 ) { dalphaGrad("&",i) -= hp(i); }
 
-	    else if ( alphaState(i) < 0 )
+                dalphaGrad("&",i) += twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF()));
+            }
+        }
+
+        else
+        {
+	    for ( int iP = 0 ; iP < aNRNZ() ; ++iP )
 	    {
-		dalphaGrad("&",i) -= hp(i);
-	    }
+                int i = dpivalphaRestrictNZ.v(iP);
 
-            dalphaGrad("&",i) += twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF()));
-	}
+	        if      ( alphaState(i) > 0 ) { dalphaGrad("&",i) += hp(i); }
+	        else if ( alphaState(i) < 0 ) { dalphaGrad("&",i) -= hp(i); }
+
+                dalphaGrad("&",i) += twoProduct(temp,Gpn(i,pivBetaF()),dbeta(pivBetaF()));
+            }
+        }
 
 	if ( keepfact() )
 	{
@@ -3138,26 +2622,12 @@ void optState<T,S>::rankone(const Vector<double> &bp, const Vector<double> &bn, 
 	    alphagradstate = -2;
 	    betagradstate  = -1;
 
-	    int iP;
-
-	    //if ( bNF() )
+            for ( int iP = 0 ; iP < bNF() ; ++iP )
 	    {
-		for ( iP = 0 ; iP < bNF() ; ++iP )
+                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 		{
-                    if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		    {
-			if ( betagradstate == -1 )
-			{
-			    betagradstate = iP;
-			}
-
-			else if ( betagradstate >= 0 )
-			{
-			    betagradstate = -2;
-
-			    break;
-			}
-		    }
+		    if      ( betagradstate == -1 ) { betagradstate = iP;        }
+		    else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 		}
 	    }
 	}
@@ -3197,13 +2667,7 @@ void optState<T,S>::diagoffset(const Vector<double> &bp, const Vector<double> &b
     {
 	Vector<T> upvectp(dalpha);
 
-	//if ( upvectp.size() )
-	{
-	    for ( int i = 0 ; i < upvectp.size() ; ++i )
-	    {
-                upvectp("&",i) *= bpGrad(i);
-	    }
-	}
+        for ( int i = 0 ; i < upvectp.size() ; ++i ) { upvectp("&",i) *= bpGrad(i); }
 
 	dalphaGrad += upvectp;
 
@@ -3217,13 +2681,7 @@ void optState<T,S>::diagoffset(const Vector<double> &bp, const Vector<double> &b
     {
 	Vector<T> upvectn(dbeta);
 
-	//if ( upvectn.size() )
-	{
-	    for ( int i = 0 ; i < upvectn.size() ; ++i )
-	    {
-                upvectn("&",i) *= bnGrad(i);
-	    }
-	}
+        for ( int i = 0 ; i < upvectn.size() ; ++i ) { upvectn("&",i) *= bnGrad(i); }
 
 	dbetaGrad += upvectn;
 
@@ -3231,26 +2689,12 @@ void optState<T,S>::diagoffset(const Vector<double> &bp, const Vector<double> &b
 	{
 	    betagradstate  = -1;
 
-	    int iP;
-
-	    //if ( bNF() )
+	    for ( int iP = 0 ; iP < bNF() ; ++iP )
 	    {
-		for ( iP = 0 ; iP < bNF() ; ++iP )
+                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 		{
-                    if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		    {
-			if ( betagradstate == -1 )
-			{
-			    betagradstate = iP;
-			}
-
-			else if ( betagradstate >= 0 )
-			{
-			    betagradstate = -2;
-
-			    break;
-			}
-		    }
+		    if      ( betagradstate == -1 ) { betagradstate = iP;        }
+		    else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 		}
 	    }
 	}
@@ -3335,13 +2779,7 @@ void optState<T,S>::diagoffsethpzero(const Vector<double> &bp, const Vector<doub
     {
 	Vector<T> upvectp(dalpha);
 
-	//if ( upvectp.size() )
-	{
-	    for ( int i = 0 ; i < upvectp.size() ; ++i )
-	    {
-                upvectp("&",i) *= bpGrad(i);
-	    }
-	}
+        for ( int i = 0 ; i < upvectp.size() ; ++i ) { upvectp("&",i) *= bpGrad(i); }
 
 	dalphaGrad += upvectp;
 
@@ -3355,13 +2793,7 @@ void optState<T,S>::diagoffsethpzero(const Vector<double> &bp, const Vector<doub
     {
 	Vector<T> upvectn(dbeta);
 
-	//if ( upvectn.size() )
-	{
-	    for ( int i = 0 ; i < upvectn.size() ; ++i )
-	    {
-                upvectn("&",i) *= bnGrad(i);
-	    }
-	}
+        for ( int i = 0 ; i < upvectn.size() ; ++i ) { upvectn("&",i) *= bnGrad(i); }
 
 	dbetaGrad += upvectn;
 
@@ -3369,26 +2801,12 @@ void optState<T,S>::diagoffsethpzero(const Vector<double> &bp, const Vector<doub
 	{
 	    betagradstate  = -1;
 
-	    int iP;
-
-	    //if ( bNF() )
+	    for ( int iP = 0 ; iP < bNF() ; ++iP )
 	    {
-		for ( iP = 0 ; iP < bNF() ; ++iP )
+                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 		{
-                    if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		    {
-			if ( betagradstate == -1 )
-			{
-			    betagradstate = iP;
-			}
-
-			else if ( betagradstate >= 0 )
-			{
-			    betagradstate = -2;
-
-			    break;
-			}
-		    }
+		    if      ( betagradstate == -1 ) { betagradstate = iP;        }
+		    else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 		}
 	    }
 	}
@@ -3459,17 +2877,20 @@ int optState<T,S>::addAlpha(int i, int alphrestrict, const T &zeroeg)
 
     // Add to vectors
 
-    dalpha.add(i);
-    dalpha("&",i) = zeroeg;
-    setzero(dalpha("&",i));
-    dalphaGrad.add(i);
-    dalphaGrad("&",i) = zeroeg;
-    setzero(dalphaGrad("&",i));
-    dalphaRestrict.add(i);
-    dalphaRestrict("&",i) = alphrestrict;
-    gradFixAlpha.add(i);
-    gradFixAlpha("&",i) = 1;
+    dalpha.        add(i); dalpha        ("&",i) = zeroeg;       setzero(dalpha    ("&",i));
+    dalphaGrad.    add(i); dalphaGrad    ("&",i) = zeroeg;       setzero(dalphaGrad("&",i));
+    dalphaRestrict.add(i); dalphaRestrict("&",i) = alphrestrict;
+    gradFixAlpha.  add(i); gradFixAlpha  ("&",i) = 1;
+
     gradFixAlphaInd = 1;
+
+    // Add to pivots
+
+    for ( int iP = 0 ; iP < aNRZ () ; ++iP ) { if ( dpivalphaRestrictZ .v(iP) >= i ) { dpivalphaRestrictZ ("&",iP)++; } }
+    for ( int iP = 0 ; iP < aNRNZ() ; ++iP ) { if ( dpivalphaRestrictNZ.v(iP) >= i ) { dpivalphaRestrictNZ("&",iP)++; } }
+
+    if ( alphrestrict == 3 ) { dpivalphaRestrictZ .add(dpivalphaRestrictZ. size()); dpivalphaRestrictZ ("&",dpivalphaRestrictZ. size()-1) = i; }
+    else                     { dpivalphaRestrictNZ.add(dpivalphaRestrictNZ.size()); dpivalphaRestrictNZ("&",dpivalphaRestrictNZ.size()-1) = i; }
 
     return res;
 }
@@ -3488,16 +2909,11 @@ int optState<T,S>::addBeta(int i, int betrestrict, const T &zeroeg)
 
     // Add to vectors
 
-    dbeta.add(i);
-    dbeta("&",i) = zeroeg;
-    setzero(dbeta("&",i));
-    dbetaGrad.add(i);
-    dbetaGrad("&",i) = zeroeg;
-    setzero(dbetaGrad("&",i));
-    dbetaRestrict.add(i);
-    dbetaRestrict("&",i) = betrestrict;
-    gradFixBeta.add(i);
-    gradFixBeta("&",i) = 1;
+    dbeta.        add(i); dbeta        ("&",i) = zeroeg;      setzero(dbeta("&",i));
+    dbetaGrad.    add(i); dbetaGrad    ("&",i) = zeroeg;      setzero(dbetaGrad("&",i));
+    dbetaRestrict.add(i); dbetaRestrict("&",i) = betrestrict;
+    gradFixBeta.  add(i); gradFixBeta  ("&",i) = 1;
+
     gradFixBetaInd = 1;
 
     return res;
@@ -3510,20 +2926,23 @@ int optState<T,S>::removeAlpha(int i)
     NiceAssert( i < aN() );
     NiceAssert( dalphaRestrict.v(i) == 3 );
 
-    int res;
+    // Remove from pivots
+
+    for ( int iP = aNRZ ()-1 ; iP >= 0 ; --iP ) { if      ( dpivalphaRestrictZ .v(iP) == i ) { dpivalphaRestrictZ. remove(iP); }
+                                                  else if ( dpivalphaRestrictZ .v(iP) >  i ) { dpivalphaRestrictZ ("&",iP)--;  } }
+    for ( int iP = aNRNZ()-1 ; iP >= 0 ; --iP ) { if      ( dpivalphaRestrictNZ.v(iP) == i ) { dpivalphaRestrictNZ.remove(iP); }
+                                                  else if ( dpivalphaRestrictNZ.v(iP) >  i ) { dpivalphaRestrictNZ("&",iP)--;  } }
 
     // Remove from Vectors
 
-    dalpha.remove(i);
-    dalphaGrad.remove(i);
+    dalpha.        remove(i);
+    dalphaGrad.    remove(i);
     dalphaRestrict.remove(i);
-    gradFixAlpha.remove(i);
+    gradFixAlpha.  remove(i);
 
     // Remove from context
 
-    res = probContext.removeAlpha(i);
-
-    return res;
+    return probContext.removeAlpha(i);
 }
 
 template <class T, class S>
@@ -3533,20 +2952,16 @@ int optState<T,S>::removeBeta(int i)
     NiceAssert( i < bN() );
     NiceAssert( dbetaRestrict.v(i) == 3 );
 
-    int res;
-
     // Remove from Vectors
 
-    dbeta.remove(i);
-    dbetaGrad.remove(i);
+    dbeta.        remove(i);
+    dbetaGrad.    remove(i);
     dbetaRestrict.remove(i);
-    gradFixBeta.remove(i);
+    gradFixBeta.  remove(i);
 
     // Remove from context
 
-    res = probContext.removeBeta(i);
-
-    return res;
+    return probContext.removeBeta(i);
 }
 
 template <class T, class S>
@@ -3570,21 +2985,15 @@ void optState<T,S>::changeAlphaRestrict(int i, int alphrestrict, const Matrix<do
 	fixGrad(GpGrad,Gn,Gpn,gp,gn,hp);
     }
 
-    int iP = 0;
-
     switch ( alphaState(i) )
     {
     case -2:
 	{
 	    if ( ( alphrestrict == 1 ) || ( alphrestrict == 3 ) )
 	    {
-		for ( iP = 0 ; iP < aNLB() ; ++iP )
-		{
-		    if ( pivAlphaLB(iP) == i )
-		    {
-			break;
-		    }
-		}
+                int iP = -1;
+
+		for ( iP = 0 ; iP < aNLB() ; ++iP ) { if ( pivAlphaLB(iP) == i ) { break; } }
 
                 NiceAssert( pivAlphaLB(iP) == i );
 
@@ -3603,18 +3012,9 @@ void optState<T,S>::changeAlphaRestrict(int i, int alphrestrict, const Matrix<do
 	{
 	    if ( ( alphrestrict == 1 ) || ( alphrestrict == 3 ) )
 	    {
-		for ( iP = 0 ; iP < aNF() ; ++iP )
-		{
-		    if ( pivAlphaF(iP) == i )
-		    {
-			if ( keepfact() && ( iP == alphagradstate ) )
-			{
-			    alphagradstate = -1;
-			}
+                int iP = -1;
 
-			break;
-		    }
-		}
+		for ( iP = 0 ; iP < aNF() ; ++iP ) { if ( pivAlphaF(iP) == i ) { if ( keepfact() && ( iP == alphagradstate ) ) { alphagradstate = -1; } break; } }
 
                 NiceAssert( pivAlphaF(iP) == i );
 
@@ -3629,18 +3029,9 @@ void optState<T,S>::changeAlphaRestrict(int i, int alphrestrict, const Matrix<do
 	{
 	    if ( ( alphrestrict == 2 ) || ( alphrestrict == 3 ) )
 	    {
-		for ( iP = 0 ; iP < aNF() ; ++iP )
-		{
-		    if ( pivAlphaF(iP) == i )
-		    {
-			if ( keepfact() && ( iP == alphagradstate ) )
-			{
-			    alphagradstate = -1;
-			}
+                int iP = -1;
 
-			break;
-		    }
-		}
+		for ( iP = 0 ; iP < aNF() ; ++iP ) { if ( pivAlphaF(iP) == i ) { if ( keepfact() && ( iP == alphagradstate ) ) { alphagradstate = -1; } break; } }
 
                 NiceAssert( pivAlphaF(iP) == i );
 
@@ -3654,14 +3045,10 @@ void optState<T,S>::changeAlphaRestrict(int i, int alphrestrict, const Matrix<do
     case +2:
 	{
 	    if ( ( alphrestrict == 2 ) || ( alphrestrict == 3 ) )
-	    {
-		for ( iP = 0 ; iP < aNUB() ; ++iP )
-		{
-		    if ( pivAlphaUB(iP) == i )
-		    {
-			break;
-		    }
-		}
+            {
+                int iP = -1;
+
+                for ( iP = 0 ; iP < aNUB() ; ++iP ) { if ( pivAlphaUB(iP) == i ) { break; } }
 
                 NiceAssert( pivAlphaUB(iP) == i );
 
@@ -3680,6 +3067,18 @@ void optState<T,S>::changeAlphaRestrict(int i, int alphrestrict, const Matrix<do
 	{
 	    break;
 	}
+    }
+
+    if ( ( alphrestrict == 3 ) && ( dalphaRestrict(i) != 3 ) )
+    {
+        for ( int iP = 0 ; iP < aNRNZ() ; ++iP ) { if ( dpivalphaRestrictNZ.v(iP) == i ) { dpivalphaRestrictNZ.remove(iP); break; } }
+        dpivalphaRestrictZ. add(dpivalphaRestrictZ. size()); dpivalphaRestrictZ ("&",dpivalphaRestrictZ. size()-1) = i;
+    }
+
+    else if ( ( alphrestrict == 3 ) && ( dalphaRestrict(i) != 3 ) )
+    {
+        for ( int iP = 0 ; iP < aNRZ () ; ++iP ) { if ( dpivalphaRestrictZ .v(iP) == i ) { dpivalphaRestrictZ. remove(iP); break; } }
+        dpivalphaRestrictNZ.add(dpivalphaRestrictNZ.size()); dpivalphaRestrictNZ("&",dpivalphaRestrictNZ.size()-1) = i;
     }
 
     dalphaRestrict.sv(i,alphrestrict);
@@ -3756,21 +3155,15 @@ void optState<T,S>::changeAlphaRestricthpzero(int i, int alphrestrict, const Mat
         fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
     }
 
-    int iP;
-
     switch ( alphaState(i) )
     {
     case -2:
 	{
 	    if ( ( alphrestrict == 1 ) || ( alphrestrict == 3 ) )
 	    {
-		for ( iP = 0 ; iP < aNLB() ; ++iP )
-		{
-		    if ( pivAlphaLB(iP) == i )
-		    {
-			break;
-		    }
-		}
+                int iP = -1;
+
+		for ( iP = 0 ; iP < aNLB() ; ++iP ) { if ( pivAlphaLB(iP) == i ) { break; } }
 
                 NiceAssert( pivAlphaLB(iP) == i );
 
@@ -3789,6 +3182,8 @@ void optState<T,S>::changeAlphaRestricthpzero(int i, int alphrestrict, const Mat
 	{
 	    if ( ( alphrestrict == 1 ) || ( alphrestrict == 3 ) )
 	    {
+                int iP = -1;
+
 		for ( iP = 0 ; iP < aNF() ; ++iP )
 		{
 		    if ( pivAlphaF(iP) == i )
@@ -3815,6 +3210,8 @@ void optState<T,S>::changeAlphaRestricthpzero(int i, int alphrestrict, const Mat
 	{
 	    if ( ( alphrestrict == 2 ) || ( alphrestrict == 3 ) )
 	    {
+                int iP = -1;
+
 		for ( iP = 0 ; iP < aNF() ; ++iP )
 		{
 		    if ( pivAlphaF(iP) == i )
@@ -3841,6 +3238,8 @@ void optState<T,S>::changeAlphaRestricthpzero(int i, int alphrestrict, const Mat
 	{
 	    if ( ( alphrestrict == 2 ) || ( alphrestrict == 3 ) )
 	    {
+                int iP = -1;
+
 		for ( iP = 0 ; iP < aNUB() ; ++iP )
 		{
 		    if ( pivAlphaUB(iP) == i )
@@ -3866,6 +3265,18 @@ void optState<T,S>::changeAlphaRestricthpzero(int i, int alphrestrict, const Mat
 	{
 	    break;
 	}
+    }
+
+    if ( ( alphrestrict == 3 ) && ( dalphaRestrict(i) != 3 ) )
+    {
+        for ( int iP = 0 ; iP < aNRNZ() ; ++iP ) { if ( dpivalphaRestrictNZ.v(iP) == i ) { dpivalphaRestrictNZ.remove(iP); break; } }
+        dpivalphaRestrictZ. add(dpivalphaRestrictZ. size()); dpivalphaRestrictZ ("&",dpivalphaRestrictZ. size()-1) = i;
+    }
+
+    else if ( ( alphrestrict == 3 ) && ( dalphaRestrict(i) != 3 ) )
+    {
+        for ( int iP = 0 ; iP < aNRZ () ; ++iP ) { if ( dpivalphaRestrictZ .v(iP) == i ) { dpivalphaRestrictZ. remove(iP); break; } }
+        dpivalphaRestrictNZ.add(dpivalphaRestrictNZ.size()); dpivalphaRestrictNZ("&",dpivalphaRestrictNZ.size()-1) = i;
     }
 
     dalphaRestrict.sv(i,alphrestrict);
@@ -3923,7 +3334,7 @@ void optState<T,S>::changeBetaRestricthpzero (int i, int betrestrict, const Matr
 
 template <class T, class S>
 int optState<T,S>::modAlphaLBtoZhpzero (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn                     )
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -3944,14 +3355,12 @@ int optState<T,S>::modAlphaLBtoZhpzero (int iP, const Matrix<double> &Gp, const 
 	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
     }
 
-    int res = probContext.modAlphaLBtoZ(iP);
-
-    return res;
+    return probContext.modAlphaLBtoZ(iP);
 }
 
 template <class T, class S>
 int optState<T,S>::modAlphaLBtoUBhpzero(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn                     )
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -3972,14 +3381,12 @@ int optState<T,S>::modAlphaLBtoUBhpzero(int iP, const Matrix<double> &Gp, const 
 	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
     }
 
-    int res = probContext.modAlphaLBtoUB(iP);
-
-    return res;
+    return probContext.modAlphaLBtoUB(iP);
 }
 
 template <class T, class S>
 int optState<T,S>::modAlphaZtoLBhpzero (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn                     )
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4000,14 +3407,12 @@ int optState<T,S>::modAlphaZtoLBhpzero (int iP, const Matrix<double> &Gp, const 
 	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
     }
 
-    int res = probContext.modAlphaZtoLB(iP);
-
-    return res;
+    return probContext.modAlphaZtoLB(iP);
 }
 
 template <class T, class S>
 int optState<T,S>::modAlphaZtoUBhpzero (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn                     )
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4028,14 +3433,12 @@ int optState<T,S>::modAlphaZtoUBhpzero (int iP, const Matrix<double> &Gp, const 
 	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
     }
 
-    int res = probContext.modAlphaZtoUB(iP);
-
-    return res;
+    return probContext.modAlphaZtoUB(iP);
 }
 
 template <class T, class S>
 int optState<T,S>::modAlphaUBtoLBhpzero(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn                     )
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4056,14 +3459,12 @@ int optState<T,S>::modAlphaUBtoLBhpzero(int iP, const Matrix<double> &Gp, const 
 	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
     }
 
-    int res = probContext.modAlphaUBtoLB(iP);
-
-    return res;
+    return probContext.modAlphaUBtoLB(iP);
 }
 
 template <class T, class S>
 int optState<T,S>::modAlphaUBtoZhpzero (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn                     )
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4084,14 +3485,12 @@ int optState<T,S>::modAlphaUBtoZhpzero (int iP, const Matrix<double> &Gp, const 
 	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
     }
 
-    int res = probContext.modAlphaUBtoZ(iP);
-
-    return res;
+    return probContext.modAlphaUBtoZ(iP);
 }
 
 template <class T, class S>
 int optState<T,S>::modAlphaLBtoLFhpzero(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn)
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4133,7 +3532,7 @@ int optState<T,S>::modAlphaLBtoLFhpzero(int iP, const Matrix<double> &Gp, const 
 
 template <class T, class S>
 int optState<T,S>::modAlphaLBtoUFhpzero(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn)
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4175,7 +3574,7 @@ int optState<T,S>::modAlphaLBtoUFhpzero(int iP, const Matrix<double> &Gp, const 
 
 template <class T, class S>
 int optState<T,S>::modAlphaUBtoUFhpzero(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn)
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4217,7 +3616,7 @@ int optState<T,S>::modAlphaUBtoUFhpzero(int iP, const Matrix<double> &Gp, const 
 
 template <class T, class S>
 int optState<T,S>::modAlphaUBtoLFhpzero(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn                     )
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4258,69 +3657,28 @@ int optState<T,S>::modAlphaUBtoLFhpzero(int iP, const Matrix<double> &Gp, const 
 }
 
 inline int isneg(double a);
-inline int isneg(double a)
-{
-    return ( a < 0 );
-}
-
-
 inline int ispos(double a);
-inline int ispos(double a)
-{
-    return ( a > 0 );
-}
 
+inline int isneg(double a) { return ( a < 0 ); }
+inline int ispos(double a) { return ( a > 0 ); }
 
 inline int isneg(double a, double x);
-inline int isneg(double a, double x)
-{
-    return ( a < x );
-}
-
-
 inline int ispos(double a, double x);
-inline int ispos(double a, double x)
-{
-    return ( a > x );
-}
 
+inline int isneg(double a, double x) { return ( a < x ); }
+inline int ispos(double a, double x) { return ( a > x ); }
 
 inline int isneg(const Vector<double> &a);
-inline int isneg(const Vector<double> &a)
-{
-    (void) a;
-
-    return 1;
-}
-
-
 inline int ispos(const Vector<double> &a);
-inline int ispos(const Vector<double> &a)
-{
-    (void) a;
 
-    return 1;
-}
-
+inline int isneg(const Vector<double> &) { return 1; }
+inline int ispos(const Vector<double> &) { return 1; }
 
 inline int isnegcond(const Vector<double> &a, double x);
-inline int isnegcond(const Vector<double> &a, double x)
-{
-    (void) a;
-    (void) x;
-
-    return 1;
-}
-
-
 inline int isposcond(const Vector<double> &a, double x);
-inline int isposcond(const Vector<double> &a, double x)
-{
-    (void) a;
-    (void) x;
 
-    return 1;
-}
+inline int isnegcond(const Vector<double> &, double ) { return 1; }
+inline int isposcond(const Vector<double> &, double ) { return 1; }
 
 
 template <class T, class S>
@@ -4347,15 +3705,8 @@ int optState<T,S>::modAlphaLFtoUFhpzero(int iP, const Matrix<S> &GpGrad, const M
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
 //    NiceAssert( isposcond(alpha(pivAlphaF(res)),-dopttol) );
@@ -4377,7 +3728,7 @@ int optState<T,S>::modAlphaLFtoUFhpzero(int iP, const Matrix<S> &GpGrad, const M
 
 template <class T, class S>
 int optState<T,S>::modAlphaUFtoLFhpzero(int iP, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn)
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     NiceAssert( Gn.isSquare() );
@@ -4399,15 +3750,8 @@ int optState<T,S>::modAlphaUFtoLFhpzero(int iP, const Matrix<S> &GpGrad, const M
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
 //    NiceAssert( isnegcond(alpha(pivAlphaF(res)),dopttol) );
@@ -4453,15 +3797,8 @@ int optState<T,S>::modAlphaLFtoLBhpzero(int iP, const Matrix<double> &Gp, const 
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(alpha(pivAlphaLB(res))-lb.v(pivAlphaLB(res))) < dopttol );
@@ -4480,7 +3817,7 @@ int optState<T,S>::modAlphaLFtoLBhpzero(int iP, const Matrix<double> &Gp, const 
 
 template <class T, class S>
 int optState<T,S>::modAlphaLFtoZhpzero (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn)
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4503,15 +3840,8 @@ int optState<T,S>::modAlphaLFtoZhpzero (int iP, const Matrix<double> &Gp, const 
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(alpha(pivAlphaZ(res))) < dopttol );
@@ -4530,7 +3860,7 @@ int optState<T,S>::modAlphaLFtoZhpzero (int iP, const Matrix<double> &Gp, const 
 
 template <class T, class S>
 int optState<T,S>::modAlphaLFtoUBhpzero(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<double> &ub)
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4554,15 +3884,8 @@ int optState<T,S>::modAlphaLFtoUBhpzero(int iP, const Matrix<double> &Gp, const 
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(ub.v(pivAlphaUB(res))-alpha(pivAlphaUB(res))) < dopttol );
@@ -4581,7 +3904,7 @@ int optState<T,S>::modAlphaLFtoUBhpzero(int iP, const Matrix<double> &Gp, const 
 
 template <class T, class S>
 int optState<T,S>::modAlphaZtoLFhpzero (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn)
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4607,15 +3930,8 @@ int optState<T,S>::modAlphaZtoLFhpzero (int iP, const Matrix<double> &Gp, const 
     {
         if ( abs2(dalphaGrad(pivAlphaF(res))) > dopttol )
 	{
-	    if ( alphagradstate == -1 )
-	    {
-		alphagradstate = res;
-	    }
-
-	    else if ( alphagradstate >= 0 )
-	    {
-		alphagradstate = -2;
-	    }
+	    if      ( alphagradstate == -1 ) { alphagradstate = res; }
+	    else if ( alphagradstate >= 0  ) { alphagradstate = -2;  }
 	}
     }
 
@@ -4624,7 +3940,7 @@ int optState<T,S>::modAlphaZtoLFhpzero (int iP, const Matrix<double> &Gp, const 
 
 template <class T, class S>
 int optState<T,S>::modAlphaZtoUFhpzero (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn)
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4650,15 +3966,8 @@ int optState<T,S>::modAlphaZtoUFhpzero (int iP, const Matrix<double> &Gp, const 
     {
         if ( abs2(dalphaGrad(pivAlphaF(res))) > dopttol )
 	{
-	    if ( alphagradstate == -1 )
-	    {
-		alphagradstate = res;
-	    }
-
-	    else if ( alphagradstate >= 0 )
-	    {
-		alphagradstate = -2;
-	    }
+	    if      ( alphagradstate == -1 ) { alphagradstate = res; }
+	    else if ( alphagradstate >= 0  ) { alphagradstate = -2;  }
 	}
     }
 
@@ -4667,7 +3976,7 @@ int optState<T,S>::modAlphaZtoUFhpzero (int iP, const Matrix<double> &Gp, const 
 
 template <class T, class S>
 int optState<T,S>::modAlphaUFtoLBhpzero(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<double> &lb)
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4691,15 +4000,8 @@ int optState<T,S>::modAlphaUFtoLBhpzero(int iP, const Matrix<double> &Gp, const 
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(lb.v(pivAlphaLB(res))-alpha(pivAlphaLB(res))) < dopttol );
@@ -4718,7 +4020,7 @@ int optState<T,S>::modAlphaUFtoLBhpzero(int iP, const Matrix<double> &Gp, const 
 
 template <class T, class S>
 int optState<T,S>::modAlphaUFtoZhpzero (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn)
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4741,15 +4043,8 @@ int optState<T,S>::modAlphaUFtoZhpzero (int iP, const Matrix<double> &Gp, const 
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(alpha(pivAlphaZ(res))) < dopttol );
@@ -4768,7 +4063,7 @@ int optState<T,S>::modAlphaUFtoZhpzero (int iP, const Matrix<double> &Gp, const 
 
 template <class T, class S>
 int optState<T,S>::modAlphaUFtoUBhpzero(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<double> &ub)
-{ 
+{
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
     //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
@@ -4792,15 +4087,8 @@ int optState<T,S>::modAlphaUFtoUBhpzero(int iP, const Matrix<double> &Gp, const 
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(alpha(pivAlphaUB(res))-ub.v(pivAlphaUB(res))) < dopttol );
@@ -4836,64 +4124,33 @@ int optState<T,S>::modAllToDesthpzero(const Matrix<double> &Gp, const Matrix<S> 
     NiceAssert( gp.size() == aN() );
     NiceAssert( gn.size() == bN() );
 
-    int i,iP;
     int res = 0;
 
     // Step 1: convert all LB to LF, UB to UF
 
-    //if ( aNLB() )
-    {
-        for ( iP = aNLB()-1 ; iP >= 0 ; --iP )
-        {
-            res |= modAlphaLBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-        }
-    }
-
-    //if ( aNUB() )
-    {
-        for ( iP = aNUB()-1 ; iP >= 0 ; --iP )
-        {
-            res |= modAlphaUBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-        }
-    }
+    for ( int iP = aNLB()-1 ; iP >= 0 ; --iP ) { res |= modAlphaLBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+    for ( int iP = aNUB()-1 ; iP >= 0 ; --iP ) { res |= modAlphaUBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
 
     // Step 2: sign-correct LF and UF
 
-    //if ( aNF() )
+    for ( int iP = aNF()-1 ; iP >= 0 ; --iP )
     {
-        for ( iP = aNF()-1 ; iP >= 0 ; --iP )
-        {
-            i = pivAlphaF(iP);
+        int i = pivAlphaF(iP);
 
-            if ( ispos(alpha(i)) && ( alphaState(i) == -1 ) )
-            {
-                res |= modAlphaUFtoLFhpzero(iP,GpGrad,Gn,Gpn,gp,gn);
-            }
-
-            else if ( isneg(alpha(i)) && ( alphaState(i) == +1 ) )
-            {
-                res |= modAlphaLFtoUFhpzero(iP,GpGrad,Gn,Gpn,gp,gn);
-            }
-        }
+        if      ( ispos(alpha(i)) && ( alphaState(i) == -1 ) ) { res |= modAlphaUFtoLFhpzero(iP,GpGrad,Gn,Gpn,gp,gn); }
+        else if ( isneg(alpha(i)) && ( alphaState(i) == +1 ) ) { res |= modAlphaLFtoUFhpzero(iP,GpGrad,Gn,Gpn,gp,gn); }
     }
 
     // Step 3: mod Z to {L,U}F for all Z constrained variabled with astat (if lastN then only do this if in last NRff variables)
 
-    //if ( aNZ() )
+    for ( int iP = aNZ()-1 ; iP >= 0 ; --iP )
     {
-        for ( iP = aNZ()-1 ; iP >= 0 ; --iP )
+        int i = pivAlphaZ(iP);
+
+        if ( !lastN || ( i >= aN()-NRff ) )
         {
-            i = pivAlphaZ(iP);
-
-            if ( !lastN || ( i >= aN()-NRff ) )
-            {
-                NiceAssert( ( alphaRestrict()(i) == 3 ) || !(alphaRestrict()(i)) );
-
-                if ( !(alphaRestrict()(i)) )
-                {
-                    res |= modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-                }
-            }
+            NiceAssert( ( alphaRestrict()(i) == 3 ) || !(alphaRestrict()(i)) );
+            if ( !(alphaRestrict()(i)) ) { res |= modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
         }
     }
 
@@ -4912,9 +4169,9 @@ int optState<T,S>::modAllToDesthpzero(const Matrix<double> &Gp, const Matrix<S> 
         {
             clearrun = 1;
 
-            for ( iP = aNF()-1 ; iP >= 0 ; --iP )
+            for ( int iP = aNF()-1 ; iP >= 0 ; --iP )
             {
-                i = pivAlphaF(iP);
+                int i = pivAlphaF(iP);
 
                 NiceAssert( ( alphaRestrict()(i) == 3 ) || !(alphaRestrict()(i)) );
 
@@ -4943,19 +4200,13 @@ int optState<T,S>::modAllToDesthpzero(const Matrix<double> &Gp, const Matrix<S> 
 
     // Step 5: mod C to F for all C constrained beta with bstat
 
-    //if ( bNC() )
+    for ( int iP = bNC()-1 ; iP >= 0 ; --iP )
     {
-        for ( iP = bNC()-1 ; iP >= 0 ; --iP )
-        {
-            i = pivBetaC(iP);
+        int i = pivBetaC(iP);
 
-            NiceAssert( ( betaRestrict()(i) == 3 ) || !(betaRestrict()(i)) );
+        NiceAssert( ( betaRestrict()(i) == 3 ) || !(betaRestrict()(i)) );
 
-            if ( !(betaRestrict()(i)) )
-            {
-                res |= modBetaCtoFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-            }
-        }
+        if ( !(betaRestrict()(i)) ) { res |= modBetaCtoFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
     }
 
     // Step 6: mod F to C for all C constrained beta with !bstat (also constrain if lastN set)
@@ -4973,9 +4224,9 @@ int optState<T,S>::modAllToDesthpzero(const Matrix<double> &Gp, const Matrix<S> 
         {
             clearrun = 1;
 
-            for ( iP = bNF()-1 ; iP >= 0 ; --iP )
+            for ( int iP = bNF()-1 ; iP >= 0 ; --iP )
             {
-                i = pivBetaF(iP);
+                int i = pivBetaF(iP);
 
                 NiceAssert( ( betaRestrict()(i) == 3 ) || !(betaRestrict()(i)) );
 
@@ -5029,7 +4280,7 @@ int optState<T,S>::modAlphaLBtoZ (int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaLBtoUB(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp                     )
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5054,14 +4305,12 @@ int optState<T,S>::modAlphaLBtoUB(int iP, const Matrix<double> &Gp, const Matrix
 
     dalphaGrad("&",pivAlphaLB(iP)) += 2*hp(pivAlphaLB(iP));
 
-    int res = probContext.modAlphaLBtoUB(iP);
-
-    return res;
+    return probContext.modAlphaLBtoUB(iP);
 }
 
 template <class T, class S>
 int optState<T,S>::modAlphaZtoLB (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp                     )
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5086,14 +4335,12 @@ int optState<T,S>::modAlphaZtoLB (int iP, const Matrix<double> &Gp, const Matrix
 
     dalphaGrad("&",pivAlphaZ(iP)) -= hp(pivAlphaZ(iP));
 
-    int res = probContext.modAlphaZtoLB(iP);
-
-    return res;
+    return probContext.modAlphaZtoLB(iP);
 }
 
 template <class T, class S>
 int optState<T,S>::modAlphaZtoUB (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp                     )
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5118,14 +4365,12 @@ int optState<T,S>::modAlphaZtoUB (int iP, const Matrix<double> &Gp, const Matrix
 
     dalphaGrad("&",pivAlphaZ(iP)) += hp(pivAlphaZ(iP));
 
-    int res = probContext.modAlphaZtoUB(iP);
-
-    return res;
+    return probContext.modAlphaZtoUB(iP);
 }
 
 template <class T, class S>
 int optState<T,S>::modAlphaUBtoLB(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp                     )
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5150,14 +4395,12 @@ int optState<T,S>::modAlphaUBtoLB(int iP, const Matrix<double> &Gp, const Matrix
 
     dalphaGrad("&",pivAlphaUB(iP)) -= 2*hp(pivAlphaUB(iP));
 
-    int res = probContext.modAlphaUBtoLB(iP);
-
-    return res;
+    return probContext.modAlphaUBtoLB(iP);
 }
 
 template <class T, class S>
 int optState<T,S>::modAlphaUBtoZ (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp                     )
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5182,14 +4425,12 @@ int optState<T,S>::modAlphaUBtoZ (int iP, const Matrix<double> &Gp, const Matrix
 
     dalphaGrad("&",pivAlphaUB(iP)) -= hp(pivAlphaUB(iP));
 
-    int res = probContext.modAlphaUBtoZ(iP);
-
-    return res;
+    return probContext.modAlphaUBtoZ(iP);
 }
 
 template <class T, class S>
 int optState<T,S>::modAlphaLBtoLF(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5216,15 +4457,8 @@ int optState<T,S>::modAlphaLBtoLF(int iP, const Matrix<double> &Gp, const Matrix
     {
         if ( abs2(dalphaGrad(pivAlphaF(res))) > dopttol )
 	{
-	    if ( alphagradstate == -1 )
-	    {
-		alphagradstate = res;
-	    }
-
-	    else if ( alphagradstate >= 0 )
-	    {
-		alphagradstate = -2;
-	    }
+	    if      ( alphagradstate == -1 ) { alphagradstate = res; }
+	    else if ( alphagradstate >= 0  ) { alphagradstate = -2;  }
 	}
     }
 
@@ -5233,7 +4467,7 @@ int optState<T,S>::modAlphaLBtoLF(int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaLBtoUF(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5262,15 +4496,8 @@ int optState<T,S>::modAlphaLBtoUF(int iP, const Matrix<double> &Gp, const Matrix
     {
         if ( abs2(dalphaGrad(pivAlphaF(res))) > dopttol )
 	{
-	    if ( alphagradstate == -1 )
-	    {
-		alphagradstate = res;
-	    }
-
-	    else if ( alphagradstate >= 0 )
-	    {
-		alphagradstate = -2;
-	    }
+	    if      ( alphagradstate == -1 ) { alphagradstate = res; }
+	    else if ( alphagradstate >= 0  ) { alphagradstate = -2;  }
 	}
     }
 
@@ -5279,7 +4506,7 @@ int optState<T,S>::modAlphaLBtoUF(int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaUBtoUF(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5306,15 +4533,8 @@ int optState<T,S>::modAlphaUBtoUF(int iP, const Matrix<double> &Gp, const Matrix
     {
         if ( abs2(dalphaGrad(pivAlphaF(res))) > dopttol )
 	{
-	    if ( alphagradstate == -1 )
-	    {
-		alphagradstate = res;
-	    }
-
-	    else if ( alphagradstate >= 0 )
-	    {
-		alphagradstate = -2;
-	    }
+	    if      ( alphagradstate == -1 ) { alphagradstate = res; }
+	    else if ( alphagradstate >= 0  ) { alphagradstate = -2;  }
 	}
     }
 
@@ -5323,7 +4543,7 @@ int optState<T,S>::modAlphaUBtoUF(int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaUBtoLF(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp                     )
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5352,15 +4572,8 @@ int optState<T,S>::modAlphaUBtoLF(int iP, const Matrix<double> &Gp, const Matrix
     {
         if ( abs2(dalphaGrad(pivAlphaF(res))) > dopttol )
 	{
-	    if ( alphagradstate == -1 )
-	    {
-		alphagradstate = res;
-	    }
-
-	    else if ( alphagradstate >= 0 )
-	    {
-		alphagradstate = -2;
-	    }
+	    if      ( alphagradstate == -1 ) { alphagradstate = res; }
+	    else if ( alphagradstate >= 0  ) { alphagradstate = -2;  }
 	}
     }
 
@@ -5369,7 +4582,7 @@ int optState<T,S>::modAlphaUBtoLF(int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaLFtoUF(int iP, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5395,15 +4608,8 @@ int optState<T,S>::modAlphaLFtoUF(int iP, const Matrix<S> &GpGrad, const Matrix<
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( alpha(pivAlphaF(res)) > -dopttol );
@@ -5425,7 +4631,7 @@ int optState<T,S>::modAlphaLFtoUF(int iP, const Matrix<S> &GpGrad, const Matrix<
 
 template <class T, class S>
 int optState<T,S>::modAlphaUFtoLF(int iP, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5451,15 +4657,8 @@ int optState<T,S>::modAlphaUFtoLF(int iP, const Matrix<S> &GpGrad, const Matrix<
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( alpha(pivAlphaF(res)) < dopttol );
@@ -5481,7 +4680,7 @@ int optState<T,S>::modAlphaUFtoLF(int iP, const Matrix<S> &GpGrad, const Matrix<
 
 template <class T, class S>
 int optState<T,S>::modAlphaLFtoLB(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp, const Vector<double> &lb)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5507,15 +4706,8 @@ int optState<T,S>::modAlphaLFtoLB(int iP, const Matrix<double> &Gp, const Matrix
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(alpha(pivAlphaLB(res))-lb.v(pivAlphaLB(res))) < dopttol );
@@ -5534,7 +4726,7 @@ int optState<T,S>::modAlphaLFtoLB(int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaLFtoZ (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5561,15 +4753,8 @@ int optState<T,S>::modAlphaLFtoZ (int iP, const Matrix<double> &Gp, const Matrix
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(alpha(pivAlphaZ(res))) < dopttol );
@@ -5588,7 +4773,7 @@ int optState<T,S>::modAlphaLFtoZ (int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaLFtoUB(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp, const Vector<double> &ub)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5616,15 +4801,8 @@ int optState<T,S>::modAlphaLFtoUB(int iP, const Matrix<double> &Gp, const Matrix
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(ub.v(pivAlphaUB(res))-alpha(pivAlphaUB(res))) < dopttol );
@@ -5643,7 +4821,7 @@ int optState<T,S>::modAlphaLFtoUB(int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaZtoLF (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5673,15 +4851,8 @@ int optState<T,S>::modAlphaZtoLF (int iP, const Matrix<double> &Gp, const Matrix
     {
         if ( abs2(dalphaGrad(pivAlphaF(res))) > dopttol )
 	{
-	    if ( alphagradstate == -1 )
-	    {
-		alphagradstate = res;
-	    }
-
-	    else if ( alphagradstate >= 0 )
-	    {
-		alphagradstate = -2;
-	    }
+	    if      ( alphagradstate == -1 ) { alphagradstate = res; }
+	    else if ( alphagradstate >= 0  ) { alphagradstate = -2;  }
 	}
     }
 
@@ -5690,7 +4861,7 @@ int optState<T,S>::modAlphaZtoLF (int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaZtoUF (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5720,15 +4891,8 @@ int optState<T,S>::modAlphaZtoUF (int iP, const Matrix<double> &Gp, const Matrix
     {
         if ( abs2(dalphaGrad(pivAlphaF(res))) > dopttol )
 	{
-	    if ( alphagradstate == -1 )
-	    {
-		alphagradstate = res;
-	    }
-
-	    else if ( alphagradstate >= 0 )
-	    {
-		alphagradstate = -2;
-	    }
+	    if      ( alphagradstate == -1 ) { alphagradstate = res; }
+	    else if ( alphagradstate >= 0  ) { alphagradstate = -2;  }
 	}
     }
 
@@ -5737,7 +4901,7 @@ int optState<T,S>::modAlphaZtoUF (int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaUFtoLB(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp, const Vector<double> &lb)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5766,15 +4930,8 @@ int optState<T,S>::modAlphaUFtoLB(int iP, const Matrix<double> &Gp, const Matrix
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(lb.v(pivAlphaLB(res))-alpha(pivAlphaLB(res))) < dopttol );
@@ -5793,7 +4950,7 @@ int optState<T,S>::modAlphaUFtoLB(int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaUFtoZ (int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5820,15 +4977,8 @@ int optState<T,S>::modAlphaUFtoZ (int iP, const Matrix<double> &Gp, const Matrix
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(alpha(pivAlphaZ(res))) < dopttol );
@@ -5847,7 +4997,7 @@ int optState<T,S>::modAlphaUFtoZ (int iP, const Matrix<double> &Gp, const Matrix
 
 template <class T, class S>
 int optState<T,S>::modAlphaUFtoUB(int iP, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp, const Vector<double> &ub)
-{ 
+{
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
     NiceAssert( GpGrad.numRows() == Gpn.numRows() );
@@ -5873,15 +5023,8 @@ int optState<T,S>::modAlphaUFtoUB(int iP, const Matrix<double> &Gp, const Matrix
 
     if ( keepfact() )
     {
-	if ( alphagradstate == iP )
-	{
-	    alphagradstate = -1;
-	}
-
-	else if ( alphagradstate > iP )
-	{
-	    --alphagradstate;
-	}
+	if      ( alphagradstate == iP ) { alphagradstate = -1; }
+	else if ( alphagradstate >  iP ) { --alphagradstate;    }
     }
 
     NiceAssert( abs2(alpha(pivAlphaUB(res))-ub.v(pivAlphaUB(res))) < dopttol );
@@ -5927,15 +5070,8 @@ int optState<T,S>::modBetaCtoF(int iP, const Matrix<double> &Gp, const Matrix<S>
     {
         if ( abs2(dbetaGrad(pivBetaF(res))) > dopttol )
 	{
-	    if ( betagradstate == -1 )
-	    {
-		betagradstate = res;
-	    }
-
-	    else if ( betagradstate >= 0 )
-	    {
-		betagradstate = -2;
-	    }
+	    if      ( betagradstate == -1 ) { betagradstate = res; }
+	    else if ( betagradstate >= 0  ) { betagradstate = -2;  }
 	}
     }
 
@@ -5968,15 +5104,8 @@ int optState<T,S>::modBetaFtoC(int iP, const Matrix<double> &Gp, const Matrix<S>
 
     if ( keepfact() )
     {
-	if ( betagradstate == iP )
-	{
-	    betagradstate = -1;
-	}
-
-	else if ( betagradstate > iP )
-	{
-	    --betagradstate;
-	}
+	if      ( betagradstate == iP ) { betagradstate = -1; }
+	else if ( betagradstate >  iP ) { --betagradstate;    }
     }
 
     NiceAssert( abs2(beta(pivBetaC(res))) < dopttol );
@@ -6021,15 +5150,8 @@ int optState<T,S>::modBetaCtoFhpzero(int iP, const Matrix<double> &Gp, const Mat
     {
         if ( abs2(dbetaGrad(pivBetaF(res))) > dopttol )
 	{
-	    if ( betagradstate == -1 )
-	    {
-		betagradstate = res;
-	    }
-
-	    else if ( betagradstate >= 0 )
-	    {
-		betagradstate = -2;
-	    }
+	    if      ( betagradstate == -1 ) { betagradstate = res; }
+	    else if ( betagradstate >= 0  ) { betagradstate = -2;  }
 	}
     }
 
@@ -6061,15 +5183,8 @@ int optState<T,S>::modBetaFtoChpzero(int iP, const Matrix<double> &Gp, const Mat
 
     if ( keepfact() )
     {
-	if ( betagradstate == iP )
-	{
-	    betagradstate = -1;
-	}
-
-	else if ( betagradstate > iP )
-	{
-	    --betagradstate;
-	}
+	if      ( betagradstate == iP ) { betagradstate = -1; }
+	else if ( betagradstate >  iP ) { --betagradstate;    }
     }
 
     NiceAssert( abs2(beta(pivBetaC(res))) < dopttol );
@@ -6086,6 +5201,7 @@ int optState<T,S>::modBetaFtoChpzero(int iP, const Matrix<double> &Gp, const Mat
     return res;
 }
 
+
 template <class T, class S>
 T &optState<T,S>::posAlphaGradhpzero(T &result, int i, const Matrix<S> &GpGrad, const Matrix<double> &Gpn, const Vector<T> &gp) const
 {
@@ -6098,15 +5214,8 @@ T &optState<T,S>::posAlphaGradhpzero(T &result, int i, const Matrix<S> &GpGrad, 
     NiceAssert( i < dalphaGrad.size() );
     NiceAssert( alphaState(i) >= 0 );
 
-    if ( gradFixAlphaInd && gradFixAlpha.v(i) )
-    {
-	recalcAlphaGradhpzero(result,GpGrad,Gpn,gp,i);
-    }
-
-    else
-    {
-	result = alphaGrad(i);
-    }
+    if ( gradFixAlphaInd && gradFixAlpha.v(i) ) { recalcAlphaGradhpzero(result,GpGrad,Gpn,gp,i); }
+    else                                        { result = alphaGrad(i);                         }
 
     return result;
 }
@@ -6123,15 +5232,8 @@ T &optState<T,S>::negAlphaGradhpzero(T &result, int i, const Matrix<S> &GpGrad, 
     NiceAssert( i < dalphaGrad.size() );
     NiceAssert( alphaState(i) <= 0 );
 
-    if ( gradFixAlphaInd && gradFixAlpha.v(i) )
-    {
-	recalcAlphaGradhpzero(result,GpGrad,Gpn,gp,i);
-    }
-
-    else
-    {
-	result = alphaGrad(i);
-    }
+    if ( gradFixAlphaInd && gradFixAlpha.v(i) ) { recalcAlphaGradhpzero(result,GpGrad,Gpn,gp,i); }
+    else                                        { result = alphaGrad(i);                         }
 
     return result;
 }
@@ -6150,20 +5252,10 @@ T &optState<T,S>::posAlphaGrad(T &result, int i, const Matrix<S> &GpGrad, const 
     NiceAssert( i < dalphaGrad.size() );
     NiceAssert( alphaState(i) >= 0 );
 
-    if ( gradFixAlphaInd && gradFixAlpha.v(i) )
-    {
-	recalcAlphaGrad(result,GpGrad,Gpn,gp,hp,i);
-    }
+    if ( gradFixAlphaInd && gradFixAlpha.v(i) ) { recalcAlphaGrad(result,GpGrad,Gpn,gp,hp,i); }
+    else                                        { result = alphaGrad(i);                      }
 
-    else
-    {
-	result = alphaGrad(i);
-    }
-
-    if ( alphaState(i) == 0 )
-    {
-        result += hp(i);
-    }
+    if ( alphaState(i) == 0 ) { result += hp(i); }
 
     return result;
 }
@@ -6182,20 +5274,10 @@ T &optState<T,S>::negAlphaGrad(T &result, int i, const Matrix<S> &GpGrad, const 
     NiceAssert( i < dalphaGrad.size() );
     NiceAssert( alphaState(i) <= 0 );
 
-    if ( gradFixAlphaInd && gradFixAlpha.v(i) )
-    {
-	recalcAlphaGrad(result,GpGrad,Gpn,gp,hp,i);
-    }
+    if ( gradFixAlphaInd && gradFixAlpha.v(i) ) { recalcAlphaGrad(result,GpGrad,Gpn,gp,hp,i); }
+    else                                        { result = alphaGrad(i);                      }
 
-    else
-    {
-	result = alphaGrad(i);
-    }
-
-    if ( alphaState(i) == 0 )
-    {
-        result -= hp(i);
-    }
+    if ( alphaState(i) == 0 ) { result -= hp(i); }
 
     return result;
 }
@@ -6212,15 +5294,8 @@ T &optState<T,S>::spAlphaGradhpzero(T &result, int i, const Matrix<S> &GpGrad, c
     NiceAssert( i < dalphaGrad.size() );
     NiceAssert( alphaState(i) <= 0 );
 
-    if ( gradFixAlphaInd && gradFixAlpha.v(i) )
-    {
-	recalcAlphaGradhpzero(result,GpGrad,Gpn,gp,i);
-    }
-
-    else
-    {
-	result = alphaGrad(i);
-    }
+    if ( gradFixAlphaInd && gradFixAlpha.v(i) ) { recalcAlphaGradhpzero(result,GpGrad,Gpn,gp,i); }
+    else                                        { result = alphaGrad(i);                         }
 
     return result;
 }
@@ -6239,25 +5314,11 @@ T &optState<T,S>::spAlphaGrad(T &result, int i, const Matrix<S> &GpGrad, const M
     NiceAssert( i < dalphaGrad.size() );
     NiceAssert( alphaState(i) <= 0 );
 
-    if ( gradFixAlphaInd && gradFixAlpha.v(i) )
-    {
-	recalcAlphaGrad(result,GpGrad,Gpn,gp,hp,i);
-    }
+    if ( gradFixAlphaInd && gradFixAlpha.v(i) ) { recalcAlphaGrad(result,GpGrad,Gpn,gp,hp,i); }
+    else                                        { result = alphaGrad(i);                      }
 
-    else
-    {
-	result = alphaGrad(i);
-    }
-
-    if ( ( alphaState(i) == 0 ) && ( alphaRestrict()(i) == 1 ) )
-    {
-        result += hp(i);
-    }
-
-    else if ( ( alphaState(i) == 0 ) && ( alphaRestrict()(i) == 2 ) )
-    {
-        result -= hp(i);
-    }
+    if      ( ( alphaState(i) == 0 ) && ( alphaRestrict()(i) == 1 ) ) { result += hp(i); }
+    else if ( ( alphaState(i) == 0 ) && ( alphaRestrict()(i) == 2 ) ) { result -= hp(i); }
 
     return result;
 }
@@ -6279,25 +5340,11 @@ int optState<T,S>::unAlphaGradIfPresent(T &result, int i, const Matrix<S> &GpGra
     (void) Gpn;
     (void) gp;
 
-    if ( gradFixAlphaInd && gradFixAlpha.v(i) )
-    {
-	return 1;
-    }
+    if ( gradFixAlphaInd && gradFixAlpha.v(i) ) { return 1;              }
+    else                                        { result = alphaGrad(i); }
 
-    else
-    {
-	result = alphaGrad(i);
-    }
-
-    if ( alphaState(i) < 0 )
-    {
-        result += hp(i);
-    }
-
-    else if ( alphaState(i) > 0 )
-    {
-        result -= hp(i);
-    }
+    if      ( alphaState(i) < 0 ) { result += hp(i); }
+    else if ( alphaState(i) > 0 ) { result -= hp(i); }
 
     return 0;
 }
@@ -6313,15 +5360,8 @@ T &optState<T,S>::unAlphaGradhpzero(T &result, int i, const Matrix<S> &GpGrad, c
     NiceAssert( i >= 0 );
     NiceAssert( i < dalphaGrad.size() );
 
-    if ( gradFixAlphaInd && gradFixAlpha.v(i) )
-    {
-	recalcAlphaGradhpzero(result,GpGrad,Gpn,gp,i);
-    }
-
-    else
-    {
-	result = alphaGrad(i);
-    }
+    if ( gradFixAlphaInd && gradFixAlpha.v(i) ) { recalcAlphaGradhpzero(result,GpGrad,Gpn,gp,i); }
+    else                                        { result = alphaGrad(i);                         }
 
     return result;
 }
@@ -6339,25 +5379,11 @@ T &optState<T,S>::unAlphaGrad(T &result, int i, const Matrix<S> &GpGrad, const M
     NiceAssert( i >= 0 );
     NiceAssert( i < dalphaGrad.size() );
 
-    if ( gradFixAlphaInd && gradFixAlpha.v(i) )
-    {
-	recalcAlphaGrad(result,GpGrad,Gpn,gp,hp,i);
-    }
+    if ( gradFixAlphaInd && gradFixAlpha.v(i) ) { recalcAlphaGrad(result,GpGrad,Gpn,gp,hp,i); }
+    else                                        { result = alphaGrad(i);                      }
 
-    else
-    {
-	result = alphaGrad(i);
-    }
-
-    if ( alphaState(i) < 0 )
-    {
-        result += hp(i);
-    }
-
-    else if ( alphaState(i) > 0 )
-    {
-        result -= hp(i);
-    }
+    if      ( alphaState(i) < 0 ) { result += hp(i); }
+    else if ( alphaState(i) > 0 ) { result -= hp(i); }
 
     return result;
 }
@@ -6374,15 +5400,8 @@ T &optState<T,S>::unBetaGrad(T &result, int i, const Matrix<double> &Gn, const M
     NiceAssert( i >= 0 );
     NiceAssert( i < dbetaGrad.size() );
 
-    if ( gradFixAlphaInd && gradFixBeta.v(i) )
-    {
-        recalcBetaGrad(result,Gn,Gpn,gn,i);
-    }
-
-    else
-    {
-	result = betaGrad(i);
-    }
+    if ( gradFixAlphaInd && gradFixBeta.v(i) ) { recalcBetaGrad(result,Gn,Gpn,gn,i); }
+    else                                       { result = betaGrad(i);               }
 
     return result;
 }
@@ -6418,15 +5437,8 @@ T &optState<T,S>::reAlphaGrad(T &result, int i, const Matrix<S> &GpGrad, const M
 
     unAlphaGrad(result,i,GpGrad,Gpn,gp,hp);
 
-    if ( alphaState(i) < 0 )
-    {
-        result += hp(i);
-    }
-
-    else if ( alphaState(i) > 0 )
-    {
-        result -= hp(i);
-    }
+    if      ( alphaState(i) < 0 ) { result += hp(i); }
+    else if ( alphaState(i) > 0 ) { result -= hp(i); }
 
     return result;
 }
@@ -6468,10 +5480,7 @@ int optState<T,S>::scaleFStep(double &scale, int &alphaFIndex, int &betaFIndex, 
     NiceAssert( bsize >= 0 );
     NiceAssert( bsize <= bNF() );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGrad(GpGrad,Gn,Gpn,gp,gn,hp);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGrad(GpGrad,Gn,Gpn,gp,gn,hp); }
 
     return scaleFStepbase(scale,alphaFIndex,betaFIndex,betaCIndex,stateChange,asize,bsize,bailout,alphaFStep,betaFStep,Gn,Gpn,lb,ub,0);
 }
@@ -6496,10 +5505,7 @@ int optState<T,S>::scaleFStephpzero(double &scale, int &alphaFIndex, int &betaFI
     NiceAssert( bsize >= 0 );
     NiceAssert( bsize <= bNF() );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGradhpzero(GpGrad,Gn,Gpn,gp,gn); }
 
     return scaleFStepbase(scale,alphaFIndex,betaFIndex,betaCIndex,stateChange,asize,bsize,bailout, alphaFStep,betaFStep,Gn,Gpn,lb,ub,1);
 }
@@ -6524,7 +5530,6 @@ int optState<T,S>::scaleFStepbase(double &scale, int &alphaFIndex, int &betaFInd
     NiceAssert( bsize <= bNF() );
 
     int res = 0;
-    int i,iP;
     double potscale;
 
     // NaN can occur if:
@@ -6561,17 +5566,10 @@ int optState<T,S>::scaleFStepbase(double &scale, int &alphaFIndex, int &betaFInd
 
     if ( asize )
     {
-	for ( i = 0 ; ( i < asize ) && !bailout ; ++i )
+	for ( int i = 0 ; ( i < asize ) && !bailout ; ++i )
 	{
-            if ( testisvnan(alpha(pivAlphaF(i))) )
-            {
-                bailout = 1;
-            }
-
-            else if ( testisvnan(alphaFStep(i)) )
-            {
-                bailout = 2;
-            }
+            if      ( testisvnan(alpha(pivAlphaF(i))) ) { bailout = 1; }
+            else if ( testisvnan(alphaFStep(i))       ) { bailout = 2; }
 
             else if ( abs2(alphaFStep(i)) > 0 )
 	    {
@@ -6583,18 +5581,8 @@ int optState<T,S>::scaleFStepbase(double &scale, int &alphaFIndex, int &betaFInd
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&>";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << ">";
-//errstream() << "WARNING: scaling outside bounds (type 1) " << potscale << "\n";
-			    potscale = 0;
-			}
+                        if      ( testisvnan(potscale) ) { errstream() << "&>"; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << ">";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 1) " << potscale << "\n";
 
 			if ( potscale < scale )
 			{
@@ -6616,18 +5604,8 @@ errstream() << ">";
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&]";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << "]";
-//errstream() << "WARNING: scaling outside bounds (type 2) " << potscale << "\n";
-			    potscale = 0;
-			}
+                        if      ( testisvnan(potscale) ) { errstream() << "&]"; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << "]";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 2) " << potscale << "\n";
 
 			if ( potscale < scale )
 			{
@@ -6649,18 +5627,8 @@ errstream() << "]";
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&<";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << "<"; // << "," << alphaRestrict(pivAlphaF(i)) << "," << alpha(i) << "," << alphaGrad()(i) << "," << alphaFStep(i);
-//errstream() << "WARNING: scaling outside bounds (type 3) " << potscale << "\n";
-			    potscale = 0;
-			}
+                        if      ( testisvnan(potscale) ) { errstream() << "&<"; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << "<";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 3) " << potscale << "\n";
 
 			if ( potscale < scale )
 			{
@@ -6682,18 +5650,8 @@ errstream() << "<"; // << "," << alphaRestrict(pivAlphaF(i)) << "," << alpha(i) 
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&)";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << ")";
-//errstream() << "WARNING: scaling outside bounds (type 4) " << potscale << "\n";
-			    potscale = 0;
-			}
+                        if      ( testisvnan(potscale) ) { errstream() << "&)"; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << ")";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 4) " << potscale << "\n";
 
 			if ( potscale < scale )
 			{
@@ -6715,18 +5673,8 @@ errstream() << ")";
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&[";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << "[";
-//errstream() << "WARNING: scaling outside bounds (type 5) " << potscale << "\n";
-			    potscale = 0;
-			}
+                        if      ( testisvnan(potscale) ) { errstream() << "&["; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << "[";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 5) " << potscale << "\n";
 
 			if ( potscale < scale )
 			{
@@ -6748,18 +5696,8 @@ errstream() << "[";
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&(";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << "("; // << "," << alphaRestrict(pivAlphaF(i)) << "," << alpha(i) << "," << alphaGrad()(i) << "," << alphaFStep(i) << "," << ub.v(pivAlphaF(i)) << "\n";
-//errstream() << "WARNING: scaling outside bounds (type 6) " << potscale << "\n";
-			    potscale = 0;
-			}
+                        if      ( testisvnan(potscale) ) { errstream() << "&("; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << "(";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 6) " << potscale << "\n";
 
 			if ( potscale < scale )
 			{
@@ -6778,17 +5716,10 @@ errstream() << "("; // << "," << alphaRestrict(pivAlphaF(i)) << "," << alpha(i) 
 
     if ( bsize && !bailout )
     {
-	for ( i = 0 ; ( i < bsize ) && !bailout ; ++i )
+	for ( int i = 0 ; ( i < bsize ) && !bailout ; ++i )
 	{
-            if ( testisvnan(beta(pivBetaF(i))) )
-            {
-                bailout = 3;
-            }
-
-            else if ( testisvnan(betaFStep(i)) )
-            {
-                bailout = 4;
-            }
+            if      ( testisvnan(beta(pivBetaF(i))) ) { bailout = 3; }
+            else if ( testisvnan(betaFStep(i))      ) { bailout = 4; }
 
 	    else if ( ( dbetaRestrict.v(pivBetaF(i)) == 2 ) && ( scale*betaFStep(i) > 0 ) )
 	    {
@@ -6798,18 +5729,8 @@ errstream() << "("; // << "," << alphaRestrict(pivAlphaF(i)) << "," << alpha(i) 
 
                     //NiceAssert( potscale >= -zerotol() );
 
-                    if ( testisvnan(potscale) )
-                    {
-errstream() << "&}";
-                        potscale = 1.0;
-                    }
-
-		    else if ( potscale < 0 )
-		    {
-errstream() << "}";
-//errstream() << "WARNING: scaling outside bounds (type 7) " << potscale << "\n";
-			potscale = 0;
-		    }
+                    if      ( testisvnan(potscale) ) { errstream() << "&}"; potscale = 1.0; }
+		    else if ( potscale < 0         ) { errstream() << "}";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 7) " << potscale << "\n";
 
 		    if ( potscale < scale )
 		    {
@@ -6831,18 +5752,8 @@ errstream() << "}";
 
                     //NiceAssert( potscale >= -zerotol() );
 
-                    if ( testisvnan(potscale) )
-                    {
-errstream() << "&{";
-                        potscale = 1.0;
-                    }
-
-		    else if ( potscale < 0 )
-		    {
-errstream() << "{";
-//errstream() << "WARNING: scaling outside bounds (type 8) " << potscale << "\n";
-			potscale = 0;
-		    }
+                    if      ( testisvnan(potscale) ) { errstream() << "&{"; potscale = 1.0; }
+		    else if ( potscale < 0         ) { errstream() << "{";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 8) " << potscale << "\n";
 
 		    if ( potscale < scale )
 		    {
@@ -6868,7 +5779,7 @@ errstream() << "{";
 	// NB: this function makes one BIG ASSUMPTION, namely that
 	//     unrestricted betas are never constrained.
 
-        static thread_local Vector<double> betaGradStepC("&",2);
+        thread_local Vector<double> betaGradStepC("&",2);
 	//Vector<double> &betaGradStepC = betaGradStepC_scaleFStepbase; //Vector<double> betaGradStepC(bNC());
         betaGradStepC.resize(bNC());
 
@@ -6878,33 +5789,13 @@ errstream() << "{";
         retVector<T> tmpvb;
         retVector<T> tmpvc;
 
-	//if ( asize )
-	{
-	    for ( iP = 0 ; iP < asize ; ++iP )
-	    {
-                betaGradStepC.scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpva,tmpvb,tmpvc),alphaFStep(iP));
-	    }
-	}
+        for ( int iP = 0 ; iP < asize ; ++iP ) { betaGradStepC.scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpva,tmpvb,tmpvc),alphaFStep(iP)); }
+        for ( int iP = 0 ; iP < bsize ; ++iP ) { betaGradStepC.scaleAddBR(Gn(pivBetaF  (iP),pivBetaC(),tmpva,tmpvb,tmpvc),betaFStep (iP)); }
 
-	//if ( bsize )
+	for ( int iP = 0 ; ( iP < bNC() ) && !bailout ; ++iP )
 	{
-	    for ( iP = 0 ; iP < bsize ; ++iP )
-	    {
-                betaGradStepC.scaleAddBR(Gn(pivBetaF(iP),pivBetaC(),tmpva,tmpvb,tmpvc),betaFStep(iP));
-	    }
-	}
-
-	for ( iP = 0 ; ( iP < bNC() ) && !bailout ; ++iP )
-	{
-            if ( testisvnan(betaGrad(pivBetaC(iP))) )
-            {
-                bailout = 5;
-            }
-
-            else if ( testisvnan(betaGradStepC(iP)) )
-            {
-                bailout = 6;
-            }
+            if      ( testisvnan(betaGrad(pivBetaC(iP))) ) { bailout = 5; }
+            else if ( testisvnan(betaGradStepC(iP))      ) { bailout = 6; }
 
 	    else if ( ( dbetaRestrict.v(pivBetaC(iP)) == 1 ) && ( betaGrad(pivBetaC(iP))+(scale*betaGradStepC(iP)) > 0 ) )
 	    {
@@ -6914,11 +5805,7 @@ errstream() << "{";
 		{
 		    potscale = -betaGrad(pivBetaC(iP))/betaGradStepC(iP);
 
-                    if ( testisvnan(potscale) )
-                    {
-errstream() << "&&";
-                        potscale = 1.0;
-                    }
+                    if ( testisvnan(potscale) ) { errstream() << "&&"; potscale = 1.0; }
 		}
 
 		// NB: it is possible for potscale to be negative.  This
@@ -6945,11 +5832,7 @@ errstream() << "&&";
 		{
 		    potscale = -betaGrad(pivBetaC(iP))/betaGradStepC(iP);
 
-                    if ( testisvnan(potscale) )
-                    {
-errstream() << "&#";
-                        potscale = 1.0;
-                    }
+                    if ( testisvnan(potscale) ) { errstream() << "&#"; potscale = 1.0; }
 		}
 
 		// NB: it is possible for potscale to be negative.  This
@@ -7005,7 +5888,6 @@ template <> inline int optState<double,double>::scaleFStepbase(double &scale, in
     NiceAssert( bsize <= bNF() );
 
     int res = 0;
-    int i,iP;
     double potscale;
 
     // NaN can occur if:
@@ -7042,17 +5924,10 @@ template <> inline int optState<double,double>::scaleFStepbase(double &scale, in
 
     if ( asize )
     {
-	for ( i = 0 ; ( i < asize ) && !bailout ; ++i )
+	for ( int i = 0 ; ( i < asize ) && !bailout ; ++i )
 	{
-            if ( testisvnan(dalpha.v(pivAlphaF(i))) )
-            {
-                bailout = 1;
-            }
-
-            else if ( testisvnan(alphaFStep.v(i)) )
-            {
-                bailout = 2;
-            }
+            if      ( testisvnan(dalpha.v(pivAlphaF(i))) ) { bailout = 1; }
+            else if ( testisvnan(alphaFStep.v(i))        ) { bailout = 2; }
 
             else if ( abs2(alphaFStep.v(i)) > 0 )
 	    {
@@ -7064,18 +5939,8 @@ template <> inline int optState<double,double>::scaleFStepbase(double &scale, in
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&>";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << ">";
-//errstream() << "WARNING: scaling outside bounds (type 1) " << potscale << "\n";
-			    potscale = 0;
-			}
+                        if      ( testisvnan(potscale) ) { errstream() << "&>"; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << ">";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 1) " << potscale << "\n";
 
 			if ( potscale < scale )
 			{
@@ -7097,18 +5962,9 @@ errstream() << ">";
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&]";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << "]";
+                        if      ( testisvnan(potscale) ) { errstream() << "&]"; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << "]";  potscale = 0;   }
 //errstream() << "WARNING: scaling outside bounds (type 2) " << potscale << "\n";
-			    potscale = 0;
-			}
 
 			if ( potscale < scale )
 			{
@@ -7130,18 +5986,9 @@ errstream() << "]";
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&<";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << "<"; // << "," << alphaRestrict(pivAlphaF(i)) << "," << alpha(i) << "," << alphaGrad()(i) << "," << alphaFStep(i);
+                        if      ( testisvnan(potscale) ) { errstream() << "&<"; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << "<";  potscale = 0;   }
 //errstream() << "WARNING: scaling outside bounds (type 3) " << potscale << "\n";
-			    potscale = 0;
-			}
 
 			if ( potscale < scale )
 			{
@@ -7163,18 +6010,8 @@ errstream() << "<"; // << "," << alphaRestrict(pivAlphaF(i)) << "," << alpha(i) 
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&)";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << ")";
-//errstream() << "WARNING: scaling outside bounds (type 4) " << potscale << "\n";
-			    potscale = 0;
-			}
+                        if      ( testisvnan(potscale) ) { errstream() << "&)"; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << ")";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 4) " << potscale << "\n";
 
 			if ( potscale < scale )
 			{
@@ -7196,18 +6033,9 @@ errstream() << ")";
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&[";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << "[";
+                        if      ( testisvnan(potscale) ) { errstream() << "&["; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << "[";  potscale = 0;   }
 //errstream() << "WARNING: scaling outside bounds (type 5) " << potscale << "\n";
-			    potscale = 0;
-			}
 
 			if ( potscale < scale )
 			{
@@ -7229,18 +6057,8 @@ errstream() << "[";
 
                         //NiceAssert( potscale >= -zerotol() );
 
-                        if ( testisvnan(potscale) )
-                        {
-errstream() << "&(";
-                            potscale = 1.0;
-                        }
-
-			else if ( potscale < 0 )
-			{
-errstream() << "("; // << "," << alphaRestrict(pivAlphaF(i)) << "," << alpha(i) << "," << alphaGrad()(i) << "," << alphaFStep(i) << "," << ub.v(pivAlphaF(i)) << "\n";
-//errstream() << "WARNING: scaling outside bounds (type 6) " << potscale << "\n";
-			    potscale = 0;
-			}
+                        if      ( testisvnan(potscale) ) { errstream() << "&("; potscale = 1.0; }
+			else if ( potscale < 0         ) { errstream() << "(";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 6) " << potscale << "\n";
 
 			if ( potscale < scale )
 			{
@@ -7259,17 +6077,10 @@ errstream() << "("; // << "," << alphaRestrict(pivAlphaF(i)) << "," << alpha(i) 
 
     if ( bsize && !bailout )
     {
-	for ( i = 0 ; ( i < bsize ) && !bailout ; ++i )
+	for ( int i = 0 ; ( i < bsize ) && !bailout ; ++i )
 	{
-            if ( testisvnan(dbeta.v(pivBetaF(i))) )
-            {
-                bailout = 3;
-            }
-
-            else if ( testisvnan(betaFStep.v(i)) )
-            {
-                bailout = 4;
-            }
+            if      ( testisvnan(dbeta.v(pivBetaF(i))) ) { bailout = 3; }
+            else if ( testisvnan(betaFStep.v(i))       ) { bailout = 4; }
 
 	    else if ( ( dbetaRestrict.v(pivBetaF(i)) == 2 ) && ( scale*betaFStep.v(i) > 0 ) )
 	    {
@@ -7279,18 +6090,8 @@ errstream() << "("; // << "," << alphaRestrict(pivAlphaF(i)) << "," << alpha(i) 
 
                     //NiceAssert( potscale >= -zerotol() );
 
-                    if ( testisvnan(potscale) )
-                    {
-errstream() << "&}";
-                        potscale = 1.0;
-                    }
-
-		    else if ( potscale < 0 )
-		    {
-errstream() << "}";
-//errstream() << "WARNING: scaling outside bounds (type 7) " << potscale << "\n";
-			potscale = 0;
-		    }
+                    if      ( testisvnan(potscale) ) { errstream() << "&}"; potscale = 1.0; }
+		    else if ( potscale < 0         ) { errstream() << "}";  potscale = 0;   } //errstream() << "WARNING: scaling outside bounds (type 7) " << potscale << "\n";
 
 		    if ( potscale < scale )
 		    {
@@ -7312,18 +6113,9 @@ errstream() << "}";
 
                     //NiceAssert( potscale >= -zerotol() );
 
-                    if ( testisvnan(potscale) )
-                    {
-errstream() << "&{";
-                        potscale = 1.0;
-                    }
-
-		    else if ( potscale < 0 )
-		    {
-errstream() << "{";
+                    if      ( testisvnan(potscale) ) { errstream() << "&{"; potscale = 1.0; }
+		    else if ( potscale < 0         ) { errstream() << "{";  potscale = 0;   }
 //errstream() << "WARNING: scaling outside bounds (type 8) " << potscale << "\n";
-			potscale = 0;
-		    }
 
 		    if ( potscale < scale )
 		    {
@@ -7349,7 +6141,7 @@ errstream() << "{";
 	// NB: this function makes one BIG ASSUMPTION, namely that
 	//     unrestricted betas are never constrained.
 
-        static thread_local Vector<double> betaGradStepC("&",2);
+        thread_local Vector<double> betaGradStepC("&",2);
 	//Vector<double> &betaGradStepC = betaGradStepC_scaleFStepbase; //Vector<double> betaGradStepC(bNC());
         betaGradStepC.resize(bNC());
 
@@ -7359,33 +6151,13 @@ errstream() << "{";
         retVector<double> tmpvb;
         retVector<double> tmpvc;
 
-	//if ( asize )
-	{
-	    for ( iP = 0 ; iP < asize ; ++iP )
-	    {
-                betaGradStepC.scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpva,tmpvb,tmpvc),alphaFStep.v(iP));
-	    }
-	}
+        for ( int iP = 0 ; iP < asize ; ++iP ) { betaGradStepC.scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpva,tmpvb,tmpvc),alphaFStep.v(iP)); }
+        for ( int iP = 0 ; iP < bsize ; ++iP ) { betaGradStepC.scaleAddBR(Gn(pivBetaF  (iP),pivBetaC(),tmpva,tmpvb,tmpvc),betaFStep. v(iP)); }
 
-	//if ( bsize )
+	for ( int iP = 0 ; ( iP < bNC() ) && !bailout ; ++iP )
 	{
-	    for ( iP = 0 ; iP < bsize ; ++iP )
-	    {
-                betaGradStepC.scaleAddBR(Gn(pivBetaF(iP),pivBetaC(),tmpva,tmpvb,tmpvc),betaFStep.v(iP));
-	    }
-	}
-
-	for ( iP = 0 ; ( iP < bNC() ) && !bailout ; ++iP )
-	{
-            if ( testisvnan(dbetaGrad.v(pivBetaC(iP))) )
-            {
-                bailout = 5;
-            }
-
-            else if ( testisvnan(betaGradStepC.v(iP)) )
-            {
-                bailout = 6;
-            }
+            if      ( testisvnan(dbetaGrad.v(pivBetaC(iP))) ) { bailout = 5; }
+            else if ( testisvnan(betaGradStepC.v(iP))       ) { bailout = 6; }
 
 	    else if ( ( dbetaRestrict.v(pivBetaC(iP)) == 1 ) && ( dbetaGrad.v(pivBetaC(iP))+(scale*betaGradStepC.v(iP)) > 0 ) )
 	    {
@@ -7395,11 +6167,7 @@ errstream() << "{";
 		{
 		    potscale = -dbetaGrad.v(pivBetaC(iP))/betaGradStepC.v(iP);
 
-                    if ( testisvnan(potscale) )
-                    {
-errstream() << "&&";
-                        potscale = 1.0;
-                    }
+                    if ( testisvnan(potscale) ) { errstream() << "&&"; potscale = 1.0; }
 		}
 
 		// NB: it is possible for potscale to be negative.  This
@@ -7426,11 +6194,7 @@ errstream() << "&&";
 		{
 		    potscale = -dbetaGrad.v(pivBetaC(iP))/betaGradStepC.v(iP);
 
-                    if ( testisvnan(potscale) )
-                    {
-errstream() << "&#";
-                        potscale = 1.0;
-                    }
+                    if ( testisvnan(potscale) ) { errstream() << "&#"; potscale = 1.0; }
 		}
 
 		// NB: it is possible for potscale to be negative.  This
@@ -7528,6 +6292,8 @@ void optState<T,S>::alphaStepbase(int i, const T &alphaStep, const Matrix<S> &Gp
     NiceAssert( i < aN() );
     NiceAssert( ( alphaState(i) == -1 ) || ( alphaState(i) == +1 ) || dontCheckState );
 
+    (void) dontCheckState;
+
     dalpha("&",i) += alphaStep;
 
     retVector<S>      tmpva;
@@ -7561,44 +6327,23 @@ void optState<T,S>::alphaStepbase(int i, const T &alphaStep, const Matrix<S> &Gp
         // avoid misses where whole-row fails.
 
 //phantomxyz
-        int j;
-
-        //if ( aN() )
-        {
-            for ( j = 0 ; j < aN() ; ++j )
-            {
-                dalphaGrad("&",j) += GpGrad(j,i)*alphaStep;
-            }
-        }
+        if ( dupdateAllGC ) { for ( int j  = 0 ; j  < aN()    ; ++j  ) {                                    dalphaGrad("&",j) += GpGrad(j,i)*alphaStep; } }
+        else                { for ( int jP = 0 ; jP < aNRNZ() ; ++jP ) { int j = dpivalphaRestrictNZ.v(jP); dalphaGrad("&",j) += GpGrad(j,i)*alphaStep; } }
     }
 
     dbetaGrad.scaleAddBR(Gpn(i,tmpvb,tmpvc),alphaStep);
 
     if ( keepfact() )
     {
-	int iP = dontCheckState; // this is just done to remove a warning.  It means nothing.
-
 	alphagradstate = -2;
 	betagradstate  = -1;
 
-	//if ( bNF() )
+	for ( int iP = 0 ; iP < bNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+	        if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -7620,10 +6365,7 @@ void optState<T,S>::betaStep(int i, const T &betaStep , const Matrix<S> &GpGrad,
     NiceAssert( i < bN() );
     NiceAssert( betaState(i) || dontCheckState );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGrad(GpGrad,Gn,Gpn,gp,gn,hp);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGrad(GpGrad,Gn,Gpn,gp,gn,hp); }
 
     betaStepbase(i,betaStep,Gn,Gpn,dontCheckState);
 }
@@ -7643,10 +6385,7 @@ void optState<T,S>::betaStephpzero(int i, const T &betaStep , const Matrix<S> &G
     NiceAssert( i < bN() );
     NiceAssert( betaState(i) || dontCheckState );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGradhpzero(GpGrad,Gn,Gpn,gp,gn); }
 
     betaStepbase(i,betaStep,Gn,Gpn,dontCheckState);
 }
@@ -7662,17 +6401,11 @@ void optState<T,S>::betaStepbase(int i, const T &betaStep , const Matrix<double>
     NiceAssert( i < bN() );
     NiceAssert( betaState(i) || dontCheckState );
 
-    int j,iP = dontCheckState; // this is just done to remove a warning.  It means nothing.
+    (void) dontCheckState;
 
     dbeta("&",i) += betaStep;
 
-    //if ( aN() )
-    {
-	for ( j = 0 ; j < aN() ; ++j )
-	{
-	    dalphaGrad("&",j) += (betaStep*Gpn.v(j,i));
-	}
-    }
+    for ( int j = 0 ; j < aN() ; ++j ) { dalphaGrad("&",j) += (betaStep*Gpn.v(j,i)); }
 
     retVector<double> tmpva;
     retVector<double> tmpvb;
@@ -7684,24 +6417,12 @@ void optState<T,S>::betaStepbase(int i, const T &betaStep , const Matrix<double>
 	alphagradstate = -2;
 	betagradstate  = -1;
 
-	//if ( bNF() )
-	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
-	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
+        {
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
+            {
+	        if      ( betagradstate == -1 ) { betagradstate = iP;        }
+                else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -7724,10 +6445,7 @@ void optState<T,S>::stepFNewton(double scale, int bsize, const Vector<T> &alphaF
     NiceAssert( bsize >= 0 );
     NiceAssert( bsize <= bNF() );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGrad(GpGrad,Gn,Gpn,gp,gn,hp);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGrad(GpGrad,Gn,Gpn,gp,gn,hp); }
 
     stepFNewtonbase(scale,bsize,alphaFStep,betaFStep,GpGrad,Gn,Gpn,doCupdate,doFupdate);
 }
@@ -7748,10 +6466,7 @@ void optState<T,S>::stepFNewtonhpzero(double scale, int bsize, const Vector<T> &
     NiceAssert( bsize >= 0 );
     NiceAssert( bsize <= bNF() );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGradhpzero(GpGrad,Gn,Gpn,gp,gn); }
 
     stepFNewtonbase(scale,bsize,alphaFStep,betaFStep,GpGrad,Gn,Gpn,doCupdate,doFupdate);
 }
@@ -7772,8 +6487,6 @@ void optState<T,S>::stepFNewtonbase(double scale, int bsize, const Vector<T> &al
     NiceAssert( betaFStep.size()  == bNF() );
     NiceAssert( bsize >= 0 );
     NiceAssert( bsize <= bNF() );
-
-    int iP,jP;
 
     retVector<T> tmpva;
     retVector<T> tmpvb;
@@ -7799,11 +6512,26 @@ void optState<T,S>::stepFNewtonbase(double scale, int bsize, const Vector<T> &al
     {
 	if ( doCupdate )
 	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
+	    for ( int iP = 0 ; iP < aNF() ; ++iP )
 	    {
                 dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaLB(),tmpvb,tmpvc,tmpvd),alphaFStep(iP));
-                dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvd),alphaFStep(iP));
                 dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaUB(),tmpvb,tmpvc,tmpvd),alphaFStep(iP));
+
+                if ( dupdateAllGC )
+                {
+                    dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvd),alphaFStep(iP));
+                }
+
+                else
+                {
+                    for ( int iiP = 0 ; iiP < pivAlphaZ().size() ; ++iiP )
+                    {
+                        if ( alphaRestrict(pivAlphaZ(iiP)) != 3 )
+                        {
+                            dalphaGrad("&",pivAlphaZ(iiP)) += GpGrad(pivAlphaF(iP),pivAlphaZ(iiP))*alphaFStep(iP);
+                        }
+                    }
+                }
 
                 dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvd),alphaFStep(iP));
                 dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvb,tmpvc,tmpvd)(bsize,1,bNF()-1,tmpve),alphaFStep(iP));
@@ -7812,7 +6540,7 @@ void optState<T,S>::stepFNewtonbase(double scale, int bsize, const Vector<T> &al
 
 	else
 	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
+	    for ( int iP = 0 ; iP < aNF() ; ++iP )
 	    {
                 dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvd),alphaFStep(iP));
                 dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvb,tmpvc,tmpvd)(bsize,1,bNF()-1,tmpve),alphaFStep(iP));
@@ -7820,52 +6548,25 @@ void optState<T,S>::stepFNewtonbase(double scale, int bsize, const Vector<T> &al
 	}
     }
 
-    //if ( bsize )
+    for ( int iP = 0 ; iP < bsize ; ++iP )
     {
-	for ( iP = 0 ; iP < bsize ; ++iP )
+	if ( doCupdate )
 	{
-	    if ( aNLB() && doCupdate )
-	    {
-		for ( jP = 0 ; jP < aNLB() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaLB(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaLB(jP),pivBetaF(iP)));
-		}
-	    }
-
-	    if ( aNZ() && doCupdate )
-	    {
-		for ( jP = 0 ; jP < aNZ() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
-		}
-	    }
-
-	    if ( aNUB() && doCupdate )
-	    {
-		for ( jP = 0 ; jP < aNUB() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaUB(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaUB(jP),pivBetaF(iP)));
-		}
-	    }
-
-            dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gn(pivBetaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvd),betaFStep(iP));
-            dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpva).scaleAddBR(Gn(pivBetaF(iP),pivBetaF(),tmpvb,tmpvc,tmpvd)(bsize,1,bNF()-1,tmpve),betaFStep(iP));
+	    for ( int jP = 0 ; jP < aNLB() ; ++jP ) { dalphaGrad("&",pivAlphaLB(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaLB(jP),pivBetaF(iP))); }
+	    for ( int jP = 0 ; jP < aNZ()  ; ++jP ) { dalphaGrad("&",pivAlphaZ (jP)) += (betaFStep(iP)*Gpn.v(pivAlphaZ (jP),pivBetaF(iP))); }
+	    for ( int jP = 0 ; jP < aNUB() ; ++jP ) { dalphaGrad("&",pivAlphaUB(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaUB(jP),pivBetaF(iP))); }
 	}
+
+        dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gn(pivBetaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvd),betaFStep(iP));
+        dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpva).scaleAddBR(Gn(pivBetaF(iP),pivBetaF(),tmpvb,tmpvc,tmpvd)(bsize,1,bNF()-1,tmpve),betaFStep(iP));
     }
 
     if ( keepfact() )
     {
 	if ( bsize == bNF()-1 )
 	{
-	    if ( ( betagradstate == -1 ) || ( betagradstate == bNF()-1 ) )
-	    {
-                betagradstate = bNF()-1;
-	    }
-
-	    else
-	    {
-                betagradstate = -2;
-	    }
+	    if ( ( betagradstate == -1 ) || ( betagradstate == bNF()-1 ) ) { betagradstate = bNF()-1; }
+	    else                                                           { betagradstate = -2;      }
 	}
 
 	else if ( bsize < bNF()-1 )
@@ -7889,8 +6590,6 @@ template <> inline void optState<double,double>::stepFNewtonbase(double scale, i
     NiceAssert( bsize >= 0 );
     NiceAssert( bsize <= bNF() );
 
-    int iP,jP;
-
     retVector<double> tmpva;
     retVector<double> tmpvb;
     retVector<double> tmpvc;
@@ -7911,77 +6610,62 @@ template <> inline void optState<double,double>::stepFNewtonbase(double scale, i
 	(dbetaGrad("&",pivBetaF(),0,1,bsize-1,tmpva)).scale(1-scale);
     }
 
-    if ( aNF() )
+    if ( doCupdate )
     {
-	if ( doCupdate )
+	for ( int iP = 0 ; iP < aNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
-	    {
-                dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaLB(),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
+            dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaLB(),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
+            dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaUB(),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
+
+            if ( dupdateAllGC )
+            {
                 dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
-                dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaUB(),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
+            }
 
-                dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
-                dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvb,tmpvc,tmpvd)(bsize,1,bNF()-1,tmpve),alphaFStep.v(iP));
-	    }
-	}
+            else
+            {
+                for ( int iiP = 0 ; iiP < pivAlphaZ().size() ; ++iiP )
+                {
+                    if ( alphaRestrict(pivAlphaZ(iiP)) != 3 )
+                    {
+                        dalphaGrad("&",pivAlphaZ(iiP)) += GpGrad(pivAlphaF(iP),pivAlphaZ(iiP))*alphaFStep.v(iP);
+                    }
+                }
+            }
 
-	else
-	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
-	    {
-                dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
-                dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvb,tmpvc,tmpvd)(bsize,1,bNF()-1,tmpve),alphaFStep.v(iP));
-	    }
+            dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
+            dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvb,tmpvc,tmpvd)(bsize,1,bNF()-1,tmpve),alphaFStep.v(iP));
 	}
     }
 
-    //if ( bsize )
+    else
     {
-	for ( iP = 0 ; iP < bsize ; ++iP )
-	{
-	    if ( aNLB() && doCupdate )
-	    {
-		for ( jP = 0 ; jP < aNLB() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaLB(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaLB(jP),pivBetaF(iP)));
-		}
-	    }
-
-	    if ( aNZ() && doCupdate )
-	    {
-		for ( jP = 0 ; jP < aNZ() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
-		}
-	    }
-
-	    if ( aNUB() && doCupdate )
-	    {
-		for ( jP = 0 ; jP < aNUB() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaUB(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaUB(jP),pivBetaF(iP)));
-		}
-	    }
-
-            dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gn(pivBetaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvd),betaFStep.v(iP));
-            dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpva).scaleAddBR(Gn(pivBetaF(iP),pivBetaF(),tmpvb,tmpvc,tmpvd)(bsize,1,bNF()-1,tmpve),betaFStep.v(iP));
+	for ( int iP = 0 ; iP < aNF() ; ++iP )
+        {
+            dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
+            dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvb,tmpvc,tmpvd)(bsize,1,bNF()-1,tmpve),alphaFStep.v(iP));
 	}
+    }
+
+    for ( int iP = 0 ; iP < bsize ; ++iP )
+    {
+	if ( doCupdate )
+	{
+	    for ( int jP = 0 ; jP < aNLB() ; ++jP ) { dalphaGrad("&",pivAlphaLB(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaLB(jP),pivBetaF(iP))); }
+	    for ( int jP = 0 ; jP < aNZ()  ; ++jP ) { dalphaGrad("&",pivAlphaZ (jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaZ (jP),pivBetaF(iP))); }
+	    for ( int jP = 0 ; jP < aNUB() ; ++jP ) { dalphaGrad("&",pivAlphaUB(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaUB(jP),pivBetaF(iP))); }
+	}
+
+        dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gn(pivBetaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvd),betaFStep.v(iP));
+        dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpva).scaleAddBR(Gn(pivBetaF(iP),pivBetaF(),tmpvb,tmpvc,tmpvd)(bsize,1,bNF()-1,tmpve),betaFStep.v(iP));
     }
 
     if ( keepfact() )
     {
 	if ( bsize == bNF()-1 )
 	{
-	    if ( ( betagradstate == -1 ) || ( betagradstate == bNF()-1 ) )
-	    {
-                betagradstate = bNF()-1;
-	    }
-
-	    else
-	    {
-                betagradstate = -2;
-	    }
+	    if ( ( betagradstate == -1 ) || ( betagradstate == bNF()-1 ) ) { betagradstate = bNF()-1; }
+	    else                                                           { betagradstate = -2;      }
 	}
 
 	else if ( bsize < bNF()-1 )
@@ -8057,8 +6741,6 @@ void optState<T,S>::stepFNewtonFullbase(int bsize, const Vector<T> &alphaFStep, 
     NiceAssert( bsize >= 0 );
     NiceAssert( bsize <= bNF() );
 
-    int iP,jP;
-
     retVector<T> tmpva;
     retVector<T> tmpvb;
     retVector<T> tmpvc;
@@ -8080,82 +6762,63 @@ void optState<T,S>::stepFNewtonFullbase(int bsize, const Vector<T> &alphaFStep, 
 	(dbetaGrad ("&",pivBetaF (),0,1,bsize-1,tmpvb)).zero();
     }
 
-    if ( aNF() )
+    if ( doCupdate )
     {
-	if ( doCupdate )
+	for ( int iP = 0 ; iP < aNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
-	    {
-                dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaLB(),tmpvb,tmpve,tmpvf),alphaFStep(iP));
+            dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaLB(),tmpvb,tmpve,tmpvf),alphaFStep(iP));
+            dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaUB(),tmpvb,tmpve,tmpvf),alphaFStep(iP));
+
+            if ( dupdateAllGC )
+            {
                 dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ (),tmpvb,tmpve,tmpvf),alphaFStep(iP));
-                dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaUB(),tmpvb,tmpve,tmpvf),alphaFStep(iP));
+            }
 
-                dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpve,tmpvf),alphaFStep(iP));
-                dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpvb).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvc,tmpve,tmpvf)(bsize,1,bNF()-1,tmpvd),alphaFStep(iP));
-	    }
-	}
+            else
+            {
+                for ( int iiP = 0 ; iiP < pivAlphaZ().size() ; ++iiP )
+                {
+                    if ( alphaRestrict(pivAlphaZ(iiP)) != 3 )
+                    {
+                        dalphaGrad("&",pivAlphaZ(iiP)) += GpGrad(pivAlphaF(iP),pivAlphaZ(iiP))*alphaFStep(iP);
+                    }
+                }
+            }
 
-	else
-	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
-	    {
-                dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvf),alphaFStep(iP));
-                dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpvb).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvc,tmpvd,tmpvf)(bsize,1,bNF()-1,tmpve),alphaFStep(iP));
-	    }
+            dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpve,tmpvf),alphaFStep(iP));
+            dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpvb).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvc,tmpve,tmpvf)(bsize,1,bNF()-1,tmpvd),alphaFStep(iP));
 	}
     }
 
-    //if ( bsize )
+    else
     {
-	for ( iP = 0 ; iP < bsize ; ++iP )
+	for ( int iP = 0 ; iP < aNF() ; ++iP )
 	{
-	    if ( aNLB() && doCupdate )
-	    {
-		for ( jP = 0 ; jP < aNLB() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaLB(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaLB(jP),pivBetaF(iP)));
-		}
-	    }
-
-	    if ( aNZ() && doCupdate )
-	    {
-		for ( jP = 0 ; jP < aNZ() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
-		}
-	    }
-
-	    if ( aNUB() && doCupdate )
-	    {
-		for ( jP = 0 ; jP < aNUB() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaUB(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaUB(jP),pivBetaF(iP)));
-		}
-	    }
-
-            dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gn(pivBetaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvf),betaFStep(iP));
-            dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpvb).scaleAddBR(Gn(pivBetaF(iP),pivBetaF(),tmpvc,tmpvd,tmpvf)(bsize,1,bNF()-1,tmpve),betaFStep(iP));
+            dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvf),alphaFStep(iP));
+            dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpvb).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvc,tmpvd,tmpvf)(bsize,1,bNF()-1,tmpve),alphaFStep(iP));
 	}
+    }
+
+    for ( int iP = 0 ; iP < bsize ; ++iP )
+    {
+        if ( doCupdate )
+	{
+	    for ( int jP = 0 ; jP < aNLB() ; ++jP ) { dalphaGrad("&",pivAlphaLB(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaLB(jP),pivBetaF(iP))); }
+	    for ( int jP = 0 ; jP < aNZ()  ; ++jP ) { dalphaGrad("&",pivAlphaZ (jP)) += (betaFStep(iP)*Gpn.v(pivAlphaZ (jP),pivBetaF(iP))); }
+	    for ( int jP = 0 ; jP < aNUB() ; ++jP ) { dalphaGrad("&",pivAlphaUB(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaUB(jP),pivBetaF(iP))); }
+	}
+
+        dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gn(pivBetaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvf),betaFStep(iP));
+        dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpvb).scaleAddBR(Gn(pivBetaF(iP),pivBetaF(),tmpvc,tmpvd,tmpvf)(bsize,1,bNF()-1,tmpve),betaFStep(iP));
     }
 
     if ( keepfact() )
     {
 	alphagradstate = -1;
 
-	if ( bsize == bNF() )
-	{
-	    betagradstate = -1;
-	}
-
-	else if ( bsize == bNF()-1 )
-	{
-	    betagradstate = bNF()-1;
-	}
-
-	else
-	{
-	    betagradstate = -2;
-	}
+	if      ( bsize == bNF()   ) { betagradstate = -1;      }
+	else if ( bsize == bNF()-1 ) { betagradstate = bNF()-1; }
+	else                         { betagradstate = -2;      }
     }
 }
 
@@ -8172,8 +6835,6 @@ template <> inline void optState<double,double>::stepFNewtonFullbase(int bsize, 
     NiceAssert( betaFStep.size()  == bNF() );
     NiceAssert( bsize >= 0 );
     NiceAssert( bsize <= bNF() );
-
-    int iP,jP;
 
     retVector<double> tmpva;
     retVector<double> tmpvb;
@@ -8196,82 +6857,63 @@ template <> inline void optState<double,double>::stepFNewtonFullbase(int bsize, 
 	(dbetaGrad ("&",pivBetaF (),0,1,bsize-1,tmpvb)).zero();
     }
 
-    if ( aNF() )
+    if ( doCupdate )
     {
-	if ( doCupdate )
+	for ( int iP = 0 ; iP < aNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
-	    {
-                dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaLB(),tmpvb,tmpve,tmpvf),alphaFStep.v(iP));
+            dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaLB(),tmpvb,tmpve,tmpvf),alphaFStep.v(iP));
+            dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaUB(),tmpvb,tmpve,tmpvf),alphaFStep.v(iP));
+
+            if ( dupdateAllGC )
+            {
                 dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ (),tmpvb,tmpve,tmpvf),alphaFStep.v(iP));
-                dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaUB(),tmpvb,tmpve,tmpvf),alphaFStep.v(iP));
+            }
 
-                dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpve,tmpvf),alphaFStep.v(iP));
-                dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpvb).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvc,tmpve,tmpvf)(bsize,1,bNF()-1,tmpvd),alphaFStep.v(iP));
-	    }
-	}
+            else
+            {
+                for ( int iiP = 0 ; iiP < pivAlphaZ().size() ; ++iiP )
+                {
+                    if ( alphaRestrict(pivAlphaZ(iiP)) != 3 )
+                    {
+                        dalphaGrad("&",pivAlphaZ(iiP)) += GpGrad(pivAlphaF(iP),pivAlphaZ(iiP))*alphaFStep.v(iP);
+                    }
+                }
+            }
 
-	else
-	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
-	    {
-                dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvf),alphaFStep.v(iP));
-                dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpvb).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvc,tmpvd,tmpvf)(bsize,1,bNF()-1,tmpve),alphaFStep.v(iP));
-	    }
+            dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpve,tmpvf),alphaFStep.v(iP));
+            dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpvb).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvc,tmpve,tmpvf)(bsize,1,bNF()-1,tmpvd),alphaFStep.v(iP));
 	}
     }
 
-    //if ( bsize )
+    else
     {
-	for ( iP = 0 ; iP < bsize ; ++iP )
+	for ( int iP = 0 ; iP < aNF() ; ++iP )
 	{
-	    if ( aNLB() && doCupdate )
-	    {
-		for ( jP = 0 ; jP < aNLB() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaLB(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaLB(jP),pivBetaF(iP)));
-		}
-	    }
+            dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvf),alphaFStep.v(iP));
+            dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpvb).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaF(),tmpvc,tmpvd,tmpvf)(bsize,1,bNF()-1,tmpve),alphaFStep.v(iP));
+	}
+    }
 
-	    if ( aNZ() && doCupdate )
+	for ( int iP = 0 ; iP < bsize ; ++iP )
+	{
+	    if ( doCupdate )
 	    {
-		for ( jP = 0 ; jP < aNZ() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
-		}
-	    }
-
-	    if ( aNUB() && doCupdate )
-	    {
-		for ( jP = 0 ; jP < aNUB() ; ++jP )
-		{
-		    dalphaGrad("&",pivAlphaUB(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaUB(jP),pivBetaF(iP)));
-		}
+		for ( int jP = 0 ; jP < aNLB() ; ++jP ) { dalphaGrad("&",pivAlphaLB(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaLB(jP),pivBetaF(iP))); }
+		for ( int jP = 0 ; jP < aNZ()  ; ++jP ) { dalphaGrad("&",pivAlphaZ (jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaZ (jP),pivBetaF(iP))); }
+		for ( int jP = 0 ; jP < aNUB() ; ++jP ) { dalphaGrad("&",pivAlphaUB(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaUB(jP),pivBetaF(iP))); }
 	    }
 
             dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gn(pivBetaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvf),betaFStep.v(iP));
             dbetaGrad("&",pivBetaF(),bsize,1,bNF()-1,tmpvb).scaleAddBR(Gn(pivBetaF(iP),pivBetaF(),tmpvc,tmpvd,tmpvf)(bsize,1,bNF()-1,tmpve),betaFStep.v(iP));
 	}
-    }
 
     if ( keepfact() )
     {
 	alphagradstate = -1;
 
-	if ( bsize == bNF() )
-	{
-	    betagradstate = -1;
-	}
-
-	else if ( bsize == bNF()-1 )
-	{
-	    betagradstate = bNF()-1;
-	}
-
-	else
-	{
-	    betagradstate = -2;
-	}
+	if      ( bsize == bNF()   ) { betagradstate = -1;      }
+	else if ( bsize == bNF()-1 ) { betagradstate = bNF()-1; }
+	else                         { betagradstate = -2;      }
     }
 }
 
@@ -8366,8 +7008,23 @@ void optState<T,S>::stepFLinearbase(int asize, int bsize, const Vector<T> &alpha
 	    for ( iP = 0 ; iP < asize ; ++iP )
 	    {
                 dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaLB(),tmpvb,tmpvc,tmpvf),alphaFStep(iP));
-                dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvf),alphaFStep(iP));
                 dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaUB(),tmpvb,tmpvc,tmpvf),alphaFStep(iP));
+
+                if ( dupdateAllGC )
+                {
+                    dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvf),alphaFStep(iP));
+                }
+
+                else
+                {
+                    for ( int iiP = 0 ; iiP < pivAlphaZ().size() ; ++iiP )
+                    {
+                        if ( alphaRestrict(pivAlphaZ(iiP)) != 3 )
+                        {
+                            dalphaGrad("&",pivAlphaZ(iiP)) += GpGrad(pivAlphaF(iP),pivAlphaZ(iiP))*alphaFStep(iP);
+                        }
+                    }
+                }
 
                 dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvf),alphaFStep(iP));
 
@@ -8417,7 +7074,7 @@ void optState<T,S>::stepFLinearbase(int asize, int bsize, const Vector<T> &alpha
 	    {
 		for ( jP = 0 ; jP < aNZ() ; ++jP )
 		{
-		    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
+                    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
 		}
 	    }
 
@@ -8499,8 +7156,23 @@ template <> inline void optState<double,double>::stepFLinearbase(int asize, int 
 	    for ( iP = 0 ; iP < asize ; ++iP )
 	    {
                 dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaLB(),tmpvb,tmpvc,tmpvf),alphaFStep.v(iP));
-                dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvf),alphaFStep.v(iP));
                 dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaUB(),tmpvb,tmpvc,tmpvf),alphaFStep.v(iP));
+
+                if ( dupdateAllGC )
+                {
+                    dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvf),alphaFStep.v(iP));
+                }
+
+                else
+                {
+                    for ( int iiP = 0 ; iiP < pivAlphaZ().size() ; ++iiP )
+                    {
+                        if ( alphaRestrict(pivAlphaZ(iiP)) != 3 )
+                        {
+                            dalphaGrad("&",pivAlphaZ(iiP)) += GpGrad(pivAlphaF(iP),pivAlphaZ(iiP))*alphaFStep.v(iP);
+                        }
+                    }
+                }
 
                 dbetaGrad("&",pivBetaC(),tmpva).scaleAddBR(Gpn(pivAlphaF(iP),pivBetaC(),tmpvb,tmpvc,tmpvf),alphaFStep.v(iP));
 
@@ -8550,7 +7222,7 @@ template <> inline void optState<double,double>::stepFLinearbase(int asize, int 
 	    {
 		for ( jP = 0 ; jP < aNZ() ; ++jP )
 		{
-		    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
+                    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
 		}
 	    }
 
@@ -8704,8 +7376,24 @@ void optState<T,S>::stepFGeneralbase(int asize, int bsize, const Vector<T> &alph
 	    for ( iP = 0 ; iP < asize ; ++iP )
 	    {
                 dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaLB(),tmpvb,tmpvc,tmpvd),alphaFStep(iP));
-                dalphaGrad("&",pivAlphaZ() ,tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ() ,tmpvb,tmpvc,tmpvd),alphaFStep(iP));
                 dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaUB(),tmpvb,tmpvc,tmpvd),alphaFStep(iP));
+
+                if ( dupdateAllGC )
+                {
+                    dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvd),alphaFStep(iP));
+                }
+
+                else
+                {
+                    for ( int iiP = 0 ; iiP < pivAlphaZ().size() ; ++iiP )
+                    {
+                        if ( alphaRestrict(pivAlphaZ(iiP)) != 3 )
+                        {
+                            dalphaGrad("&",pivAlphaZ(iiP)) += GpGrad(pivAlphaF(iP),pivAlphaZ(iiP))*alphaFStep(iP);
+                        }
+                    }
+                }
+
                 dbetaGrad.scaleAddBR(Gpn(pivAlphaF(iP),tmpva,tmpvd),alphaFStep(iP));
 	    }
 	}
@@ -8727,7 +7415,7 @@ void optState<T,S>::stepFGeneralbase(int asize, int bsize, const Vector<T> &alph
 	    {
 		for ( jP = 0 ; jP < aNZ() ; ++jP )
 		{
-		    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
+                    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
 		}
 	    }
 
@@ -8809,8 +7497,24 @@ template <> inline void optState<double,double>::stepFGeneralbase(int asize, int
 	    for ( iP = 0 ; iP < asize ; ++iP )
 	    {
                 dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaLB(),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
-                dalphaGrad("&",pivAlphaZ() ,tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ() ,tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
                 dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaUB(),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
+
+                if ( dupdateAllGC )
+                {
+                    dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(pivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvd),alphaFStep.v(iP));
+                }
+
+                else
+                {
+                    for ( int iiP = 0 ; iiP < pivAlphaZ().size() ; ++iiP )
+                    {
+                        if ( alphaRestrict(pivAlphaZ(iiP)) != 3 )
+                        {
+                            dalphaGrad("&",pivAlphaZ(iiP)) += GpGrad(pivAlphaF(iP),pivAlphaZ(iiP))*alphaFStep.v(iP);
+                        }
+                    }
+                }
+
                 dbetaGrad.scaleAddBR(Gpn(pivAlphaF(iP),tmpva,tmpvd),alphaFStep.v(iP));
 	    }
 	}
@@ -8832,7 +7536,7 @@ template <> inline void optState<double,double>::stepFGeneralbase(int asize, int
 	    {
 		for ( jP = 0 ; jP < aNZ() ; ++jP )
 		{
-		    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
+                    dalphaGrad("&",pivAlphaZ(jP)) += (betaFStep.v(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
 		}
 	    }
 
@@ -8888,8 +7592,23 @@ void optState<T,S>::updateGradOpt(const Vector<T> &combAlphaFStep, const Vector<
 	for ( iP = 0 ; iP < startPivAlphaF.size() ; ++iP )
 	{
             dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(startPivAlphaF(iP),pivAlphaLB(),tmpvb,tmpvc,tmpvf),combAlphaFStep(iP));
-            dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(startPivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvf),combAlphaFStep(iP));
             dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(startPivAlphaF(iP),pivAlphaUB(),tmpvb,tmpvc,tmpvf),combAlphaFStep(iP));
+
+            if ( dupdateAllGC )
+            {
+                dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(startPivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvf),combAlphaFStep(iP));
+            }
+
+            else
+            {
+                for ( int iiP = 0 ; iiP < pivAlphaZ().size() ; ++iiP )
+                {
+                    if ( alphaRestrict(pivAlphaZ(iiP)) != 3 )
+                    {
+                        dalphaGrad("&",pivAlphaZ(iiP)) += GpGrad(pivAlphaF(iP),pivAlphaZ(iiP))*combAlphaFStep(iP);
+                    }
+                }
+            }
 	}
     }
 
@@ -8909,7 +7628,7 @@ void optState<T,S>::updateGradOpt(const Vector<T> &combAlphaFStep, const Vector<
 	    {
 		for ( jP = 0 ; jP < aNZ() ; ++jP )
 		{
-		    dalphaGrad("&",pivAlphaZ(jP)) += (combBetaFStep(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
+                    dalphaGrad("&",pivAlphaZ(jP)) += (combBetaFStep(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
 		}
 	    }
 
@@ -8946,8 +7665,23 @@ template <> inline void optState<double,double>::updateGradOpt(const Vector<doub
 	for ( iP = 0 ; iP < startPivAlphaF.size() ; ++iP )
 	{
             dalphaGrad("&",pivAlphaLB(),tmpva).scaleAddBR(GpGrad(startPivAlphaF(iP),pivAlphaLB(),tmpvb,tmpvc,tmpvf),combAlphaFStep.v(iP));
-            dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(startPivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvf),combAlphaFStep.v(iP));
             dalphaGrad("&",pivAlphaUB(),tmpva).scaleAddBR(GpGrad(startPivAlphaF(iP),pivAlphaUB(),tmpvb,tmpvc,tmpvf),combAlphaFStep.v(iP));
+
+            if ( dupdateAllGC )
+            {
+                dalphaGrad("&",pivAlphaZ (),tmpva).scaleAddBR(GpGrad(startPivAlphaF(iP),pivAlphaZ (),tmpvb,tmpvc,tmpvf),combAlphaFStep.v(iP));
+            }
+
+            else
+            {
+                for ( int iiP = 0 ; iiP < pivAlphaZ().size() ; ++iiP )
+                {
+                    if ( alphaRestrict(pivAlphaZ(iiP)) != 3 )
+                    {
+                        dalphaGrad("&",pivAlphaZ(iiP)) += GpGrad(pivAlphaF(iP),pivAlphaZ(iiP))*combAlphaFStep.v(iP);
+                    }
+                }
+            }
 	}
     }
 
@@ -8967,7 +7701,7 @@ template <> inline void optState<double,double>::updateGradOpt(const Vector<doub
 	    {
 		for ( jP = 0 ; jP < aNZ() ; ++jP )
 		{
-		    dalphaGrad("&",pivAlphaZ(jP)) += (combBetaFStep.v(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
+                    dalphaGrad("&",pivAlphaZ(jP)) += (combBetaFStep.v(iP)*Gpn.v(pivAlphaZ(jP),pivBetaF(iP)));
 		}
 	    }
 
@@ -9718,10 +8452,7 @@ int optState<T,S>::maxGradNonOpthpzero(int &alphaCIndex, int &betaCIndex, int &s
 
 template <> inline int optState<double,double>::maxGradNonOpthpzero(int &alphaCIndex, int &betaCIndex, int &stateChange, double &gradmag, const Matrix<double> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &gn, double toloverride, int checkfree, int ignorebeta)
 {
-    if ( toloverride < 0 )
-    {
-        toloverride = dopttol;
-    }
+    if ( toloverride < 0 ) { toloverride = dopttol; }
 
 //FIXME: if you want to include vector angles for hp then fix here
     //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
@@ -9733,12 +8464,8 @@ template <> inline int optState<double,double>::maxGradNonOpthpzero(int &alphaCI
     NiceAssert( gp.size() == aN() );
     NiceAssert( gn.size() == bN() );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGradhpzero(GpGrad,Gn,Gpn,gp,gn); }
 
-    int i;
     int res = 1;
 
     gradmag     = toloverride;
@@ -9751,52 +8478,45 @@ template <> inline int optState<double,double>::maxGradNonOpthpzero(int &alphaCI
     //    gradmag = -1/zerotol();
     //}
 
-    //if ( pivAlphaLB().size() )
+    for ( int i = 0 ; i < pivAlphaLB().size() ; ++i )
     {
-	for ( i = 0 ; i < pivAlphaLB().size() ; ++i )
+        if ( -dalphaGrad.v(pivAlphaLB(i)) > gradmag )
 	{
-	    if ( -dalphaGrad.v(pivAlphaLB(i)) > gradmag )
-	    {
-		gradmag     = -dalphaGrad.v(pivAlphaLB(i));
-		alphaCIndex = i;
-		betaCIndex  = -1;
-                stateChange = -2;
+	    gradmag     = -dalphaGrad.v(pivAlphaLB(i));
+	    alphaCIndex = i;
+	    betaCIndex  = -1;
+            stateChange = -2;
 
-                res = 0;
-	    }
+            res = 0;
 	}
     }
 
-    //if ( pivAlphaZ().size() )
+    for ( int i = 0 ; i < pivAlphaZ().size() ; ++i )
     {
-	for ( i = 0 ; i < pivAlphaZ().size() ; ++i )
+	if ( ( dalphaGrad.v(pivAlphaZ(i)) > gradmag ) && ( ( dalphaRestrict.v(pivAlphaZ(i)) == 0 ) || ( dalphaRestrict.v(pivAlphaZ(i)) == 2 ) ) )
 	{
-	    if ( ( dalphaGrad.v(pivAlphaZ(i)) > gradmag ) && ( ( dalphaRestrict.v(pivAlphaZ(i)) == 0 ) || ( dalphaRestrict.v(pivAlphaZ(i)) == 2 ) ) )
-	    {
-                gradmag     = dalphaGrad.v(pivAlphaZ(i));
-		alphaCIndex = i;
-		betaCIndex  = -1;
-                stateChange = -1;
+            gradmag     = dalphaGrad.v(pivAlphaZ(i));
+	    alphaCIndex = i;
+	    betaCIndex  = -1;
+            stateChange = -1;
 
-                res = 0;
-	    }
+            res = 0;
+	}
 
-	    if ( ( -dalphaGrad.v(pivAlphaZ(i)) > gradmag ) && ( ( dalphaRestrict.v(pivAlphaZ(i)) == 0 ) || ( dalphaRestrict.v(pivAlphaZ(i)) == 1 ) ) )
-	    {
-                gradmag     = -dalphaGrad.v(pivAlphaZ(i));
-		alphaCIndex = i;
-		betaCIndex  = -1;
-                stateChange = +1;
+	if ( ( -dalphaGrad.v(pivAlphaZ(i)) > gradmag ) && ( ( dalphaRestrict.v(pivAlphaZ(i)) == 0 ) || ( dalphaRestrict.v(pivAlphaZ(i)) == 1 ) ) )
+	{
+            gradmag     = -dalphaGrad.v(pivAlphaZ(i));
+	    alphaCIndex = i;
+	    betaCIndex  = -1;
+            stateChange = +1;
 
-                res = 0;
-	    }
+            res = 0;
 	}
     }
 
-    //if ( pivAlphaF().size() && checkfree )
     if ( checkfree )
     {
-	for ( i = 0 ; i < pivAlphaF().size() ; ++i )
+	for ( int i = 0 ; i < pivAlphaF().size() ; ++i )
 	{
 	    if ( dalphaGrad.v(pivAlphaF(i)) > gradmag )
 	    {
@@ -9820,26 +8540,22 @@ template <> inline int optState<double,double>::maxGradNonOpthpzero(int &alphaCI
 	}
     }
 
-    //if ( pivAlphaUB().size() )
+    for ( int i = 0 ; i < pivAlphaUB().size() ; ++i )
     {
-	for ( i = 0 ; i < pivAlphaUB().size() ; ++i )
+        if ( dalphaGrad.v(pivAlphaUB(i)) > gradmag )
 	{
-	    if ( dalphaGrad.v(pivAlphaUB(i)) > gradmag )
-	    {
-                gradmag     = dalphaGrad.v(pivAlphaUB(i));
-		alphaCIndex = i;
-		betaCIndex  = -1;
-                stateChange = +2;
+            gradmag     = dalphaGrad.v(pivAlphaUB(i));
+	    alphaCIndex = i;
+	    betaCIndex  = -1;
+            stateChange = +2;
 
-                res = 0;
-	    }
+            res = 0;
 	}
     }
 
-    //if ( pivBetaC().size() && !ignorebeta )
     if ( !ignorebeta )
     {
-	for ( i = 0 ; i < pivBetaC().size() ; ++i )
+	for ( int i = 0 ; i < pivBetaC().size() ; ++i )
 	{
 	    if ( ( -dbetaGrad.v(pivBetaC(i)) > gradmag ) && ( ( dbetaRestrict.v(pivBetaC(i)) == 0 ) || ( dbetaRestrict.v(pivBetaC(i)) == 2 ) ) )
 	    {
@@ -9863,12 +8579,11 @@ template <> inline int optState<double,double>::maxGradNonOpthpzero(int &alphaCI
 	}
     }
 
-    //if ( pivBetaF().size() && ( betagradstate != -1 ) && !ignorebeta )
     if ( ( betagradstate != -1 ) && !ignorebeta )
     {
 	double locgradmag = toloverride;
 
-	for ( i = 0 ; i < pivBetaF().size() ; ++i )
+	for ( int i = 0 ; i < pivBetaF().size() ; ++i )
 	{
             if ( abs2(dbetaGrad.v(pivBetaF(i))) > locgradmag )
 	    {
@@ -9911,39 +8626,32 @@ int optState<T,S>::maxBetaGradNonOpt(int &betaCIndex, int &stateChange, double &
     NiceAssert( gn.size() == bN() );
     NiceAssert( hp.size() == aN() );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGrad(GpGrad,Gn,Gpn,gp,gn,hp);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGrad(GpGrad,Gn,Gpn,gp,gn,hp); }
 
-    int i;
     int res = 1;
 
     gradmag     = dopttol;
     betaCIndex  = -1;
     stateChange = 0;
 
-    //if ( bN() )
+    for ( int i = 0 ; i < bN() ; ++i )
     {
-	for ( i = 0 ; i < bN() ; ++i )
+	if ( ( -betaGrad(i) > gradmag ) && ( ( dbetaRestrict.v(i) == 0 ) || ( dbetaRestrict.v(i) == 2 ) ) )
 	{
-	    if ( ( -betaGrad(i) > gradmag ) && ( ( dbetaRestrict.v(i) == 0 ) || ( dbetaRestrict.v(i) == 2 ) ) )
-	    {
-                gradmag     = -betaGrad(i);
-		betaCIndex  = i;
-                stateChange = -1;
+            gradmag     = -betaGrad(i);
+	    betaCIndex  = i;
+            stateChange = -1;
 
-                res = 0;
-	    }
+            res = 0;
+	}
 
-	    if ( ( betaGrad(i) > gradmag ) && ( ( dbetaRestrict.v(i) == 0 ) || ( dbetaRestrict.v(i) == 1 ) ) )
-	    {
-                gradmag     = betaGrad(i);
-		betaCIndex  = i;
-                stateChange = +1;
+	if ( ( betaGrad(i) > gradmag ) && ( ( dbetaRestrict.v(i) == 0 ) || ( dbetaRestrict.v(i) == 1 ) ) )
+	{
+            gradmag     = betaGrad(i);
+	    betaCIndex  = i;
+            stateChange = +1;
 
-                res = 0;
-	    }
+            res = 0;
 	}
     }
 
@@ -9963,39 +8671,32 @@ int optState<T,S>::maxBetaGradNonOpthpzero(int &betaCIndex, int &stateChange, do
     NiceAssert( gp.size() == aN() );
     NiceAssert( gn.size() == bN() );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGradhpzero(GpGrad,Gn,Gpn,gp,gn); }
 
-    int i;
     int res = 1;
 
     gradmag     = -1/zerotol();;
     betaCIndex  = -1;
     stateChange = 0;
 
-    //if ( bN() )
+    for ( int i = 0 ; i < bN() ; ++i )
     {
-	for ( i = 0 ; i < bN() ; ++i )
+	if ( ( -betaGrad(i) > gradmag ) && ( ( dbetaRestrict.v(i) == 0 ) || ( dbetaRestrict.v(i) == 2 ) ) )
 	{
-	    if ( ( -betaGrad(i) > gradmag ) && ( ( dbetaRestrict.v(i) == 0 ) || ( dbetaRestrict.v(i) == 2 ) ) )
-	    {
-                gradmag     = -betaGrad(i);
-		betaCIndex  = i;
-                stateChange = -1;
+            gradmag     = -betaGrad(i);
+	    betaCIndex  = i;
+            stateChange = -1;
 
-                res = 0;
-	    }
+            res = 0;
+	}
 
-	    if ( ( betaGrad(i) > gradmag ) && ( ( dbetaRestrict.v(i) == 0 ) || ( dbetaRestrict.v(i) == 1 ) ) )
-	    {
-                gradmag     = betaGrad(i);
-		betaCIndex  = i;
-                stateChange = +1;
+	if ( ( betaGrad(i) > gradmag ) && ( ( dbetaRestrict.v(i) == 0 ) || ( dbetaRestrict.v(i) == 1 ) ) )
+	{
+            gradmag     = betaGrad(i);
+	    betaCIndex  = i;
+            stateChange = +1;
 
-                res = 0;
-	    }
+            res = 0;
 	}
     }
 
@@ -10018,32 +8719,13 @@ int optState<T,S>::initGradBeta(const Matrix<double> &Gp, const Matrix<S> &GpGra
     NiceAssert( gn.size() == bN() );
     NiceAssert( hp.size() == aN() );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGrad(GpGrad,Gn,Gpn,gp,gn,hp); }
+
+    for ( int iP = bNC()-1 ; iP >= 0 ; --iP )
     {
-	fixGrad(GpGrad,Gn,Gpn,gp,gn,hp);
-    }
-
-    int iP;
-
-    //if ( bNC() )
-    {
-	for ( iP = bNC()-1 ; iP >= 0 ; --iP )
-	{
-	    if ( dbetaRestrict.v(pivBetaC(iP)) == 0 )
-	    {
-		modBetaCtoF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-	    }
-
-	    else if ( ( dbetaRestrict.v(iP) == 1 ) && ( betaGrad(pivBetaC(iP)) > dopttol ) )
-	    {
-		modBetaCtoF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-	    }
-
-	    else if ( ( dbetaRestrict.v(iP) == 2 ) && ( betaGrad(pivBetaC(iP)) < -dopttol ) )
-	    {
-		modBetaCtoF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-	    }
-	}
+	if      ( dbetaRestrict.v(pivBetaC(iP)) == 0                                    ) { modBetaCtoF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+        else if ( ( dbetaRestrict.v(iP) == 1 ) && ( betaGrad(pivBetaC(iP)) >  dopttol ) ) { modBetaCtoF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+        else if ( ( dbetaRestrict.v(iP) == 2 ) && ( betaGrad(pivBetaC(iP)) < -dopttol ) ) { modBetaCtoF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
     }
 
     if ( keepfact() )
@@ -10051,45 +8733,21 @@ int optState<T,S>::initGradBeta(const Matrix<double> &Gp, const Matrix<S> &GpGra
 	alphagradstate = -1;
 	betagradstate  = -1;
 
-	//if ( aNF() )
+        for ( int iP = 0 ; iP < aNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
+            if ( abs2(alphaGrad(pivAlphaF(iP))) > dopttol )
 	    {
-                if ( abs2(alphaGrad(pivAlphaF(iP))) > dopttol )
-		{
-		    if ( alphagradstate == -1 )
-		    {
-			alphagradstate = iP;
-		    }
-
-		    else if ( alphagradstate >= 0 )
-		    {
-			alphagradstate = -2;
-
-			break;
-		    }
-		}
+		if      ( alphagradstate == -1 ) { alphagradstate = iP;        }
+		else if ( alphagradstate >= 0  ) { alphagradstate = -2; break; }
 	    }
 	}
 
-	//if ( bNF() )
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+		if      ( betagradstate == -1 ) { betagradstate = iP;        }
+		else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -10111,32 +8769,13 @@ int optState<T,S>::initGradBetahpzero(const Matrix<double> &Gp, const Matrix<S> 
     NiceAssert( gp.size() == aN() );
     NiceAssert( gn.size() == bN() );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGradhpzero(GpGrad,Gn,Gpn,gp,gn); }
+
+    for ( int iP = bNC()-1 ; iP >= 0 ; --iP )
     {
-	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
-    }
-
-    int iP;
-
-    //if ( bNC() )
-    {
-	for ( iP = bNC()-1 ; iP >= 0 ; --iP )
-	{
-	    if ( dbetaRestrict.v(pivBetaC(iP)) == 0 )
-	    {
-		modBetaCtoFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-	    }
-
-	    else if ( ( dbetaRestrict.v(iP) == 1 ) && ( betaGrad(pivBetaC(iP)) > dopttol ) )
-	    {
-		modBetaCtoFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-	    }
-
-	    else if ( ( dbetaRestrict.v(iP) == 2 ) && ( betaGrad(pivBetaC(iP)) < -dopttol ) )
-	    {
-		modBetaCtoFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
-	    }
-	}
+	if      ( dbetaRestrict.v(pivBetaC(iP)) == 0                                    ) { modBetaCtoFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+	else if ( ( dbetaRestrict.v(iP) == 1 ) && ( betaGrad(pivBetaC(iP)) >  dopttol ) ) { modBetaCtoFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
+	else if ( ( dbetaRestrict.v(iP) == 2 ) && ( betaGrad(pivBetaC(iP)) < -dopttol ) ) { modBetaCtoFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn); }
     }
 
     if ( keepfact() )
@@ -10144,45 +8783,21 @@ int optState<T,S>::initGradBetahpzero(const Matrix<double> &Gp, const Matrix<S> 
 	alphagradstate = -1;
 	betagradstate  = -1;
 
-	//if ( aNF() )
-	{
-	    for ( iP = 0 ; iP < aNF() ; ++iP )
-	    {
-                if ( abs2(alphaGrad(pivAlphaF(iP))) > dopttol )
-		{
-		    if ( alphagradstate == -1 )
-		    {
-			alphagradstate = iP;
-		    }
-
-		    else if ( alphagradstate >= 0 )
-		    {
-			alphagradstate = -2;
-
-			break;
-		    }
-		}
+        for ( int iP = 0 ; iP < aNF() ; ++iP )
+        {
+            if ( abs2(alphaGrad(pivAlphaF(iP))) > dopttol )
+            {
+		if      ( alphagradstate == -1 ) { alphagradstate = iP;        }
+		else if ( alphagradstate >= 0  ) { alphagradstate = -2; break; }
 	    }
 	}
 
-	//if ( bNF() )
+        for ( int iP = 0 ; iP < bNF() ; ++iP )
 	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
+            if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
 	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
+		if      ( betagradstate == -1 ) { betagradstate = iP;        }
+		else if ( betagradstate >= 0  ) { betagradstate = -2; break; }
 	    }
 	}
     }
@@ -10210,10 +8825,7 @@ int optState<T,S>::fact_calcStep(Vector<T> &stepAlpha, Vector<T> &stepBeta, int 
     NiceAssert( stepBeta.size()  == bN() );
     NiceAssert( keepfact() );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGrad(GpGrad,Gn,Gpn,gp,gn,hp);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGrad(GpGrad,Gn,Gpn,gp,gn,hp); }
 
     return fact_calcStepbase(stepAlpha,stepBeta,asize,bsize,Gp,Gn,Gpn,lb,ub);
 }
@@ -10237,10 +8849,7 @@ int optState<T,S>::fact_calcStephpzero(Vector<T> &stepAlpha, Vector<T> &stepBeta
     NiceAssert( stepBeta.size()  == bN() );
     NiceAssert( keepfact() );
 
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGradhpzero(GpGrad,Gn,Gpn,gp,gn);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGradhpzero(GpGrad,Gn,Gpn,gp,gn); }
 
     return fact_calcStepbase(stepAlpha,stepBeta,asize,bsize,Gp,Gn,Gpn,lb,ub);
 }
@@ -10324,14 +8933,14 @@ int optState<T,S>::fact_calcStepbase(Vector<T> &stepAlpha, Vector<T> &stepBeta, 
             (stepBeta ("&",pivBetaF (),0,1,bsize-1,tmpvb)).negate();
 	}
 
-        int iP,jP;
+        int jP;
 	double scale = 1;
         double pscale;
         double distancetoedge = 0;
 
 	jP = -1;
 
-	for ( iP = 0 ; iP < asize ; ++iP )
+	for ( int iP = 0 ; iP < asize ; ++iP )
 	{
 	    if ( ( alphaState(pivAlphaF(iP)) > 0 ) && ( stepAlpha(pivAlphaF(iP)) >= zerotol() ) )
 	    {
@@ -10390,10 +8999,7 @@ int optState<T,S>::fact_calcStepbase(Vector<T> &stepAlpha, Vector<T> &stepBeta, 
 	    }
 	}
 
-	if ( scale < 1 )
-	{
-            scale = 1;
-	}
+	if ( scale < 1 ) { scale = 1; }
 
         scale *= 1.1;
 
@@ -10446,22 +9052,17 @@ int optState<T,S>::fact_calcStepbase(Vector<T> &stepAlpha, Vector<T> &stepBeta, 
         asize = aNF();
         bsize = 0; // will grow this
 
-        int i,j,k;
-
         // First we construct the complete Gpn'.Gpn matrix
 
         Matrix<double> GpnGpn(bNF(),bNF());
 
-        for ( i = 0 ; i < bNF() ; ++i )
+        for ( int i = 0 ; i < bNF() ; ++i )
         {
-            for ( j = 0 ; j <= i ; ++j )
+            for ( int j = 0 ; j <= i ; ++j )
             {
                 GpnGpn("&",i,j) = 0.0;
 
-                for ( k = 0 ; k < aNF() ; ++k )
-                {
-                    GpnGpn("&",i,j) += Gpn.v(pivAlphaF(k),pivBetaF(i))*Gpn.v(pivAlphaF(k),pivBetaF(j));
-                }
+                for ( int k = 0 ; k < aNF() ; ++k ) { GpnGpn("&",i,j) += Gpn.v(pivAlphaF(k),pivBetaF(i))*Gpn.v(pivAlphaF(k),pivBetaF(j)); }
 
                 GpnGpn("&",j,i) = GpnGpn.v(i,j);
             }
@@ -10491,7 +9092,7 @@ int optState<T,S>::fact_calcStepbase(Vector<T> &stepAlpha, Vector<T> &stepBeta, 
         {
             isok = 0;
 
-            for ( i = bsize ; ( i < bNF() ) && !isok ; ++i )
+            for ( int i = bsize ; ( i < bNF() ) && !isok ; ++i )
             {
                 GpnInd.squareswap(bsize,i);
                 GpnFake.addRow(bsize);
@@ -10663,14 +9264,14 @@ template <> inline int optState<double,double>::fact_calcStepbase(Vector<double>
             (stepBeta ("&",pivBetaF (),0,1,probContext.fact_nfact(Gn,Gpn)-1,tmpvb)).negate();
 	}
 
-        int iP,jP;
+        int jP;
 	double scale = 1;
         double pscale;
         double distancetoedge = 0;
 
 	jP = -1;
 
-	for ( iP = 0 ; iP < asize ; ++iP )
+	for ( int iP = 0 ; iP < asize ; ++iP )
 	{
 	    if ( ( alphaState(pivAlphaF(iP)) > 0 ) && ( stepAlpha(pivAlphaF(iP)) >= zerotol() ) )
 	    {
@@ -10729,10 +9330,7 @@ template <> inline int optState<double,double>::fact_calcStepbase(Vector<double>
 	    }
 	}
 
-	if ( scale < 1 )
-	{
-            scale = 1;
-	}
+	if ( scale < 1 ) { scale = 1; }
 
         scale *= 1.1;
 
@@ -10785,22 +9383,17 @@ template <> inline int optState<double,double>::fact_calcStepbase(Vector<double>
         asize = aNF();
         bsize = 0; // will grow this
 
-        int i,j,k;
-
         // First we construct the complete Gpn'.Gpn matrix
 
         Matrix<double> GpnGpn(bNF(),bNF());
 
-        for ( i = 0 ; i < bNF() ; ++i )
+        for ( int i = 0 ; i < bNF() ; ++i )
         {
-            for ( j = 0 ; j <= i ; ++j )
+            for ( int j = 0 ; j <= i ; ++j )
             {
                 GpnGpn("&",i,j) = 0.0;
 
-                for ( k = 0 ; k < aNF() ; ++k )
-                {
-                    GpnGpn("&",i,j) += Gpn.v(pivAlphaF(k),pivBetaF(i))*Gpn.v(pivAlphaF(k),pivBetaF(j));
-                }
+                for ( int k = 0 ; k < aNF() ; ++k ) { GpnGpn("&",i,j) += Gpn.v(pivAlphaF(k),pivBetaF(i))*Gpn.v(pivAlphaF(k),pivBetaF(j)); }
 
                 GpnGpn("&",j,i) = GpnGpn.v(i,j);
             }
@@ -10830,7 +9423,7 @@ template <> inline int optState<double,double>::fact_calcStepbase(Vector<double>
         {
             isok = 0;
 
-            for ( i = bsize ; ( i < bNF() ) && !isok ; ++i )
+            for ( int i = bsize ; ( i < bNF() ) && !isok ; ++i )
             {
                 GpnInd.squareswap(bsize,i);
                 GpnFake.addRow(bsize);
@@ -10951,16 +9544,8 @@ int optState<T,S>::fact_minverse(Vector<U> &aAlpha, Vector<U> &aBeta, const Vect
 
     int res = -1;
 
-    if ( probContext.fact_pfact(Gn,Gpn) == aNF() )
-    {
-        probContext.fact_minverse(aAlpha,aBeta,bAlpha,bBeta,Gn,Gpn);
-    }
-
-    else
-    {
-        res = pivAlphaF(probContext.fact_pfact(Gn,Gpn));
-        //NiceThrow("Unable to disambiguate required inverse for singular case in direct inverse call.");
-    }
+    if ( probContext.fact_pfact(Gn,Gpn) == aNF() ) { probContext.fact_minverse(aAlpha,aBeta,bAlpha,bBeta,Gn,Gpn); }
+    else                                           { res = pivAlphaF(probContext.fact_pfact(Gn,Gpn));             }
 
     return res;
 }
@@ -11031,12 +9616,7 @@ void optState<T,S>::fact_fudgeOn (const Matrix<double> &Gp, const Matrix<double>
     NiceAssert( Gpn.numRows() == aN() );
     NiceAssert( Gpn.numCols() == bN() );
 
-    if ( keepfact() )
-    {
-        probContext.fact_fudgeOn(Gp,Gn,Gpn,alphagradstate,betagradstate);
-    }
-
-    return;
+    if ( keepfact() ) { probContext.fact_fudgeOn(Gp,Gn,Gpn,alphagradstate,betagradstate); }
 }
 
 template <class T, class S>
@@ -11049,12 +9629,7 @@ void optState<T,S>::fact_fudgeOff(const Matrix<double> &Gp, const Matrix<double>
     NiceAssert( Gpn.numRows() == aN() );
     NiceAssert( Gpn.numCols() == bN() );
 
-    if ( keepfact() )
-    {
-        probContext.fact_fudgeOff(Gp,Gn,Gpn,alphagradstate,betagradstate);
-    }
-
-    return;
+    if ( keepfact() ) { probContext.fact_fudgeOff(Gp,Gn,Gpn,alphagradstate,betagradstate); }
 }
 
 extern int istrig;
@@ -11076,14 +9651,28 @@ void optState<T,S>::fixGrad(const Matrix<S> &GpGrad, const Matrix<double> &Gn, c
     {
 	gradFixAlphaInd = 0;
 
-	//if ( aN() )
+	if ( dupdateAllGC )
 	{
 	    for ( int i = 0 ; i < aN() ; ++i )
 	    {
 		if ( gradFixAlpha.v(i) )
 		{
-		    gradFixAlpha.sv(i,0);
-		    recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i);
+                    gradFixAlpha.sv(i,0);
+	            recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i);
+		}
+	    }
+	}
+
+        else
+	{
+	    for ( int iP = 0 ; iP < aNRNZ() ; ++iP )
+	    {
+                int i = dpivalphaRestrictNZ.v(iP);
+
+		if ( gradFixAlpha.v(i) )
+		{
+                    gradFixAlpha.sv(i,0);
+	            recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i);
 		}
 	    }
 	}
@@ -11093,15 +9682,12 @@ void optState<T,S>::fixGrad(const Matrix<S> &GpGrad, const Matrix<double> &Gn, c
     {
 	gradFixBetaInd = 0;
 
-	//if ( bN() )
-	{
-	    for ( int i = 0 ; i < bN() ; ++i )
+        for ( int i = 0 ; i < bN() ; ++i )
+        {
+	    if ( gradFixBeta.v(i) )
 	    {
-		if ( gradFixBeta.v(i) )
-		{
-		    gradFixBeta.sv(i,0);
-		    recalcBetaGrad(dbetaGrad("&",i),Gn,Gpn,gn,i);
-		}
+	        gradFixBeta.sv(i,0);
+	        recalcBetaGrad(dbetaGrad("&",i),Gn,Gpn,gn,i);
 	    }
 	}
     }
@@ -11123,14 +9709,28 @@ void optState<T,S>::fixGradhpzero(const Matrix<S> &GpGrad, const Matrix<double> 
     {
 	gradFixAlphaInd = 0;
 
-	//if ( aN() )
+	if ( dupdateAllGC )
 	{
 	    for ( int i = 0 ; i < aN() ; ++i )
 	    {
 		if ( gradFixAlpha.v(i) )
 		{
-		    gradFixAlpha.sv(i,0);
-		    recalcAlphaGradhpzero(dalphaGrad("&",i),GpGrad,Gpn,gp,i);
+                    gradFixAlpha.sv(i,0);
+	            recalcAlphaGradhpzero(dalphaGrad("&",i),GpGrad,Gpn,gp,i);
+		}
+	    }
+	}
+
+	else
+	{
+	    for ( int iP = 0 ; iP < aNRNZ() ; ++iP )
+	    {
+                int i = dpivalphaRestrictNZ.v(iP);
+
+		if ( gradFixAlpha.v(i) )
+		{
+                    gradFixAlpha.sv(i,0);
+	            recalcAlphaGradhpzero(dalphaGrad("&",i),GpGrad,Gpn,gp,i);
 		}
 	    }
 	}
@@ -11140,15 +9740,12 @@ void optState<T,S>::fixGradhpzero(const Matrix<S> &GpGrad, const Matrix<double> 
     {
 	gradFixBetaInd = 0;
 
-	//if ( bN() )
-	{
-	    for ( int i = 0 ; i < bN() ; ++i )
+        for ( int i = 0 ; i < bN() ; ++i )
+        {
+            if ( gradFixBeta.v(i) )
 	    {
-		if ( gradFixBeta.v(i) )
-		{
-		    gradFixBeta.sv(i,0);
-		    recalcBetaGrad(dbetaGrad("&",i),Gn,Gpn,gn,i);
-		}
+	        gradFixBeta.sv(i,0);
+	        recalcBetaGrad(dbetaGrad("&",i),Gn,Gpn,gn,i);
 	    }
 	}
     }
@@ -11188,32 +9785,9 @@ void optState<T,S>::recalcAlphaGradhpzero(T &res, const Matrix<S> &GpGrad, const
         // elementwise version as symmetry-mapping likely to
         // avoid misses where whole-row fails.
 
-        int j;
-
-//phantomxyz
-        //if ( aNLB() )
-        {
-            for ( j = 0 ; j < aNLB() ; ++j )
-            {
-                res += GpGrad(i,pivAlphaLB(j))*alpha(pivAlphaLB(j));
-            }
-        }
-
-        //if ( aNF() )
-        {
-            for ( j = 0 ; j < aNF() ; ++j )
-            {
-                res += GpGrad(i,pivAlphaF(j))*alpha(pivAlphaF(j));
-            }
-        }
-
-        //if ( aNUB() )
-        {
-            for ( j = 0 ; j < aNUB() ; ++j )
-            {
-                res += GpGrad(i,pivAlphaUB(j))*alpha(pivAlphaUB(j));
-            }
-        }
+        for ( int j = 0 ; j < aNLB() ; ++j ) { res += GpGrad(i,pivAlphaLB(j))*alpha(pivAlphaLB(j)); }
+        for ( int j = 0 ; j < aNF()  ; ++j ) { res += GpGrad(i,pivAlphaF (j))*alpha(pivAlphaF (j)); }
+        for ( int j = 0 ; j < aNUB() ; ++j ) { res += GpGrad(i,pivAlphaUB(j))*alpha(pivAlphaUB(j)); }
     }
 
     retVector<double> tmpvd;
@@ -11227,16 +9801,12 @@ void optState<T,S>::recalcAlphaGradhpzero(T &res, const Matrix<S> &GpGrad, const
 template <class T, class S>
 T &optState<T,S>::calcObj(T &res, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp)
 {
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-        fixGrad(GpGrad,Gn,Gpn,gp,gn,hp);
-    }
+    if ( gradFixAlphaInd || gradFixBetaInd ) { fixGrad(GpGrad,Gn,Gpn,gp,gn,hp); }
 
     res = 0;
 
     if ( aNNZ() )
     {
-        int i;
         int j = 0;
 
         T tempa,gbi,hpi;
@@ -11245,7 +9815,7 @@ T &optState<T,S>::calcObj(T &res, const Matrix<S> &GpGrad, const Matrix<double> 
         //   = ( 1/2 GpGrad.alpha + gp + hp sgn(alpha) )'.alpha
         //   = ( 1/2 ( alphaGrad - Gpn.beta - gp - hp sgn(alpha) ) + gp + hp sgn(alpha) )'.alpha
 
-        for ( i = 0 ; ( ( i < aN() ) && ( j < aNNZ() ) ) ; ++i )
+        for ( int i = 0 ; ( ( i < aN() ) && ( j < aNNZ() ) ) ; ++i )
         {
             if ( alphaState(i) )
             {
@@ -11287,15 +9857,8 @@ void optState<T,S>::recalcAlphaGrad(T &res, const Matrix<S> &GpGrad, const Matri
 
     recalcAlphaGradhpzero(res,GpGrad,Gpn,gp,i);
 
-    if ( alphaState(i) > 0 )
-    {
-	res += hp(i);
-    }
-
-    else if ( alphaState(i) < 0 )
-    {
-	res -= hp(i);
-    }
+    if      ( alphaState(i) > 0 ) { res += hp(i); }
+    else if ( alphaState(i) < 0 ) { res -= hp(i); }
 }
 
 template <class T, class S>
@@ -11308,7 +9871,6 @@ void optState<T,S>::recalcBetaGrad(T &res, const Matrix<double> &Gn, const Matri
     NiceAssert( gn.size() == bN() );
     NiceAssert( ( i >= 0 ) && ( i < bN() ) );
 
-    int iP;
     T temp;
 
     res = gn(i);
@@ -11320,72 +9882,46 @@ void optState<T,S>::recalcBetaGrad(T &res, const Matrix<double> &Gn, const Matri
 
     res += sumb(temp,Gn(i,pivBetaF(),tmpva,tmpvb,tmpvd),dbeta(pivBetaF(),tmpvc));
 
-    //if ( aNLB() )
-    {
-	for ( iP = 0 ; iP < aNLB() ; ++iP )
-	{
-	    res += (alpha(pivAlphaLB(iP))*Gpn.v(pivAlphaLB(iP),i));
-	}
-    }
-
-    //if ( aNF() )
-    {
-	for ( iP = 0 ; iP < aNF() ; ++iP )
-	{
-	    res += (alpha(pivAlphaF(iP))*Gpn.v(pivAlphaF(iP),i));
-	}
-    }
-
-    //if ( aNUB() )
-    {
-	for ( iP = 0 ; iP < aNUB() ; ++iP )
-	{
-	    res += (alpha(pivAlphaUB(iP))*Gpn.v(pivAlphaUB(iP),i));
-	}
-    }
+    for ( int iP = 0 ; iP < aNLB() ; ++iP ) { res += (alpha(pivAlphaLB(iP))*Gpn.v(pivAlphaLB(iP),i)); }
+    for ( int iP = 0 ; iP < aNF()  ; ++iP ) { res += (alpha(pivAlphaF (iP))*Gpn.v(pivAlphaF (iP),i)); }
+    for ( int iP = 0 ; iP < aNUB() ; ++iP ) { res += (alpha(pivAlphaUB(iP))*Gpn.v(pivAlphaUB(iP),i)); }
 }
 
 template <class T, class S>
 void optState<T,S>::redimensionalise(void (*redimelm)(T &, int, int), int olddim, int newdim)
 {
-    int i;
-
-    //if ( aN() )
+    for ( int i = 0 ; i < aN() ; ++i )
     {
-	for ( i = 0 ; i < aN() ; ++i )
-	{
-            redimelm(dalpha("&",i),olddim,newdim);
-            redimelm(dalphaGrad("&",i),olddim,newdim);
-	}
+        redimelm(dalpha("&",i),olddim,newdim);
+        redimelm(dalphaGrad("&",i),olddim,newdim);
     }
 
-    //if ( bN() )
+    for ( int i = 0 ; i < bN() ; ++i )
     {
-	for ( i = 0 ; i < bN() ; ++i )
-	{
-            redimelm(dbeta("&",i),olddim,newdim);
-            redimelm(dbetaGrad("&",i),olddim,newdim);
-	}
+        redimelm(dbeta("&",i),olddim,newdim);
+        redimelm(dbetaGrad("&",i),olddim,newdim);
     }
 }
 
 template <class T, class S> std::ostream &operator<<(std::ostream &output, const optState<T,S> &src )
 {
-    output << "Alpha:                " << src.dalpha          << "\n";
-    output << "Beta:                 " << src.dbeta           << "\n";
-    output << "Alpha gradient:       " << src.dalphaGrad      << "\n";
-    output << "Beta gradient:        " << src.dbetaGrad       << "\n";
-    output << "Gradient error bound: " << src.cumgraderr      << "\n";
-    output << "Alpha restriction:    " << src.dalphaRestrict  << "\n";
-    output << "Beta restriction:     " << src.dbetaRestrict   << "\n";
-    output << "Optimality tolerance: " << src.dopttol         << "\n";
-    output << "Alpha gradient state: " << src.alphagradstate  << "\n";
-    output << "Beta gradient state:  " << src.betagradstate   << "\n";
-    output << "Alpha Gradient State: " << src.gradFixAlphaInd << "\n";
-    output << "Beta Gradient State:  " << src.gradFixBetaInd  << "\n";
-    output << "Alpha Gradient fine:  " << src.gradFixAlpha    << "\n";
-    output << "Beta Gradient fine:   " << src.gradFixBeta     << "\n";
-    output << "Context:              " << src.probContext     << "\n";
+    output << "Alpha:                " << src.dalpha              << "\n";
+    output << "Beta:                 " << src.dbeta               << "\n";
+    output << "Alpha gradient:       " << src.dalphaGrad          << "\n";
+    output << "Beta gradient:        " << src.dbetaGrad           << "\n";
+    output << "Gradient error bound: " << src.cumgraderr          << "\n";
+    output << "Alpha restriction:    " << src.dalphaRestrict      << "\n";
+    output << "Beta restriction:     " << src.dbetaRestrict       << "\n";
+    output << "Alpha restr Z pivot:  " << src.dpivalphaRestrictZ  << "\n";
+    output << "Alpha restr NZ pivot: " << src.dpivalphaRestrictNZ << "\n";
+    output << "Optimality tolerance: " << src.dopttol             << "\n";
+    output << "Alpha gradient state: " << src.alphagradstate      << "\n";
+    output << "Beta gradient state:  " << src.betagradstate       << "\n";
+    output << "Alpha Gradient State: " << src.gradFixAlphaInd     << "\n";
+    output << "Beta Gradient State:  " << src.gradFixBetaInd      << "\n";
+    output << "Alpha Gradient fine:  " << src.gradFixAlpha        << "\n";
+    output << "Beta Gradient fine:   " << src.gradFixBeta         << "\n";
+    output << "Context:              " << src.probContext         << "\n";
 
     return output;
 }
@@ -11402,6 +9938,8 @@ template <class T, class S> std::istream &operator>>(std::istream &input,       
     input >> dummy; input >> dest.cumgraderr;
     input >> dummy; input >> dest.dalphaRestrict;
     input >> dummy; input >> dest.dbetaRestrict;
+    input >> dummy; input >> dest.dpivalphaRestrictZ;
+    input >> dummy; input >> dest.dpivalphaRestrictNZ;
     input >> dummy; input >> dest.dopttol;
     input >> dummy; input >> dest.alphagradstate;
     input >> dummy; input >> dest.betagradstate;

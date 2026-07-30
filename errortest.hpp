@@ -62,7 +62,7 @@ double calcCross   (const ML_Base &baseML, int m, int rndit = 0, int numreps = 1
 double CalcSparSens(const ML_Base &baseML, int minbad, int maxbad, double noisemean = 0, double noisevar = 0, int startpoint = 0, int suppressfb = 0, int useThreads = 0);
 
 double calcnegloglikelihood(const ML_Base &baseML, int suppressfb = 0);
-double calcmaxinfogain     (const ML_Base &baseML, int suppressfb = 0);
+double calcinfogain        (const ML_Base &baseML, int suppressfb = 0);
 double calcRKHSnorm        (const ML_Base &baseML, int suppressfb = 0); // ||f||_K^2
 
 double calcLOO     (const ML_Base &baseML,                                           Vector<int>    &cnt, Matrix<int>    &cfm,                                                                    int startpoint = 0, int suppressfb = 0, int useThreads = 0);

@@ -370,7 +370,7 @@ BLK_Generic::BLK_Generic(int xisIndPrune) : ML_Base(xisIndPrune)
 {
     setaltx(nullptr);
 
-    const static thread_local std::string dummy = "";
+    const thread_local std::string dummy = "";
 
     xuseristream = &promptstream(dummy);
     xuserostream = &promptoutstream();

@@ -96,6 +96,8 @@ public:
     // simRmin: on regret plot, start of y (regret) range (default 1, simRmin > simRmax means auto)
     // simRmax: on regret plot, end of y (regret) range (default 0)
     // logyplot: 0 for linear y axis, 1 for log y axis
+    // xgridon: 0 no, 1 yes
+    // ygridon: 0 no, 1 yes
 
     std::string simname;      // "", which derives to optname+"_regret"
     int         simoutformat; // 2
@@ -105,12 +107,18 @@ public:
     double      simRmin;      // 1
     double      simRmax;      // 0
     int         logyplot;     // 1
+    int         xgridon;      // 1
+    int         ygridon;      // 1
 
     std::string getsimname(void) const { return ( simname != "" ) ? simname : (optname+"_regret"); }
 
     // recursive allxres
 
     void *altallxres;
+
+    // Threaded reps
+
+    bool threadreps;
 
     // maxtraintime: maximum training time (sec).  0 for unlimited.  Note
     //           that this is not precise - for example in bayesian optim
@@ -210,7 +218,7 @@ public:
 
     // Generate a copy of the relevant optimisation class.
 
-//    virtual GlobalOptions *makeDup(void) const;
+    virtual GlobalOptions *makeDup(void) const { GlobalOptions *res; MEMNEW(res,GlobalOptions(*this)); return res; }
 
     // virtual Destructor to get rid of annoying warnings
 
@@ -553,7 +561,9 @@ public:
                     const Vector<Vector<Vector<gentype>>> &allFres,
                     const Vector<Vector<Vector<gentype>>> &allfres,
                     int plotdata,
-                    int plotlogy);
+                    int plotlogy,
+                    int xgrid,
+                    int ygrid);
 
     // Overload to set sample distributions in models (if any)
 

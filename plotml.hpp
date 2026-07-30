@@ -59,13 +59,19 @@
 //          1 plot g(x)^2
 // plotimp: 0 normal
 //          1 imp(x)
+//
+// xgrid: 0 = no x grid
+//        1 = yes x grid
+// ygrid: 0 = no y grid
+//        1 = yes y grid
 
 
 // Plot a simple line baseline(var), where var is set by xusevar (default x)
 
 int plotfn2d(double xmin, double xmax, double omin, double omax,
              const std::string &fname, const std::string &dname, int outformat, const gentype &baseline,
-             int xusevar = 0);
+             int xusevar = 0,
+             int xgrid = 1, int ygrid = 1);
 
 
 // Plot a simple surf baseline(xvar,yvar), where xvar,yvar are set by xusevar, yusevar (default x,y)
@@ -80,7 +86,8 @@ int surffn(double xmin, double xmax, double ymin, double ymax, double omin, doub
 int plotml(const ML_Base &ml, int xindex,
            double xmin, double xmax, double omin, double omax,
            const std::string &fname, const std::string &dname, int outformat, int incdata, const gentype &baseline, int incvar, int xusevar,
-           const SparseVector<gentype> &xtemplate, int plotsq = 0, int plotimp = 0, double scale = 1, double dscale = 1);
+           const SparseVector<gentype> &xtemplate, int plotsq = 0, int plotimp = 0, double scale = 1, double dscale = 1,
+           int xgrid = 1, int ygrid = 1);
 
 
 // Do a surface plot visualisation of ml
@@ -99,14 +106,16 @@ int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double
            const Vector<Vector<double>> &xneg, const Vector<Vector<double>> &yneg,
            const Vector<Vector<double>> &xequ, const Vector<Vector<double>> &yequ,
            double xmin, double xmax, double omin, double omax,
-           const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar, int plotlogy);
+           const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar, int plotlogy,
+           int xgrid = 1, int ygrid = 1);
 
 
 // Plot multiple graphs (specified by y) on a single 2-d axis
 
 int multiplot2d(const Vector<Vector<gentype>> &y, const Vector<Vector<gentype>> &yvar, Vector<std::string> &plotlabels,
            double omin, double omax,
-           const std::string &fname, const std::string &dname, int outformat, const std::string &title, int plotlogy);
+           const std::string &fname, const std::string &dname, int outformat, const std::string &title, int plotlogy,
+           int xgrid = 1, int ygrid = 1);
 
 // Plot multiple graphs (specified by x and y) on a single 2-d axis
 
@@ -116,14 +125,16 @@ int multiplot2d(const Vector<Vector<double>> &x,
                 const Vector<std::string> &plotlabels,
                 double xmin, double xmax,
                 double omin, double omax,
-                const std::string &fname, const std::string &dname, int outformat, const std::string &title, int incvar, int plotlogy);
+                const std::string &fname, const std::string &dname, int outformat, const std::string &title, int incvar, int plotlogy,
+                int xgrid = 1, int ygrid = 1);
 
 
 // Simple scatter plot
 
 int scatterplot2d(const Vector<double> &x, const Vector<double> &y,
                   double xmin, double xmax, double ymin, double ymax,
-                  const std::string &fname, const std::string &dname, int outformat);
+                  const std::string &fname, const std::string &dname, int outformat,
+                  int xgrid = 1, int ygrid = 1);
 
 #endif
 

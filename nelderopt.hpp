@@ -66,6 +66,16 @@ public:
 
     NelderOptions(const NelderOptions &src) : GlobalOptions(src)
     {
+        optname = "opt_nelder";
+
+        minf_max = -HUGE_VAL;
+        ftol_rel = 0;
+        ftol_abs = 0;
+        xtol_rel = 0;
+        xtol_abs = 0;
+        maxeval  = 1000;
+        method   = 0;
+
         *this = src;
     }
 
@@ -95,14 +105,7 @@ public:
 
     // Generate a copy of the relevant optimisation class.
 
-//    virtual GlobalOptions *makeDup(void) const
-//    {
-//        NelderOptions *newver;
-//
-//        MEMNEW(newver,NelderOptions(*this));
-//
-//        return newver;
-//    }
+    virtual GlobalOptions *makeDup(void) const { NelderOptions *res; MEMNEW(res,NelderOptions(*this)); return res; }
 
     virtual int optim(int dim,
                       Vector<gentype> &Xres,

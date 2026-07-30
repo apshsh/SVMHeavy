@@ -2384,7 +2384,7 @@ static double gamma_5_10_data[24] = {
   1.3858639703888078291599886143e-18,
  -2.2574398807738626571560124396e-19
 };
-static const cheb_series gamma_5_10_cs = {
+const static cheb_series gamma_5_10_cs = {
   gamma_5_10_data,
   23,
   -1, 1,
@@ -6542,7 +6542,7 @@ halley_iteration(
 static double
 series_eval(double r)
 {
-  static const double c[12] = {
+  const static double c[12] = {
     -1.0,
      2.331643981597124203363536062168,
     -1.812187885639363490240191647568,
@@ -6600,7 +6600,7 @@ gsl_sf_lambert_W0_e(double x, gsl_sf_result * result)
     return GSL_SUCCESS;
   }
   else {
-    static const unsigned int MAX_ITERS = 10;
+    const static unsigned int MAX_ITERS = 10;
     double w;
 
     if (x < 1.0) {
@@ -6634,7 +6634,7 @@ gsl_sf_lambert_Wm1_e(double x, gsl_sf_result * result)
     return GSL_SUCCESS;
   }
   else {
-    static const unsigned int MAX_ITERS = 32;
+    const static unsigned int MAX_ITERS = 32;
     const double one_over_E = 1.0/M_E;
     const double q = x + one_over_E;
     double w;

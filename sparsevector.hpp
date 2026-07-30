@@ -39,9 +39,6 @@
 #include <sstream>
 #include <cstdint>
 #include <iterator>
-//#ifdef ENABLE_THREADS
-//#include <atomic>
-//#endif
 #include "randfun.hpp"
 #include "vector.hpp"
 #include "strfns.hpp"
@@ -1793,21 +1790,9 @@ const SparseVector<T> &SparseVector<T>::n(void) const
 // Design choice: it is unlikely that we'll get a race here,
 // and if we do then the only consequence is a memory leak,
 // so let's just let it go.
-//#ifdef ENABLE_THREADS
-//            static svm_mutex eyelock;
-//            svm_mutex_lock(eyelock);
-//#endif
-//
-//            if ( !npointer )
-//            {
                 npointer = xnpointer;
                 npointerused = true;
                 xnupsize = qs;
-//            }
-//
-//#ifdef ENABLE_THREADS
-//            svm_mutex_unlock(eyelock);
-//#endif
         }
 
         if ( !npointerused || ( npointer != xnpointer ) )
@@ -1891,21 +1876,9 @@ const SparseVector<T> &SparseVector<T>::f1(void) const
 // Design choice: it is unlikely that we'll get a race here,
 // and if we do then the only consequence is a memory leak,
 // so let's just let it go.
-//#ifdef ENABLE_THREADS
-//            static svm_mutex eyelock;
-//            svm_mutex_lock(eyelock);
-//#endif
-//
-//            if ( !f1pointer )
-//            {
                 f1pointer = xf1pointer;
                 f1pointerused = true;
                 xf1upsize = qs;
-//            }
-//
-//#ifdef ENABLE_THREADS
-//            svm_mutex_unlock(eyelock);
-//#endif
         }
 
         if ( !f1pointerused || ( f1pointer != xf1pointer ) )
@@ -1989,21 +1962,9 @@ const SparseVector<T> &SparseVector<T>::f2(void) const
 // Design choice: it is unlikely that we'll get a race here,
 // and if we do then the only consequence is a memory leak,
 // so let's just let it go.
-//#ifdef ENABLE_THREADS
-//            static svm_mutex eyelock;
-//            svm_mutex_lock(eyelock);
-//#endif
-//
-//            if ( !f2pointer )
-//            {
                 f2pointer = xf2pointer;
                 f2pointerused = true;
                 xf2upsize = qs;
-//            }
-//
-//#ifdef ENABLE_THREADS
-//            svm_mutex_unlock(eyelock);
-//#endif
         }
 
         if ( !f2pointerused || ( f2pointer != xf2pointer ) )
@@ -2087,21 +2048,9 @@ const SparseVector<T> &SparseVector<T>::f3(void) const
 // Design choice: it is unlikely that we'll get a race here,
 // and if we do then the only consequence is a memory leak,
 // so let's just let it go.
-//#ifdef ENABLE_THREADS
-//            static svm_mutex eyelock;
-//            svm_mutex_lock(eyelock);
-//#endif
-//
-//            if ( !f3pointer )
-//            {
                 f3pointer = xf3pointer;
                 f3pointerused = true;
                 xf3upsize = qs;
-//            }
-//
-//#ifdef ENABLE_THREADS
-//            svm_mutex_unlock(eyelock);
-//#endif
         }
 
         if ( !f3pointerused || ( f3pointer != xf3pointer ) )
@@ -2185,21 +2134,9 @@ const SparseVector<T> &SparseVector<T>::f4(void) const
 // Design choice: it is unlikely that we'll get a race here,
 // and if we do then the only consequence is a memory leak,
 // so let's just let it go.
-//#ifdef ENABLE_THREADS
-//            static svm_mutex eyelock;
-//            svm_mutex_lock(eyelock);
-//#endif
-//
-//            if ( !f4pointer )
-//            {
                 f4pointer = xf4pointer;
                 f4pointerused = true;
                 xf4upsize = qs;
-//            }
-//
-//#ifdef ENABLE_THREADS
-//            svm_mutex_unlock(eyelock);
-//#endif
         }
 
         if ( !f4pointerused || ( f4pointer != xf4pointer ) )
@@ -12451,7 +12388,8 @@ std::istream &operator>>(std::istream &input, SparseVector<T> &dest)
 
     while ( 1 )
     {
-        while ( ( isspace(input.peek()) ) || ( input.peek() == ';' ) )
+//        while ( ( isspace(input.peek()) ) || ( input.peek() == ';' ) )
+        while ( ( isspace(input.peek()) ) || ( input.peek() == ';' ) || ( input.peek() == ',' ) )
         {
             input.get(xxx);
         }
@@ -12651,7 +12589,8 @@ std::istream &streamItInAlt(std::istream &input, SparseVector<T> &dest, int proc
 
     while ( 1 )
     {
-        while ( ( isspace(input.peek()) ) || ( input.peek() == ';' ) )
+//        while ( ( isspace(input.peek()) ) || ( input.peek() == ';' ) )
+        while ( ( isspace(input.peek()) ) || ( input.peek() == ';' ) || ( input.peek() == ',' ) )
         {
             input.get(xxx);
         }
@@ -13364,12 +13303,7 @@ template <class T> int operator<=(const T               &left_op, const SparseVe
 inline uintmax_t getnewID(void)
 {
 // DESIGN DECISION: don't let x get shared accross thread boundary!
-//#ifdef ENABLE_THREADS
-//    static std::atomic<uintmax_t> currid(0);
-//#endif
-//#ifndef ENABLE_THREADS
-    static thread_local uintmax_t currid(0);
-//#endif
+    thread_local uintmax_t currid(0);
 
     return (uintmax_t) currid++;
 }

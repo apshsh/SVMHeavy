@@ -53,6 +53,11 @@ int atod_anion_safe(d_anion &result, const char *qwerty, int len = -1);
 std::ostream &operator<<(std::ostream &output, const d_anion &source);
 std::istream &operator>>(std::istream &input ,       d_anion &destin);
 
+// Spoilers (friends)
+
+double norm2(const d_anion &a);
+d_anion sgn(const d_anion &a);
+double real(const d_anion &a);
 
 class d_anion
 {
@@ -82,6 +87,9 @@ class d_anion
     friend std::ostream &operator<<(std::ostream &output, const d_anion &source);
     friend d_anion atod_anion(const char *qwerty, int len);
     friend d_anion &setconj(d_anion &a);
+    friend double norm2(const d_anion &a);
+    friend d_anion sgn(const d_anion &a);
+    friend double real(const d_anion &a);
 
     friend void qswap(d_anion &a, d_anion &b);
 
@@ -92,32 +100,23 @@ class d_anion
     */
 
     explicit d_anion()                                : is_im(0), value_real(0.0), value_inf(nullptr), value_0(nullptr) {                          }
-    explicit d_anion(double src)                      : is_im(0), value_real(src), value_inf(nullptr), value_0(nullptr) {                          }
+    explicit d_anion(      double                src) : is_im(0), value_real(src), value_inf(nullptr), value_0(nullptr) {                          }
     explicit d_anion(const std::complex<double> &src) : is_im(0), value_real(0.0), value_inf(nullptr), value_0(nullptr) { *this = src;             }
-             d_anion(const d_anion &src)              : is_im(0), value_real(0.0), value_inf(nullptr), value_0(nullptr) { *this = src;             }
-    explicit d_anion(const char *src)                 : is_im(0), value_real(0.0), value_inf(nullptr), value_0(nullptr) { *this = atod_anion(src); }
+             d_anion(const d_anion              &src) : is_im(0), value_real(0.0), value_inf(nullptr), value_0(nullptr) { *this = src;             }
+    explicit d_anion(const char                 *src) : is_im(0), value_real(0.0), value_inf(nullptr), value_0(nullptr) { *this = atod_anion(src); }
 
-    explicit d_anion(double left_op, double right_op)                                           : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op)); }
-    explicit d_anion(const std::complex<double> &left_op, double right_op)                      : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op)); }
-    explicit d_anion(const d_anion &left_op, double right_op)                                   : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op)); }
-    explicit d_anion(double left_op, const std::complex<double> &right_op)                      : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op)); }
-    explicit d_anion(const std::complex<double> &left_op, const std::complex<double> &right_op) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op)); }
-    explicit d_anion(const d_anion &left_op, const std::complex<double> &right_op)              : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op)); }
-    explicit d_anion(double left_op, const d_anion &right_op)                                   : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op)); }
-    explicit d_anion(const std::complex<double> &left_op, const d_anion &right_op)              : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op)); }
-    explicit d_anion(const d_anion &left_op, const d_anion &right_op)                           : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op)); }
+    explicit d_anion(      double               left_op,        double                right_op) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op));                        }
+    explicit d_anion(const std::complex<double> &left_op,       double                right_op) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op));                        }
+    explicit d_anion(const d_anion              &left_op,       double                right_op) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op));                        }
+    explicit d_anion(      double                left_op, const std::complex<double> &right_op) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op));                        }
+    explicit d_anion(const std::complex<double> &left_op, const std::complex<double> &right_op) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op));                        }
+    explicit d_anion(const d_anion              &left_op, const std::complex<double> &right_op) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op));                        }
+    explicit d_anion(      double                left_op, const d_anion              &right_op) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op));                        }
+    explicit d_anion(const std::complex<double> &left_op, const d_anion              &right_op) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op));                        }
+    explicit d_anion(const d_anion              &left_op, const d_anion              &right_op) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(left_op)); MEMNEW(value_0,d_anion(right_op));                        }
 
-    explicit d_anion(double valR, double valI, double valJ, double valK) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr)
-    {
-        MEMNEW(value_inf,d_anion(valR,valI));
-        MEMNEW(value_0,d_anion(valJ,valK));
-    }
-
-    explicit d_anion(double valR, double vall, double valm, double valn, double valo, double valp, double valq, double valr) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr)
-    {
-        MEMNEW(value_inf,d_anion(valR,vall,valm,valn));
-        MEMNEW(value_0,d_anion(valo,valp,valq,valr));
-    }
+    explicit d_anion(double valR, double valI, double valJ, double valK)                                                     : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(valR,valI)); MEMNEW(value_0,d_anion(valJ,valK));                     }
+    explicit d_anion(double valR, double vall, double valm, double valn, double valo, double valp, double valq, double valr) : is_im(1), value_real(0.0), value_inf(nullptr), value_0(nullptr) { MEMNEW(value_inf,d_anion(valR,vall,valm,valn)); MEMNEW(value_0,d_anion(valo,valp,valq,valr)); }
 
     explicit d_anion(int order) : is_im(order ? 1 : 0), value_real(0.0), value_inf(nullptr), value_0(nullptr) { if ( order ) { MEMNEW(value_inf,d_anion(order-1)); MEMNEW(value_0  ,d_anion(order-1)); } }
 
@@ -127,10 +126,10 @@ class d_anion
        Assignment operators
     */
 
-    d_anion &operator=(double val);
+    d_anion &operator=(      double                val);
     d_anion &operator=(const std::complex<double> &val);
-    d_anion &operator=(const d_anion &val);
-    d_anion &operator=(const char *val);
+    d_anion &operator=(const d_anion              &val);
+    d_anion &operator=(const char                 *val);
 
     /*
        Back casting operators.
@@ -170,16 +169,16 @@ class d_anion
        isindet - returns true of any part of this number is inf or nan
     */
 
-    int order(void)              const;
-    int size(void)               const { return 1 << order();     }
-    int isreal(void)             const { return !iscomplex();     }
-    int iscomplex(void)          const { return is_im;            }
-    int iscommutative(void)      const { return ( order() <= 1 ); }
-    int isassociative(void)      const { return ( order() <= 2 ); }
+    int order             (void) const;
+    int size              (void) const { return 1 << order();     }
+    int isreal            (void) const { return !iscomplex();     }
+    int iscomplex         (void) const { return is_im;            }
+    int iscommutative     (void) const { return ( order() <= 1 ); }
+    int isassociative     (void) const { return ( order() <= 2 ); }
     int ispowerassociative(void) const { return ( order() <= 3 ); }
-    int isindet(void)            const;
+    int isindet           (void) const;
 
-    d_anion &leftpart(void);
+    d_anion &leftpart (void);
     d_anion &rightpart(void);
 
     double  operator()(int i) const;
@@ -634,130 +633,130 @@ inline int testisninf(const d_anion &x);
 //
 // conj(function(a)) = Function(conj(a))
 
-double  abs1(const d_anion &a);
-double  abs2(const d_anion &a);
-double  absp(const d_anion &a, double q);
+double  abs1  (const d_anion &a);
+double  abs2  (const d_anion &a);
+double  absp  (const d_anion &a, double q);
 double  absinf(const d_anion &a);
-double  abs0(const d_anion &a);
-double  arg(const d_anion &a);
-d_anion argd(const d_anion &a);
-d_anion argx(const d_anion &a);
-double  norm1(const d_anion &a);
-double  norm2(const d_anion &a);
-double  normp(const d_anion &a, double q);
-d_anion angle(const d_anion &a);
+double  abs0  (const d_anion &a);
+double  arg   (const d_anion &a);
+d_anion argd  (const d_anion &a);
+d_anion argx  (const d_anion &a);
+double  norm1 (const d_anion &a);
+//double  norm2(const d_anion &a);
+double  normp (const d_anion &a, double q);
+d_anion angle (const d_anion &a);
 d_anion vangle(const d_anion &a, const d_anion &defsign);
 d_anion polar (double x, double y, const d_anion &a);
 d_anion polard(double x, double y, const d_anion &a);
 d_anion polarx(double x, const d_anion &a);
-d_anion sgn(const d_anion &a);
+//d_anion sgn(const d_anion &a);
 
-double  real(const d_anion &a);
-double  imag(const d_anion &a);
+//double  real(const d_anion &a);
+double  imag (const d_anion &a);
 d_anion imagd(const d_anion &a);
 d_anion imagx(const d_anion &a);
-d_anion conj(const d_anion &a);
-d_anion inv(const d_anion &a);
+d_anion conj (const d_anion &a);
+d_anion inv  (const d_anion &a);
 
-d_anion pow(long a, const d_anion &b);
-d_anion pow(double a, const d_anion &b);
-d_anion pow(const std::complex<double> &a, const d_anion &b);
-d_anion powl(const std::complex<double> &a, const d_anion &b);
-d_anion powr(const std::complex<double> &a, const d_anion &b);
-d_anion pow(const d_anion &a, long b);
-d_anion pow(const d_anion &a, double b);
-d_anion pow(const d_anion &a, const std::complex<double> &b);
-d_anion powl(const d_anion &a, const std::complex<double> &b);
-d_anion powr(const d_anion &a, const std::complex<double> &b);
-d_anion pow(const d_anion &a, const d_anion &b);
-d_anion powl(const d_anion &a, const d_anion &b);
-d_anion powr(const d_anion &a, const d_anion &b);
-d_anion sqrt(const d_anion &a);
-d_anion cbrt(const d_anion &a);
+d_anion pow (long                        a, const d_anion              &b);
+d_anion pow (double                      a, const d_anion              &b);
+d_anion pow (const std::complex<double> &a, const d_anion              &b);
+d_anion powl(const std::complex<double> &a, const d_anion              &b);
+d_anion powr(const std::complex<double> &a, const d_anion              &b);
+d_anion pow (const d_anion              &a, long                        b);
+d_anion pow (const d_anion              &a, double                      b);
+d_anion pow (const d_anion              &a, const std::complex<double> &b);
+d_anion powl(const d_anion              &a, const std::complex<double> &b);
+d_anion powr(const d_anion              &a, const std::complex<double> &b);
+d_anion pow (const d_anion              &a, const d_anion              &b);
+d_anion powl(const d_anion              &a, const d_anion              &b);
+d_anion powr(const d_anion              &a, const d_anion              &b);
+d_anion sqrt(const d_anion              &a);
+d_anion cbrt(const d_anion              &a);
 
-d_anion exp(const d_anion &a);
-d_anion tenup(const d_anion &a);
-d_anion log(const d_anion &a);
-d_anion log10(const d_anion &a);
-d_anion logb(long a, const d_anion &b);
-d_anion logb(double a, const d_anion &b);
-d_anion logb(const std::complex<double> &a, const d_anion &b);
-d_anion logbl(const std::complex<double> &a, const d_anion &b);
-d_anion logbr(const std::complex<double> &a, const d_anion &b);
-d_anion logb(const d_anion &a, long b);
-d_anion logb(const d_anion &a, double b);
-d_anion logb(const d_anion &a, const std::complex<double> &b);
-d_anion logbl(const d_anion &a, const std::complex<double> &b);
-d_anion logbr(const d_anion &a, const std::complex<double> &b);
-d_anion logb(const d_anion &a, const d_anion &b);
-d_anion logbl(const d_anion &a, const d_anion &b);
-d_anion logbr(const d_anion &a, const d_anion &b);
+d_anion exp  (const d_anion              &a);
+d_anion tenup(const d_anion              &a);
+d_anion log  (const d_anion              &a);
+d_anion log10(const d_anion              &a);
+d_anion logb (long                        a, const d_anion              &b);
+d_anion logb (double                      a, const d_anion              &b);
+d_anion logb (const std::complex<double> &a, const d_anion              &b);
+d_anion logbl(const std::complex<double> &a, const d_anion              &b);
+d_anion logbr(const std::complex<double> &a, const d_anion              &b);
+d_anion logb (const d_anion              &a, long                        b);
+d_anion logb (const d_anion              &a, double                      b);
+d_anion logb (const d_anion              &a, const std::complex<double> &b);
+d_anion logbl(const d_anion              &a, const std::complex<double> &b);
+d_anion logbr(const d_anion              &a, const std::complex<double> &b);
+d_anion logb (const d_anion              &a, const d_anion              &b);
+d_anion logbl(const d_anion              &a, const d_anion              &b);
+d_anion logbr(const d_anion              &a, const d_anion              &b);
 
-d_anion sin(const d_anion &a);
-d_anion cos(const d_anion &a);
-d_anion tan(const d_anion &a);
-d_anion cosec(const d_anion &a);
-d_anion sec(const d_anion &a);
-d_anion cot(const d_anion &a);
-d_anion asin(const d_anion &a);
-d_anion acos(const d_anion &a);
-d_anion atan(const d_anion &a);
-d_anion acosec(const d_anion &a);
-d_anion asec(const d_anion &a);
-d_anion acot(const d_anion &a);
-d_anion sinc(const d_anion &a);
-d_anion cosc(const d_anion &a);
-d_anion tanc(const d_anion &a);
-d_anion vers(const d_anion &a);
-d_anion covers(const d_anion &a);
-d_anion hav(const d_anion &a);
-d_anion excosec(const d_anion &a);
-d_anion exsec(const d_anion &a);
-d_anion avers(const d_anion &a);
-d_anion acovers(const d_anion &a);
-d_anion ahav(const d_anion &a);
+d_anion sin     (const d_anion &a);
+d_anion cos     (const d_anion &a);
+d_anion tan     (const d_anion &a);
+d_anion cosec   (const d_anion &a);
+d_anion sec     (const d_anion &a);
+d_anion cot     (const d_anion &a);
+d_anion asin    (const d_anion &a);
+d_anion acos    (const d_anion &a);
+d_anion atan    (const d_anion &a);
+d_anion acosec  (const d_anion &a);
+d_anion asec    (const d_anion &a);
+d_anion acot    (const d_anion &a);
+d_anion sinc    (const d_anion &a);
+d_anion cosc    (const d_anion &a);
+d_anion tanc    (const d_anion &a);
+d_anion vers    (const d_anion &a);
+d_anion covers  (const d_anion &a);
+d_anion hav     (const d_anion &a);
+d_anion excosec (const d_anion &a);
+d_anion exsec   (const d_anion &a);
+d_anion avers   (const d_anion &a);
+d_anion acovers (const d_anion &a);
+d_anion ahav    (const d_anion &a);
 d_anion aexcosec(const d_anion &a);
-d_anion aexsec(const d_anion &a);
-d_anion castrg(const d_anion &a);
-d_anion casctrg(const d_anion &a);
-d_anion acastrg(const d_anion &a);
+d_anion aexsec  (const d_anion &a);
+d_anion castrg  (const d_anion &a);
+d_anion casctrg (const d_anion &a);
+d_anion acastrg (const d_anion &a);
 d_anion acasctrg(const d_anion &a);
 
-d_anion sinh(const d_anion &a);
-d_anion cosh(const d_anion &a);
-d_anion tanh(const d_anion &a);
-d_anion cosech(const d_anion &a);
-d_anion sech(const d_anion &a);
-d_anion coth(const d_anion &a);
-d_anion asinh(const d_anion &a);
-d_anion acosh(const d_anion &a);
-d_anion atanh(const d_anion &a);
-d_anion acosech(const d_anion &a);
-d_anion asech(const d_anion &a);
-d_anion acoth(const d_anion &a);
-d_anion sinhc(const d_anion &a);
-d_anion coshc(const d_anion &a);
-d_anion tanhc(const d_anion &a);
-d_anion versh(const d_anion &a);
-d_anion coversh(const d_anion &a);
-d_anion havh(const d_anion &a);
-d_anion excosech(const d_anion &a);
-d_anion exsech(const d_anion &a);
-d_anion aversh(const d_anion &a);
-d_anion acovrsh(const d_anion &a);
-d_anion ahavh(const d_anion &a);
+d_anion sinh     (const d_anion &a);
+d_anion cosh     (const d_anion &a);
+d_anion tanh     (const d_anion &a);
+d_anion cosech   (const d_anion &a);
+d_anion sech     (const d_anion &a);
+d_anion coth     (const d_anion &a);
+d_anion asinh    (const d_anion &a);
+d_anion acosh    (const d_anion &a);
+d_anion atanh    (const d_anion &a);
+d_anion acosech  (const d_anion &a);
+d_anion asech    (const d_anion &a);
+d_anion acoth    (const d_anion &a);
+d_anion sinhc    (const d_anion &a);
+d_anion coshc    (const d_anion &a);
+d_anion tanhc    (const d_anion &a);
+d_anion versh    (const d_anion &a);
+d_anion coversh  (const d_anion &a);
+d_anion havh     (const d_anion &a);
+d_anion excosech (const d_anion &a);
+d_anion exsech   (const d_anion &a);
+d_anion aversh   (const d_anion &a);
+d_anion acovrsh  (const d_anion &a);
+d_anion ahavh    (const d_anion &a);
 d_anion aexcosech(const d_anion &a);
-d_anion aexsech(const d_anion &a);
-d_anion cashyp(const d_anion &a);
-d_anion caschyp(const d_anion &a);
-d_anion acashyp(const d_anion &a);
-d_anion acaschyp(const d_anion &a);
+d_anion aexsech  (const d_anion &a);
+d_anion cashyp   (const d_anion &a);
+d_anion caschyp  (const d_anion &a);
+d_anion acashyp  (const d_anion &a);
+d_anion acaschyp (const d_anion &a);
 
 
-d_anion sigm(const d_anion &a);
-d_anion gd(const d_anion &a);
+d_anion sigm (const d_anion &a);
+d_anion gd   (const d_anion &a);
 d_anion asigm(const d_anion &a);
-d_anion agd(const d_anion &a);
+d_anion agd  (const d_anion &a);
 
 
 
@@ -765,147 +764,145 @@ d_anion Argd(const d_anion &a);
 d_anion Argx(const d_anion &a);
 d_anion Imagd(const d_anion &a);
 
-d_anion Pow(long a, const d_anion &b);
-d_anion Pow(double a, const d_anion &b);
-d_anion Pow(const std::complex<double> &a, const d_anion &b);
-d_anion Powl(const std::complex<double> &a, const d_anion &b);
-d_anion Powr(const std::complex<double> &a, const d_anion &b);
-d_anion Pow(const d_anion &a, long b);
-d_anion Pow(const d_anion &a, double b);
-d_anion Pow(const d_anion &a, const std::complex<double> &b);
-d_anion Powl(const d_anion &a, const std::complex<double> &b);
-d_anion Powr(const d_anion &a, const std::complex<double> &b);
-d_anion Pow(const d_anion &a, const d_anion &b);
-d_anion Powl(const d_anion &a, const d_anion &b);
-d_anion Powr(const d_anion &a, const d_anion &b);
-d_anion Sqrt(const d_anion &a);
-d_anion Cbrt(const d_anion &a);
+d_anion Pow (long                        a, const d_anion              &b);
+d_anion Pow (double                      a, const d_anion              &b);
+d_anion Pow (const std::complex<double> &a, const d_anion              &b);
+d_anion Powl(const std::complex<double> &a, const d_anion              &b);
+d_anion Powr(const std::complex<double> &a, const d_anion              &b);
+d_anion Pow (const d_anion              &a, long                        b);
+d_anion Pow (const d_anion              &a, double                      b);
+d_anion Pow (const d_anion              &a, const std::complex<double> &b);
+d_anion Powl(const d_anion              &a, const std::complex<double> &b);
+d_anion Powr(const d_anion              &a, const std::complex<double> &b);
+d_anion Pow (const d_anion              &a, const d_anion              &b);
+d_anion Powl(const d_anion              &a, const d_anion              &b);
+d_anion Powr(const d_anion              &a, const d_anion              &b);
+d_anion Sqrt(const d_anion              &a);
+d_anion Cbrt(const d_anion              &a);
 
-d_anion Log(const d_anion &a);
-d_anion Log10(const d_anion &a);
-d_anion Logb(long a, const d_anion &b);
-d_anion Logb(double a, const d_anion &b);
-d_anion Logb(const std::complex<double> &a, const d_anion &b);
-d_anion Logbl(const std::complex<double> &a, const d_anion &b);
-d_anion Logbr(const std::complex<double> &a, const d_anion &b);
-d_anion Logb(const d_anion &a, long b);
-d_anion Logb(const d_anion &a, double b);
-d_anion Logb(const d_anion &a, const std::complex<double> &b);
-d_anion Logbl(const d_anion &a, const std::complex<double> &b);
-d_anion Logbr(const d_anion &a, const std::complex<double> &b);
-d_anion Logb(const d_anion &a, const d_anion &b);
-d_anion Logbl(const d_anion &a, const d_anion &b);
-d_anion Logbr(const d_anion &a, const d_anion &b);
+d_anion Log  (const d_anion              &a);
+d_anion Log10(const d_anion              &a);
+d_anion Logb (long                        a, const d_anion              &b);
+d_anion Logb (double                      a, const d_anion              &b);
+d_anion Logb (const std::complex<double> &a, const d_anion              &b);
+d_anion Logbl(const std::complex<double> &a, const d_anion              &b);
+d_anion Logbr(const std::complex<double> &a, const d_anion              &b);
+d_anion Logb (const d_anion              &a, long                        b);
+d_anion Logb (const d_anion              &a, double                      b);
+d_anion Logb (const d_anion              &a, const std::complex<double> &b);
+d_anion Logbl(const d_anion              &a, const std::complex<double> &b);
+d_anion Logbr(const d_anion              &a, const std::complex<double> &b);
+d_anion Logb (const d_anion              &a, const d_anion              &b);
+d_anion Logbl(const d_anion              &a, const d_anion              &b);
+d_anion Logbr(const d_anion              &a, const d_anion              &b);
 
-d_anion Asin(const d_anion &a);
-d_anion Acos(const d_anion &a);
-d_anion Acosec(const d_anion &a);
-d_anion Asec(const d_anion &a);
-d_anion Avers(const d_anion &a);
-d_anion Acovers(const d_anion &a);
-d_anion Ahav(const d_anion &a);
+d_anion Asin    (const d_anion &a);
+d_anion Acos    (const d_anion &a);
+d_anion Acosec  (const d_anion &a);
+d_anion Asec    (const d_anion &a);
+d_anion Avers   (const d_anion &a);
+d_anion Acovers (const d_anion &a);
+d_anion Ahav    (const d_anion &a);
 d_anion Aexcosec(const d_anion &a);
-d_anion Aexsec(const d_anion &a);
-d_anion Acastrg(const d_anion &a);
+d_anion Aexsec  (const d_anion &a);
+d_anion Acastrg (const d_anion &a);
 d_anion Acasctrg(const d_anion &a);
 
 
-
-d_anion Acosh(const d_anion &a);
-d_anion Atanh(const d_anion &a);
-d_anion Asech(const d_anion &a);
-d_anion Acoth(const d_anion &a);
-d_anion Aversh(const d_anion &a);
-d_anion Ahavh(const d_anion &a);
-d_anion Aexsech(const d_anion &a);
-d_anion Acashyp(const d_anion &a);
+d_anion Acosh   (const d_anion &a);
+d_anion Atanh   (const d_anion &a);
+d_anion Asech   (const d_anion &a);
+d_anion Acoth   (const d_anion &a);
+d_anion Aversh  (const d_anion &a);
+d_anion Ahavh   (const d_anion &a);
+d_anion Aexsech (const d_anion &a);
+d_anion Acashyp (const d_anion &a);
 d_anion Acaschyp(const d_anion &a);
 
 d_anion Asigm(const d_anion &a);
-d_anion Agd(const d_anion &a);
+d_anion Agd  (const d_anion &a);
 
 
-
-d_anion argd(const d_anion &a, const d_anion &q_default);
-d_anion argx(const d_anion &a, const d_anion &q_default);
+d_anion argd (const d_anion &a, const d_anion &q_default);
+d_anion argx (const d_anion &a, const d_anion &q_default);
 d_anion imagd(const d_anion &a, const d_anion &q_default);
 
-d_anion pow(long a, const d_anion &b, const d_anion &q_default);
-d_anion pow(double a, const d_anion &b, const d_anion &q_default);
-d_anion pow(const std::complex<double> &a, const d_anion &b, const d_anion &q_default);
-d_anion powl(const std::complex<double> &a, const d_anion &b, const d_anion &q_default);
-d_anion powr(const std::complex<double> &a, const d_anion &b, const d_anion &q_default);
-d_anion pow(const d_anion &a, long b, const d_anion &q_default);
-d_anion pow(const d_anion &a, double b, const d_anion &q_default);
-d_anion pow(const d_anion &a, const std::complex<double> &b, const d_anion &q_default);
-d_anion powl(const d_anion &a, const std::complex<double> &b, const d_anion &q_default);
-d_anion powr(const d_anion &a, const std::complex<double> &b, const d_anion &q_default);
-d_anion pow(const d_anion &a, const d_anion &b, const d_anion &q_default);
-d_anion powl(const d_anion &a, const d_anion &b, const d_anion &q_default);
-d_anion powr(const d_anion &a, const d_anion &b, const d_anion &q_default);
-d_anion sqrt(const d_anion &a, const d_anion &q_default);
-d_anion cbrt(const d_anion &a, const d_anion &q_default);
+d_anion pow (long                        a, const d_anion              &b, const d_anion &q_default);
+d_anion pow (double                      a, const d_anion              &b, const d_anion &q_default);
+d_anion pow (const std::complex<double> &a, const d_anion              &b, const d_anion &q_default);
+d_anion powl(const std::complex<double> &a, const d_anion              &b, const d_anion &q_default);
+d_anion powr(const std::complex<double> &a, const d_anion              &b, const d_anion &q_default);
+d_anion pow (const d_anion              &a, long                        b, const d_anion &q_default);
+d_anion pow (const d_anion              &a, double                      b, const d_anion &q_default);
+d_anion pow (const d_anion              &a, const std::complex<double> &b, const d_anion &q_default);
+d_anion powl(const d_anion              &a, const std::complex<double> &b, const d_anion &q_default);
+d_anion powr(const d_anion              &a, const std::complex<double> &b, const d_anion &q_default);
+d_anion pow (const d_anion              &a, const d_anion              &b, const d_anion &q_default);
+d_anion powl(const d_anion              &a, const d_anion              &b, const d_anion &q_default);
+d_anion powr(const d_anion              &a, const d_anion              &b, const d_anion &q_default);
+d_anion sqrt(const d_anion              &a,                                const d_anion &q_default);
+d_anion cbrt(const d_anion              &a,                                const d_anion &q_default);
 
-d_anion log(const d_anion &a, const d_anion &q_default);
-d_anion log10(const d_anion &a, const d_anion &q_default);
-d_anion logb(long a, const d_anion &b, const d_anion &q_default);
-d_anion logb(double a, const d_anion &b, const d_anion &q_default);
-d_anion logb(const std::complex<double> &a, const d_anion &b, const d_anion &q_default);
-d_anion logbl(const std::complex<double> &a, const d_anion &b, const d_anion &q_default);
-d_anion logbr(const std::complex<double> &a, const d_anion &b, const d_anion &q_default);
-d_anion logb(const d_anion &a, long b, const d_anion &q_default);
-d_anion logb(const d_anion &a, double b, const d_anion &q_default);
-d_anion logb(const d_anion &a, const std::complex<double> &b, const d_anion &q_default);
-d_anion logbl(const d_anion &a, const std::complex<double> &b, const d_anion &q_default);
-d_anion logbr(const d_anion &a, const std::complex<double> &b, const d_anion &q_default);
-d_anion logb(const d_anion &a, const d_anion &b, const d_anion &q_default);
-d_anion logbl(const d_anion &a, const d_anion &b, const d_anion &q_default);
-d_anion logbr(const d_anion &a, const d_anion &b, const d_anion &q_default);
+d_anion log  (const d_anion              &a,                                const d_anion &q_default);
+d_anion log10(const d_anion              &a,                                const d_anion &q_default);
+d_anion logb (long                        a, const d_anion              &b, const d_anion &q_default);
+d_anion logb (double                      a, const d_anion              &b, const d_anion &q_default);
+d_anion logb (const std::complex<double> &a, const d_anion              &b, const d_anion &q_default);
+d_anion logbl(const std::complex<double> &a, const d_anion              &b, const d_anion &q_default);
+d_anion logbr(const std::complex<double> &a, const d_anion              &b, const d_anion &q_default);
+d_anion logb (const d_anion              &a, long                        b, const d_anion &q_default);
+d_anion logb (const d_anion              &a, double                      b, const d_anion &q_default);
+d_anion logb (const d_anion              &a, const std::complex<double> &b, const d_anion &q_default);
+d_anion logbl(const d_anion              &a, const std::complex<double> &b, const d_anion &q_default);
+d_anion logbr(const d_anion              &a, const std::complex<double> &b, const d_anion &q_default);
+d_anion logb (const d_anion              &a, const d_anion              &b, const d_anion &q_default);
+d_anion logbl(const d_anion              &a, const d_anion              &b, const d_anion &q_default);
+d_anion logbr(const d_anion              &a, const d_anion              &b, const d_anion &q_default);
 
-d_anion asin(const d_anion &a, const d_anion &q_default);
-d_anion acos(const d_anion &a, const d_anion &q_default);
-d_anion acosec(const d_anion &a, const d_anion &q_default);
-d_anion asec(const d_anion &a, const d_anion &q_default);
-d_anion avers(const d_anion &a, const d_anion &q_default);
-d_anion acovers(const d_anion &a, const d_anion &q_default);
-d_anion ahav(const d_anion &a, const d_anion &q_default);
+d_anion asin    (const d_anion &a, const d_anion &q_default);
+d_anion acos    (const d_anion &a, const d_anion &q_default);
+d_anion acosec  (const d_anion &a, const d_anion &q_default);
+d_anion asec    (const d_anion &a, const d_anion &q_default);
+d_anion avers   (const d_anion &a, const d_anion &q_default);
+d_anion acovers (const d_anion &a, const d_anion &q_default);
+d_anion ahav    (const d_anion &a, const d_anion &q_default);
 d_anion aexcosec(const d_anion &a, const d_anion &q_default);
-d_anion aexsec(const d_anion &a, const d_anion &q_default);
+d_anion aexsec  (const d_anion &a, const d_anion &q_default);
 
-d_anion acosh(const d_anion &a, const d_anion &q_default);
-d_anion atanh(const d_anion &a, const d_anion &q_default);
-d_anion asech(const d_anion &a, const d_anion &q_default);
-d_anion acoth(const d_anion &a, const d_anion &q_default);
-d_anion aversh(const d_anion &a, const d_anion &q_default);
-d_anion ahavh(const d_anion &a, const d_anion &q_default);
+d_anion acosh  (const d_anion &a, const d_anion &q_default);
+d_anion atanh  (const d_anion &a, const d_anion &q_default);
+d_anion asech  (const d_anion &a, const d_anion &q_default);
+d_anion acoth  (const d_anion &a, const d_anion &q_default);
+d_anion aversh (const d_anion &a, const d_anion &q_default);
+d_anion ahavh  (const d_anion &a, const d_anion &q_default);
 d_anion aexsech(const d_anion &a, const d_anion &q_default);
 
 d_anion asigm(const d_anion &a, const d_anion &q_default);
-d_anion agd(const d_anion &a, const d_anion &q_default);
+d_anion agd  (const d_anion &a, const d_anion &q_default);
 
 
 
 // Other functions for anions
 
-inline d_anion &setident(d_anion &a);
-inline d_anion &setzero(d_anion &a);
-inline d_anion &setposate(d_anion &a);
-inline d_anion &setnegate(d_anion &a);
-inline d_anion &setconj(d_anion &a);
-inline d_anion &setrand(d_anion &a);
+inline d_anion &setident        (d_anion &a);
+inline d_anion &setzero         (d_anion &a);
+inline d_anion &setposate       (d_anion &a);
+inline d_anion &setnegate       (d_anion &a);
+inline d_anion &setconj         (d_anion &a);
+inline d_anion &setrand         (d_anion &a);
 inline d_anion &postProInnerProd(d_anion &a) { return a; }
 
 // Non-standard functions for complex
 
-inline std::complex<double> angle(const std::complex<double> &a);
+inline std::complex<double> angle (const std::complex<double> &a);
 inline std::complex<double> vangle(const std::complex<double> &a, const std::complex<double> &defsign);
-inline std::complex<double> inv(const std::complex<double> &a);
-inline std::complex<double> sgn(const std::complex<double> &a);
+inline std::complex<double> inv   (const std::complex<double> &a);
+inline std::complex<double> sgn   (const std::complex<double> &a);
 
-inline std::complex<double> &leftmult (std::complex<double>  &a, const std::complex<double>  &b);
-inline std::complex<double> &leftmult (std::complex<double>  &a,       double                 b);
-inline std::complex<double> &rightmult(const std::complex<double>  &a, std::complex<double>  &b);
-inline std::complex<double> &rightmult(      double                 a, std::complex<double>  &b);
+inline std::complex<double> &leftmult (std::complex<double>        &a, const std::complex<double>  &b);
+inline std::complex<double> &leftmult (std::complex<double>        &a,       double                 b);
+inline std::complex<double> &rightmult(const std::complex<double>  &a, std::complex<double>        &b);
+inline std::complex<double> &rightmult(      double                 a, std::complex<double>        &b);
 
 
 
@@ -913,57 +910,21 @@ inline std::complex<double> &rightmult(      double                 a, std::comp
 
 // inlines
 
-inline d_anion &operator*=(d_anion &left_op, double right_op)
-{
-    return leftmult(left_op,right_op);
-}
+inline d_anion &operator*=(d_anion &left_op,       double                right_op) { return leftmult(left_op,right_op  ); }
+inline d_anion &operator*=(d_anion &left_op, const std::complex<double> &right_op) { return leftmult(left_op,right_op  ); }
+inline d_anion &operator*=(d_anion &left_op, const d_anion              &right_op) { return leftmult(left_op,right_op  ); }
+inline d_anion &operator/=(d_anion &left_op,       double                right_op) { return leftmult(left_op,1/right_op); }
 
-inline d_anion &operator*=(d_anion &left_op, const std::complex<double> &right_op)
-{
-    return leftmult(left_op,right_op);
-}
-
-inline d_anion &operator*=(d_anion &left_op, const d_anion &right_op)
-{
-    return leftmult(left_op,right_op);
-}
-
-inline d_anion &operator/=(d_anion &left_op, double right_op)
-{
-    return leftmult(left_op,1/right_op);
-}
-
-inline d_anion &setident(d_anion &a)
-{
-    a = 1.0;
-
-    return a;
-}
-
-inline d_anion &setzero(d_anion &a)
-{
-    a = 0.0;
-
-    return a;
-}
-
-inline d_anion &setposate(d_anion &a)
-{
-    return a;
-}
-
-inline d_anion &setnegate(d_anion &a)
-{
-    a *= -1.0;
-
-    return a;
-}
+inline d_anion &setident (d_anion &a) { a = 1.0;   return a; }
+inline d_anion &setzero  (d_anion &a) { a = 0.0;   return a; }
+inline d_anion &setposate(d_anion &a) {            return a; }
+inline d_anion &setnegate(d_anion &a) { a *= -1.0; return a; }
 
 inline d_anion &setconj(d_anion &a)
 {
     if ( a.iscomplex() )
     {
-        setconj(a.leftpart());
+        setconj  (a.leftpart ());
         setnegate(a.rightpart());
     }
 
@@ -972,13 +933,7 @@ inline d_anion &setconj(d_anion &a)
 
 inline d_anion &setrand(d_anion &a)
 {
-    {
-        for ( int i = 0 ; i < a.size() ; ++i )
-        {
-            //a("&",i) = ((double) svm_rand())/SVM_RAND_MAX;
-            a("&",i) = ((double) rand())/RAND_MAX;
-        }
-    }
+    for ( int i = 0 ; i < a.size() ; ++i ) { a("&",i) = ((double) rand())/RAND_MAX; }
 
     return a;
 }
@@ -986,13 +941,9 @@ inline d_anion &setrand(d_anion &a)
 inline std::complex<double> angle(const std::complex<double> &a)
 {
     double absa = abs(a);
+    std::complex<double> resultzero = 0.0;
 
-    if ( absa == 0.0 )
-    {
-        std::complex<double> resultzero = 0.0;
-
-        return resultzero;
-    }
+    if ( absa == 0.0 ) { return resultzero; }
 
     return a/absa;
 }
@@ -1001,326 +952,79 @@ inline std::complex<double> vangle(const std::complex<double> &a, const std::com
 {
     double absa = abs(a);
 
-    if ( absa == 0.0 )
-    {
-        return defsign;
-    }
+    if ( absa == 0.0 ) { return defsign; }
 
     return a/absa;
 }
 
-inline std::complex<double> inv(const std::complex<double> &a)
-{
-    return conj(a)/norm(a);
-}
+inline std::complex<double> inv(const std::complex<double> &a) {                  return conj(a)/norm(a);                     }
+inline std::complex<double> sgn(const std::complex<double> &a) {d_anion tempa(a); return ((std::complex<double>) sgn(tempa)); }
 
-inline std::complex<double> sgn(const std::complex<double> &a)
-{
-    d_anion tempa(a);
-
-    return ((std::complex<double>) sgn(tempa));
-}
-
-inline std::complex<double> &setident(std::complex<double> &a)
-{
-    return ( a = 1 );
-}
-
-inline std::complex<double> &setzero(std::complex<double> &a)
-{
-    return ( a = 0 );
-}
-
-inline std::complex<double> &setposate(std::complex<double> &a)
-{
-    return a;
-}
-
-inline std::complex<double> &setnegate(std::complex<double> &a)
-{
-    return ( a *= -1 );
-}
-
-inline std::complex<double> &setconj(std::complex<double> &a)
-{
-    return ( a = conj(a) );
-}
+inline std::complex<double> &setident (std::complex<double> &a) { return ( a = 1 );       }
+inline std::complex<double> &setzero  (std::complex<double> &a) { return ( a = 0 );       }
+inline std::complex<double> &setposate(std::complex<double> &a) { return a;               }
+inline std::complex<double> &setnegate(std::complex<double> &a) { return ( a *= -1 );     }
+inline std::complex<double> &setconj  (std::complex<double> &a) { return ( a = conj(a) ); }
 
 inline std::complex<double> &setrand(std::complex<double> &a)
 {
-//    a.real(((double) svm_rand())/SVM_RAND_MAX);
-//    a.imag(((double) svm_rand())/SVM_RAND_MAX);
     a.real(((double) rand())/RAND_MAX);
     a.imag(((double) rand())/RAND_MAX);
 
     return a;
 }
 
-inline std::complex<double> &leftmult(std::complex<double> &a, const std::complex<double>  &b)
-{
-    return a *= b;
-}
-
-inline std::complex<double> &leftmult(std::complex<double> &a, double b)
-{
-    return a *= b;
-}
-
-inline std::complex<double> &rightmult(const std::complex<double> &a, std::complex<double>  &b)
-{
-    b = (a*b);
-
-    return b;
-}
-
-inline std::complex<double> &rightmult(double a, std::complex<double> &b)
-{
-    b = (a*b);
-
-    return b;
-}
-
-d_anion operator+(const d_anion &left_op)
-{
-    return left_op;
-}
-
-d_anion operator-(const d_anion &left_op)
-{
-    d_anion result(left_op);
-
-    return result *= -1.0;
-}
-
-d_anion operator+(double left_op, const d_anion &right_op)
-{
-    d_anion temp(left_op);
-
-    return temp += right_op;
-}
-
-d_anion operator+(const std::complex<double> &left_op, const d_anion &right_op)
-{
-    d_anion temp(left_op);
-
-    return temp += right_op;
-}
-
-d_anion operator+(const d_anion &left_op, double right_op)
-{
-    d_anion temp(left_op);
-
-    return temp += right_op;
-}
-
-d_anion operator+(const d_anion &left_op, const std::complex<double> &right_op)
-{
-    d_anion temp(left_op);
-
-    return temp += right_op;
-}
-
-d_anion operator+(const d_anion &left_op, const d_anion &right_op)
-{
-    d_anion temp(left_op);
-
-    return temp += right_op;
-}
-
-d_anion operator-(double left_op, const d_anion &right_op)
-{
-    d_anion temp(left_op);
-
-    return temp -= right_op;
-}
-
-d_anion operator-(const std::complex<double> &left_op, const d_anion &right_op)
-{
-    d_anion temp(left_op);
-
-    return temp -= right_op;
-}
-
-d_anion operator-(const d_anion &left_op, double right_op)
-{
-    d_anion temp(left_op);
-
-    return temp -= right_op;
-}
-
-d_anion operator-(const d_anion &left_op, const std::complex<double> &right_op)
-{
-    d_anion temp(left_op);
-
-    return temp -= right_op;
-}
-
-d_anion operator-(const d_anion &left_op, const d_anion &right_op)
-{
-    d_anion temp(left_op);
-
-    return temp -= right_op;
-}
-
-inline d_anion &operator+=(d_anion &left_op, double right_op)
-{
-    d_anion temp(right_op);
-
-    return ( left_op += temp );
-}
-
-inline d_anion &operator+=(d_anion &left_op, const std::complex<double> &right_op)
-{
-    d_anion temp(right_op);
-
-    return ( left_op += temp );
-}
-
-inline d_anion &operator-=(d_anion &left_op, double right_op)
-{
-    d_anion temp(right_op);
-
-    return ( left_op -= temp );
-}
-
-inline d_anion &operator-=(d_anion &left_op, const std::complex<double> &right_op)
-{
-    d_anion temp(right_op);
-
-    return ( left_op -= temp );
-}
-
-d_anion operator*(double left_op, const d_anion &right_op)
-{
-    d_anion result(right_op);
-    d_anion tleft_op(left_op);
-
-    return rightmult(tleft_op,result);
-}
-
-d_anion operator*(const std::complex<double> &left_op, const d_anion &right_op)
-{
-    d_anion result(right_op);
-    d_anion tleft_op(left_op);
-
-    return rightmult(tleft_op,result);
-}
-
-d_anion operator*(const d_anion &left_op, double right_op)
-{
-    d_anion result(left_op);
-    d_anion tright_op(right_op);
-
-    return leftmult(result,tright_op);
-}
-
-d_anion operator*(const d_anion &left_op, const std::complex<double> &right_op)
-{
-    d_anion result(left_op);
-    d_anion tright_op(right_op);
-
-    return leftmult(result,tright_op);
-}
-
-d_anion operator*(const d_anion &left_op, const d_anion &right_op)
-{
-    d_anion result(left_op);
-
-    return leftmult(result,right_op);
-}
-
-d_anion operator/(const d_anion &left_op, double right_op)
-{
-    d_anion result(left_op);
-
-    return ( result *= (1/right_op) );
-}
-
-int operator==(double left_op, const d_anion &right_op)
-{
-    d_anion temp(left_op);
-
-    return temp == right_op;
-}
-
-int operator==(const std::complex<double> &left_op, const d_anion &right_op)
-{
-    d_anion temp(left_op);
-
-    return temp == right_op;
-}
-
-int operator==(const d_anion &left_op, double right_op)
-{
-    d_anion temp(right_op);
-
-    return left_op == temp;
-}
-
-int operator==(const d_anion &left_op, const std::complex<double> &right_op)
-{
-    d_anion temp(right_op);
-
-    return left_op == temp;
-}
-
-int operator!=(double left_op, const d_anion &right_op)
-{
-    return !(left_op == right_op);
-}
-
-int operator!=(const std::complex<double> &left_op, const d_anion &right_op)
-{
-    return !(left_op == right_op);
-}
-
-int operator!=(const d_anion &left_op, double right_op)
-{
-    return !(left_op == right_op);
-}
-
-int operator!=(const d_anion &left_op, const std::complex<double> &right_op)
-{
-    return !(left_op == right_op);
-}
-
-int operator!=(const d_anion &left_op, const d_anion &right_op)
-{
-    return !(left_op == right_op);
-}
-
-inline d_anion &oneProduct(d_anion &res, const d_anion &a)
-{
-    return res = a;
-}
-
-inline d_anion &innerProduct(d_anion &res, const d_anion &a, const d_anion &b)
-{
-    res = a;
-    setconj(res);
-    res *= b;
-
-    return res;
-}
-
-inline d_anion &threeProduct(d_anion &res, const d_anion &a, const d_anion &b, const d_anion &c)
-{
-    res = a;
-    res *= b;
-    res *= c;
-
-    return res;
-}
-
-inline d_anion &fourProduct(d_anion &res, const d_anion &a, const d_anion &b, const d_anion &c, const d_anion &d)
-{
-    res = a;
-    res *= b;
-    res *= c;
-    res *= d;
-
-    return res;
-}
+inline std::complex<double> &leftmult (      std::complex<double> &a, const std::complex<double> &b) { return a *= b;        }
+inline std::complex<double> &leftmult (      std::complex<double> &a,       double                b) { return a *= b;        }
+inline std::complex<double> &rightmult(const std::complex<double> &a,       std::complex<double> &b) { return ( b = (a*b) ); }
+inline std::complex<double> &rightmult(      double                a,       std::complex<double> &b) { return ( b = (a*b) ); }
+
+d_anion operator+(const d_anion &left_op) {                          return left_op;        }
+d_anion operator-(const d_anion &left_op) { d_anion result(left_op); return result *= -1.0; }
+
+d_anion operator+(      double                left_op, const d_anion              &right_op) { d_anion temp(left_op); return temp += right_op; }
+d_anion operator+(const std::complex<double> &left_op, const d_anion              &right_op) { d_anion temp(left_op); return temp += right_op; }
+d_anion operator+(const d_anion              &left_op,       double                right_op) { d_anion temp(left_op); return temp += right_op; }
+d_anion operator+(const d_anion              &left_op, const std::complex<double> &right_op) { d_anion temp(left_op); return temp += right_op; }
+d_anion operator+(const d_anion              &left_op, const d_anion              &right_op) { d_anion temp(left_op); return temp += right_op; }
+
+d_anion operator-(      double                left_op, const d_anion              &right_op) { d_anion temp(left_op); return temp -= right_op; }
+d_anion operator-(const std::complex<double> &left_op, const d_anion              &right_op) { d_anion temp(left_op); return temp -= right_op; }
+d_anion operator-(const d_anion              &left_op,       double                right_op) { d_anion temp(left_op); return temp -= right_op; }
+d_anion operator-(const d_anion              &left_op, const std::complex<double> &right_op) { d_anion temp(left_op); return temp -= right_op; }
+d_anion operator-(const d_anion              &left_op, const d_anion              &right_op) { d_anion temp(left_op); return temp -= right_op; }
+
+inline d_anion &operator+=(d_anion &left_op,       double                right_op) { d_anion temp(right_op); return ( left_op += temp ); }
+inline d_anion &operator+=(d_anion &left_op, const std::complex<double> &right_op) { d_anion temp(right_op); return ( left_op += temp ); }
+
+inline d_anion &operator-=(d_anion &left_op,       double                right_op) { d_anion temp(right_op); return ( left_op -= temp ); }
+inline d_anion &operator-=(d_anion &left_op, const std::complex<double> &right_op) { d_anion temp(right_op); return ( left_op -= temp ); }
+
+d_anion operator*(      double                left_op, const d_anion              &right_op) { d_anion result(right_op); d_anion tleft_op (left_op ); return rightmult(tleft_op,result   ); }
+d_anion operator*(const std::complex<double> &left_op, const d_anion              &right_op) { d_anion result(right_op); d_anion tleft_op (left_op ); return rightmult(tleft_op,result   ); }
+d_anion operator*(const d_anion              &left_op,       double                right_op) { d_anion result(left_op ); d_anion tright_op(right_op); return leftmult (result  ,tright_op); }
+d_anion operator*(const d_anion              &left_op, const std::complex<double> &right_op) { d_anion result(left_op ); d_anion tright_op(right_op); return leftmult (result  ,tright_op); }
+d_anion operator*(const d_anion              &left_op, const d_anion              &right_op) { d_anion result(left_op );                              return leftmult (result  , right_op); }
+
+d_anion operator/(const d_anion &left_op, double right_op) { d_anion result(left_op); return ( result *= (1/right_op) ); }
+
+int operator==(      double                left_op, const d_anion              &right_op) { d_anion temp(left_op ); return temp    == right_op; }
+int operator==(const std::complex<double> &left_op, const d_anion              &right_op) { d_anion temp(left_op ); return temp    == right_op; }
+int operator==(const d_anion              &left_op,       double                right_op) { d_anion temp(right_op); return left_op == temp;     }
+int operator==(const d_anion              &left_op, const std::complex<double> &right_op) { d_anion temp(right_op); return left_op == temp;     }
+
+int operator!=(      double                left_op, const d_anion              &right_op) { return !(left_op == right_op); }
+int operator!=(const std::complex<double> &left_op, const d_anion              &right_op) { return !(left_op == right_op); }
+int operator!=(const d_anion              &left_op,       double                right_op) { return !(left_op == right_op); }
+int operator!=(const d_anion              &left_op, const std::complex<double> &right_op) { return !(left_op == right_op); }
+int operator!=(const d_anion              &left_op, const d_anion              &right_op) { return !(left_op == right_op); }
+
+inline d_anion &oneProduct         (d_anion &res, const d_anion &a) { return res = a; }
+inline d_anion &twoProduct         (d_anion &res, const d_anion &a, const d_anion &b) { res = a; res *= b; return res; }
+inline d_anion &threeProduct       (d_anion &res, const d_anion &a, const d_anion &b, const d_anion &c) { res = a; res *= b; res *= c; return res; }
+inline d_anion &fourProduct        (d_anion &res, const d_anion &a, const d_anion &b, const d_anion &c, const d_anion &d) { res = a; res *= b; res *= c; res *= d; return res; }
+inline d_anion &innerProduct       (d_anion &res, const d_anion &a, const d_anion &b) { res = a; setconj(res); res *= b; return res; }
+inline d_anion &innerProductRevConj(d_anion &res, const d_anion &a, const d_anion &b) { res = b; setconj(res); rightmult(a,res); return res; }
 
 inline d_anion &mProduct(d_anion &res, int m, const d_anion *a)
 {
@@ -1328,95 +1032,17 @@ inline d_anion &mProduct(d_anion &res, int m, const d_anion *a)
 
     setident(res);
 
-    {
-        for ( int i = 0 ; i < m ; ++i )
-        {
-            res *= a[i];
-        }
-    }
-
-    return res;
-}
-
-inline d_anion &twoProduct(d_anion &res, const d_anion &a, const d_anion &b)
-{
-    res = a;
-    res *= b;
-
-    return res;
-}
-
-inline d_anion &innerProductRevConj(d_anion &res, const d_anion &a, const d_anion &b)
-{
-    res = b;
-    setconj(res);
-    rightmult(a,res);
-
-    return res;
-}
-
-
-inline int testisvnan(const d_anion &x)
-{
-    int res = 0;
-
-    {
-        for ( int i = 0 ; !res && ( i < x.size() ) ; ++i )
-        {
-            if ( testisvnan(x(i)) )
-            {
-                res = 1;
-            }
-        }
-    }
-
-    return res;
-}
-
-inline int testisinf (const d_anion &x)
-{
-    int res = 0;
-
-    if ( x.size() && !testisvnan(x) )
-    {
-        for ( int i = 0 ; !res && ( i < x.size() ) ; ++i )
-        {
-            if ( testisinf(x(i)) )
-            {
-                res = 1;
-            }
-        }
-    }
-
-    return res;
-}
-
-inline int testispinf(const d_anion &x)
-{
-    int res = 0;
-
-    if ( ( x.size() == 1 ) && ( testispinf(x(0)) ) )
-    {
-        res = 1;
-    }
-
-    return res;
-}
-
-inline int testisninf(const d_anion &x)
-{
-    int res = 0;
-
-    if ( ( x.size() == 1 ) && ( testisninf(x(0)) ) )
-    {
-        res = 1;
-    }
+    for ( int i = 0 ; i < m ; ++i ) { res *= a[i]; }
 
     return res;
 }
 
 
 
+inline int testisvnan(const d_anion &x) { for ( int i = 0 ; i < x.size() ; ++i ) { if ( testisvnan(x(i)) ) { return 1; } } return 0; }
+inline int testisinf (const d_anion &x) { if ( !testisvnan(x) ) { for ( int i = 0 ; i < x.size() ; ++i ) { if ( testisinf(x(i)) ) { return 1; } } } return 0; }
+inline int testispinf(const d_anion &x) { if ( ( x.size() == 1 ) && ( testispinf(x(0)) ) ) { return 1; } return 0; }
+inline int testisninf(const d_anion &x) { if ( ( x.size() == 1 ) && ( testisninf(x(0)) ) ) { return 1; } return 0; }
 
 
 #endif

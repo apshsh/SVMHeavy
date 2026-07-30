@@ -477,8 +477,8 @@ public:
     virtual gentype &operator()(gentype &res, const       Vector<gentype> &i) const { if ( revertToFunc ) { return FuncVector::operator()(res,i); } SparseVector<gentype> ii(i);             return (*this)(res,ii); }
     virtual gentype &operator()(gentype &res, const SparseVector<gentype> &i) const;
 
-    const gentype &f(void) const        { if ( revertToFunc ) { return FuncVector::f();      } NiceThrow("Can't use f() on RKHSVector"); const static thread_local gentype rdummy; return rdummy; }
-          gentype &f(const char *dummy) { if ( revertToFunc ) { return FuncVector::f(dummy); } NiceThrow("Can't use f() on RKHSVector");       static thread_local gentype rdummy; return rdummy; }
+    const gentype &f(void) const        { if ( revertToFunc ) { return FuncVector::f();      } NiceThrow("Can't use f() on RKHSVector"); const thread_local gentype rdummy; return rdummy; }
+          gentype &f(const char *dummy) { if ( revertToFunc ) { return FuncVector::f(dummy); } NiceThrow("Can't use f() on RKHSVector");       thread_local gentype rdummy; return rdummy; }
 
     Vector<gentype> &a(const char *dummy,                         retVector<gentype> &tmp) { unsample(); NiceAssert( !revertToFunc ); return alpha(dummy,tmp);          }
     gentype         &a(const char *dummy, int i                                          ) { unsample(); NiceAssert( !revertToFunc ); return alpha(dummy,i);            }
@@ -831,8 +831,8 @@ public:
     virtual gentype &operator()(gentype &res, const       Vector<gentype> &i) const { if ( revertToFunc ) { return FuncVector::operator()(res,i); } SparseVector<gentype> ii(i);             return (*this)(res,ii); }
     virtual gentype &operator()(gentype &res, const SparseVector<gentype> &i) const;
 
-    const gentype &f(void) const        { if ( revertToFunc ) { return FuncVector::f();      } NiceThrow("Can't use f() on BernVector"); const static thread_local gentype rdummy; return rdummy; }
-          gentype &f(const char *dummy) { if ( revertToFunc ) { return FuncVector::f(dummy); } NiceThrow("Can't use f() on BernVector");       static thread_local gentype rdummy; return rdummy; }
+    const gentype &f(void) const        { if ( revertToFunc ) { return FuncVector::f();      } NiceThrow("Can't use f() on BernVector"); const thread_local gentype rdummy; return rdummy; }
+          gentype &f(const char *dummy) { if ( revertToFunc ) { return FuncVector::f(dummy); } NiceThrow("Can't use f() on BernVector");       thread_local gentype rdummy; return rdummy; }
 
     Vector<gentype> &w(const char *dummy,                         retVector<gentype> &tmp) { unsample(); NiceAssert( !revertToFunc ); return ww(dummy,tmp);          }
     gentype         &w(const char *dummy, int i                                          ) { unsample(); NiceAssert( !revertToFunc ); return ww(dummy,i);            }

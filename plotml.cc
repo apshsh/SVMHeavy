@@ -35,7 +35,8 @@
 
 int plotfn2d(double xmin, double xmax, double omin, double omax,
              const std::string &fname, const std::string &dname, int outformat, const gentype &baseline,
-             int xusevar)
+             int xusevar,
+             int xgrid, int ygrid)
 {
     NiceAssert( xmin < xmax );
 
@@ -61,7 +62,13 @@ int plotfn2d(double xmin, double xmax, double omin, double omax,
 
     dnamefile.close();
 
-    int ires = doplot(xmin,xmax,omin,omax,fname,dname,outformat,0,0);
+    int incdata = 0;
+    int incvar = 0;
+    int doline = 1;
+    int numdat = 0;
+    int plotlogy = 0;
+
+    int ires = doplot(xmin,xmax,omin,omax,fname,dname,outformat,incdata,incvar,doline,numdat,plotlogy,xgrid,ygrid);
 
 #ifdef DO_CLEANUP
     std::string delstringa = "rm "+dname;
@@ -94,6 +101,7 @@ int surffn(double xmin, double xmax, double ymin, double ymax, double omin, doub
 
     // Create the mean/variance datafile to plot
 
+    space2under(dname);
     std::ofstream dnamefile(dname);
 
     for ( x = xmin ; (double) x <= xmax ; x += (xmax-xmin)/NUMSAMPSURF )
@@ -131,7 +139,8 @@ int surffn(double xmin, double xmax, double ymin, double ymax, double omin, doub
 int plotml(const ML_Base &ml, int xindex,
            double xmin, double xmax, double omin, double omax,
            const std::string &fname, const std::string &dname, int outformat, int incdata, const gentype &baseline, int incvar, int xusevar,
-           const SparseVector<gentype> &xtemplate, int plotsq, int plotimp, double scale, double dscale)
+           const SparseVector<gentype> &xtemplate, int plotsq, int plotimp, double scale, double dscale,
+           int xgrid, int ygrid)
 {
     NiceAssert( xmin < xmax );
 
@@ -149,6 +158,7 @@ int plotml(const ML_Base &ml, int xindex,
 
     // Create the mean/variance datafile to plot
 
+    space2under(dname);
     std::ofstream dnamefile(dname);
     gentype dummy,dummyb;
 
@@ -247,7 +257,11 @@ int plotml(const ML_Base &ml, int xindex,
         dnameequfile.close();
     }
 
-    int ires = doplot(xmin,xmax,omin,omax,fname,dname,outformat,incdata,incvar);
+    int doline = 1;
+    int numdat = 0;
+    int plotlogy = 0;
+
+    int ires = doplot(xmin,xmax,omin,omax,fname,dname,outformat,incdata,incvar,doline,numdat,plotlogy,xgrid,ygrid);
 
     if ( ( ml.type() == 212 ) && ( dynamic_cast<const BLK_Conect &>(ml).mlqlist().size() ) )
     {
@@ -264,7 +278,7 @@ int plotml(const ML_Base &ml, int xindex,
             std::string fname_sub = fname+"_subplot_"+std::to_string(ii);
             std::string dname_sub = dname+"_subplot_"+std::to_string(ii);
 
-            ires |= plotml(ml_sub,xindex,xmin,xmax,omin,omax,fname_sub,dname_sub,outformat,incdata_sub,baseline,incvar_sub,xusevar,xtemplate,plotsq,plotimp,scale,dscale);
+            ires |= plotml(ml_sub,xindex,xmin,xmax,omin,omax,fname_sub,dname_sub,outformat,incdata_sub,baseline,incvar_sub,xusevar,xtemplate,plotsq,plotimp,scale,dscale,xgrid,ygrid);
         }
     }
 
@@ -509,7 +523,8 @@ int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double
            const Vector<Vector<double>> &xneg, const Vector<Vector<double>> &yneg,
            const Vector<Vector<double>> &xequ, const Vector<Vector<double>> &yequ,
            double xmin, double xmax, double omin, double omax,
-           const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar, int plotlogy)
+           const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar, int plotlogy,
+           int xgrid, int ygrid)
 {
     NiceAssert( x.size() == y.size() );
     NiceAssert( x.size() == yvar.size() );
@@ -582,14 +597,15 @@ int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double
     int doline = 2;
     int numdat = ( xpos.size() > 1 ) ? xpos.size() : 0;
 
-    return doplot(xmin,xmax,omin,omax,fname,dname,outformat,incdata,incvar,doline,numdat,plotlogy);
+    return doplot(xmin,xmax,omin,omax,fname,dname,outformat,incdata,incvar,doline,numdat,plotlogy,xgrid,ygrid);
 }
 
 // Plot multiple graphs (specified by y) on a single 2-d axis
 
 int multiplot2d(const Vector<Vector<gentype>> &y, const Vector<Vector<gentype>> &yvar, Vector<std::string> &plotlabels,
            double omin, double omax,
-           const std::string &fname, const std::string &dname, int outformat, const std::string &title, int plotlogy)
+           const std::string &fname, const std::string &dname, int outformat, const std::string &title, int plotlogy,
+           int xgrid, int ygrid)
 {
     NiceAssert( y.size() == yvar.size() );
     NiceAssert( y.size() == plotlabels.size() );
@@ -666,7 +682,7 @@ int multiplot2d(const Vector<Vector<gentype>> &y, const Vector<Vector<gentype>> 
 
     //int numdatfiles = q; // total number of lines to draw
 
-    int ires = domultiplot2d(xmin,xmax,omin,omax,fname,dname,outformat,title,dnamelist,repind,objind,plotlabels,maxobj,1,plotlogy);
+    int ires = domultiplot2d(xmin,xmax,omin,omax,fname,dname,outformat,title,dnamelist,repind,objind,plotlabels,maxobj,1,plotlogy,xgrid,ygrid);
 
 #ifdef DO_CLEANUP
         if ( dnamelist.size() )
@@ -691,7 +707,8 @@ int multiplot2d(const Vector<Vector<double>> &x,
                 const Vector<std::string> &plotlabels,
                 double xmin, double xmax,
                 double omin, double omax,
-                const std::string &fname, const std::string &dname, int outformat, const std::string &title, int incvar, int plotlogy)
+                const std::string &fname, const std::string &dname, int outformat, const std::string &title, int incvar, int plotlogy,
+                int xgrid, int ygrid)
 {
     NiceAssert( y.size() == yvar.size() );
     NiceAssert( y.size() == plotlabels.size() );
@@ -750,7 +767,7 @@ int multiplot2d(const Vector<Vector<double>> &x,
 
     //int numdatfiles = q; // total number of lines to draw
 
-    int ires = domultiplot2d(xmin,xmax,omin,omax,fname,dname,outformat,title,dnamelist,repind,objind,plotlabels,maxobj,1,plotlogy);
+    int ires = domultiplot2d(xmin,xmax,omin,omax,fname,dname,outformat,title,dnamelist,repind,objind,plotlabels,maxobj,1,plotlogy,xgrid,ygrid);
 
 #ifdef DO_CLEANUP
         if ( dnamelist.size() )
@@ -773,7 +790,8 @@ int multiplot2d(const Vector<Vector<double>> &x,
 
 int scatterplot2d(const Vector<double> &x, const Vector<double> &y,
                   double xmin, double xmax, double ymin, double ymax,
-                  const std::string &fname, const std::string &dname, int outformat)
+                  const std::string &fname, const std::string &dname, int outformat,
+                  int xgrid, int ygrid)
 {
     NiceAssert( x.size() == y.size() );
 
@@ -793,7 +811,7 @@ int scatterplot2d(const Vector<double> &x, const Vector<double> &y,
 
     datfile.close();
 
-    int ires = doscatterplot2d(xmin,xmax,ymin,ymax,fname,dname,outformat);
+    int ires = doscatterplot2d(xmin,xmax,ymin,ymax,fname,dname,outformat,xgrid,ygrid);
 
 #ifdef DO_CLEANUP
     std::string delstringa = "rm "+dname;

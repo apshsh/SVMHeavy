@@ -40,16 +40,6 @@
 
 // constexpr with variables in function is available in c++14 and after
 
-//#ifdef IS_CPP14
-//#define svm_constexpr constexpr
-//#endif
-
-//#ifndef IS_CPP14
-//#define svm_constexpr
-//#endif
-
-
-
 #ifndef DEFAULT_SAMPLES_SAMPLE
 #define DEFAULT_SAMPLES_SAMPLE     100
 #endif
@@ -554,7 +544,7 @@ public:
     }
 
     bool base              (void) const { return nbase;                                                         }
-    bool contiguous        (void) const { return !nbase || ( ( iis == 1 ) && ( pivot == cntintarray(dsize) ) ); }
+    bool contiguous        (void) const { return !nbase || ( ( iis == 1 ) && pivot && pivot->iscntintarray );   }
     bool contentalloced    (void) const { return ( content ? true : false );                                    }
     bool contentarray_hold (void) const { NiceAssert( content ); return content->array_hold();                  }
     int  contentarray_alloc(void) const { NiceAssert( content ); return content->array_alloc();                 }
@@ -783,9 +773,9 @@ public: // because fuck it
         return *overthere;
     }
 
-    const T *unsafeccontent(void) const { NiceAssert( !infsize() ); if ( !ccontent ) { static thread_local Vector<T> altres;      return altres.unsafecontent(); } return &((*ccontent)(0));    }
+    const T *unsafeccontent(void) const { NiceAssert( !infsize() ); if ( !ccontent ) { thread_local Vector<T> altres;      return altres.unsafecontent(); } return &((*ccontent)(0));    }
           T *unsafecontent (void)       { NiceAssert( !infsize() ); fix(); NiceAssert( content );                                                                  return &((*content)("&",0)); }
-    const int *unsafepivot (void) const { NiceAssert( !infsize() ); if ( !pivot    ) { static thread_local Vector<int> altres(0); return altres.unsafepivot();   } return &((*pivot)(0));       }
+    const int *unsafepivot (void) const { NiceAssert( !infsize() ); if ( !pivot    ) { thread_local Vector<int> altres(0); return altres.unsafepivot();   } return &((*pivot)(0));       }
 
     int unsafeib(void) const { return iib; }
     int unsafeis(void) const { return iis; }
@@ -1490,7 +1480,7 @@ DynArray<int> *retVector<T>::reset_p(Vector<T> &cover, int pivotsize)
     else
     {
 	MEMNEW(resval,DynArray<int>);
-        (*resval) = { nullptr,0,0,0,false,false,false };
+        (*resval) = { nullptr,0,0,0,false,false,false,false,false };
         (*resval).resize(pivotsize);
         (*resval).useSlackAllocation();
 
@@ -1557,7 +1547,7 @@ DynArray<int> *retVector<T>::creset_p(const Vector<T> &cover, int pivotsize)
     else
     {
 	MEMNEW(resval,DynArray<int>);
-        (*resval) = { nullptr,0,0,0,false,false,false };
+        (*resval) = { nullptr,0,0,0,false,false,false,false,false };
         (*resval).resize(pivotsize);
         (*resval).useSlackAllocation();
 
@@ -1620,7 +1610,7 @@ retVector<T> &retVector<T>::reset(const char *, const Vector<T> &src)
     }
 
     MEMNEW(Vector<T>::content,DynArray<T>);
-    (*(Vector<T>::content)) = { nullptr,0,0,Vector<T>::defaulttightalloc,false,false,false };
+    (*(Vector<T>::content)) = { nullptr,0,0,Vector<T>::defaulttightalloc,false,false,false,false,false };
     (*(Vector<T>::content)).resize(Vector<T>::dsize);
     Vector<T>::ccontent = Vector<T>::content;
 
@@ -1672,7 +1662,7 @@ Vector<T>::Vector(int size, const T *src, int tightalloc) : newln('\n'),
     if ( defaulttightalloc >= 2 ) { backoff = 1; defaulttightalloc -= 2; } // this indicates that the final element should not be set from src (see sparsevector)
 
     MEMNEW(content,DynArray<T>);
-    (*content) = { nullptr,0,0,defaulttightalloc,false,false,false };
+    (*content) = { nullptr,0,0,defaulttightalloc,false,false,false,false,false };
     (*content).resize(dsize);
     ccontent = content;
 
@@ -1704,7 +1694,7 @@ Vector<T>::Vector(int size, const T &src, int tightalloc) : newln('\n'),
     NiceAssert( size >= 0 );
 
     MEMNEW(content,DynArray<T>);
-    (*content) = { nullptr,0,0,defaulttightalloc,false,false,false };
+    (*content) = { nullptr,0,0,defaulttightalloc,false,false,false,false,false };
     (*content).resize(dsize);
     ccontent = content;
 
@@ -1743,7 +1733,7 @@ Vector<T>::Vector(const Vector<T> &src) : newln(src.newln),
     }
 
     MEMNEW(content,DynArray<T>);
-    (*content) = { nullptr,0,0,defaulttightalloc,false,false,false };
+    (*content) = { nullptr,0,0,defaulttightalloc,false,false,false,false,false };
     (*content).resize(dsize);
     ccontent = content;
 
@@ -2985,7 +2975,7 @@ Vector<T> &Vector<T>::operator()(const char *, const Vector<int> &i, retVector<T
 
     //isize = ( isize < 0 ) ? 0 : isize;
 
-    if ( ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && ( pivot == cntintarray(0) ) ) ) && !(i.base()) )
+    if ( ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && pivot && pivot->iscntintarray ) ) && !(i.base()) )
     {
         res.reset(*this);
 
@@ -3001,7 +2991,7 @@ Vector<T> &Vector<T>::operator()(const char *, const Vector<int> &i, retVector<T
 
     }
 
-    else if ( ( iib == 0 ) && ( iis == 0 ) && ( pivot == zerointarray() ) )
+    else if ( ( iib == 0 ) && ( iis == 0 ) && pivot && pivot->iszerointarray )
     {
         res.reset(*this);
 
@@ -3056,7 +3046,7 @@ Vector<T> &Vector<T>::operator()(const char *, const DynArray<int> &i, int isize
     }
 #endif
 
-    if ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && ( pivot == cntintarray(0) ) ) )
+    if ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && pivot && pivot->iscntintarray ) )
     {
         res.reset(*this);
 
@@ -3071,7 +3061,7 @@ Vector<T> &Vector<T>::operator()(const char *, const DynArray<int> &i, int isize
         res.pivot = res.dsize ? &i : cntintarray(res.iib);
     }
 
-    else if ( ( iib == 0 ) && ( iis == 0 ) && ( pivot == zerointarray() ) )
+    else if ( ( iib == 0 ) && ( iis == 0 ) && pivot && pivot->iszerointarray )
     {
         res.reset(*this);
 
@@ -3126,7 +3116,7 @@ Vector<T> &Vector<T>::operator()(const char *, const Vector<int> &i, int ib, int
     }
 #endif
 
-    if ( ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && ( pivot == cntintarray(0) ) ) ) && !(i.base()) )
+    if ( ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && pivot && pivot->iscntintarray ) ) && !(i.base()) )
     {
         res.reset(*this);
 
@@ -3141,7 +3131,7 @@ Vector<T> &Vector<T>::operator()(const char *, const Vector<int> &i, int ib, int
         res.pivot = res.dsize ? i.ccontent : cntintarray(res.iib);
     }
 
-    else if ( ( iib == 0 ) && ( iis == 0 ) && ( pivot == zerointarray() ) )
+    else if ( ( iib == 0 ) && ( iis == 0 ) && pivot && pivot->iszerointarray )
     {
         res.reset(*this);
 
@@ -3196,7 +3186,7 @@ Vector<T> &Vector<T>::operator()(const char *, const DynArray<int> &i, int ib, i
     }
 #endif
 
-    if ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && ( pivot == cntintarray(0) ) ) )
+    if ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && pivot && pivot->iscntintarray ) )
     {
         res.reset(*this);
 
@@ -3211,7 +3201,7 @@ Vector<T> &Vector<T>::operator()(const char *, const DynArray<int> &i, int ib, i
         res.pivot = res.dsize ? &i : cntintarray(res.iib);
     }
 
-    else if ( ( iib == 0 ) && ( iis == 0 ) && ( pivot == zerointarray() ) )
+    else if ( ( iib == 0 ) && ( iis == 0 ) && pivot && pivot->iszerointarray )
     {
         res.reset(*this);
 
@@ -3287,7 +3277,7 @@ const Vector<T> &Vector<T>::operator()(const Vector<int> &i, retVector<T> &res) 
         // we can't allocate it (without mutable) in the const context, so we
         // have an alternative vector (which we would be constructing) and use that.
 
-        static thread_local Vector<T> altres;
+        thread_local Vector<T> altres;
 
         return altres("&",i,res); // note *non*-const return so that fix can be called.
     }
@@ -3296,7 +3286,7 @@ const Vector<T> &Vector<T>::operator()(const Vector<int> &i, retVector<T> &res) 
 
     //isize = ( isize < 0 ) ? 0 : isize;
 
-    if ( ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && ( pivot == cntintarray(0) ) ) ) && !(i.base()) )
+    if ( ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && pivot && pivot->iscntintarray ) ) && !(i.base()) )
     {
         res.creset(*this);
 
@@ -3306,7 +3296,7 @@ const Vector<T> &Vector<T>::operator()(const Vector<int> &i, retVector<T> &res) 
         res.pivot = res.dsize ? i.ccontent : cntintarray(res.iib);
     }
 
-    else if ( ( iib == 0 ) && ( iis == 0 ) && ( pivot == zerointarray() ) )
+    else if ( ( iib == 0 ) && ( iis == 0 ) && pivot && pivot->iszerointarray )
     {
         res.creset(*this);
 
@@ -3345,7 +3335,7 @@ const Vector<T> &Vector<T>::operator()(const Vector<int> &i, int ib, int is, int
         // we can't allocate it (without mutable) in the const context, so we
         // have an alternative vector (which we would be constructing) and use that.
 
-        static thread_local Vector<T> altres;
+        thread_local Vector<T> altres;
 
         return altres("&",i,ib,is,im,res); // note *non*-const return so that fix can be called.
     }
@@ -3362,7 +3352,7 @@ const Vector<T> &Vector<T>::operator()(const Vector<int> &i, int ib, int is, int
     }
 #endif
 
-    if ( ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && ( pivot == cntintarray(0) ) ) ) && !(i.base()) )
+    if ( ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && pivot && pivot->iscntintarray ) ) && !(i.base()) )
     {
         res.creset(*this);
 
@@ -3372,7 +3362,7 @@ const Vector<T> &Vector<T>::operator()(const Vector<int> &i, int ib, int is, int
         res.pivot = res.dsize ? i.ccontent : cntintarray(res.iib);
     }
 
-    else if ( ( iib == 0 ) && ( iis == 0 ) && ( pivot == zerointarray() ) )
+    else if ( ( iib == 0 ) && ( iis == 0 ) && pivot && pivot->iszerointarray )
     {
         res.creset(*this);
 
@@ -3411,7 +3401,7 @@ const Vector<T> &Vector<T>::operator()(const DynArray<int> &i, int isize, retVec
         // we can't allocate it (without mutable) in the const context, so we
         // have an alternative vector (which we would be constructing) and use that.
 
-        static thread_local Vector<T> altres;
+        thread_local Vector<T> altres;
 
         return altres("&",i,isize,res); // note *non*-const return so that fix can be called.
     }
@@ -3424,7 +3414,7 @@ const Vector<T> &Vector<T>::operator()(const DynArray<int> &i, int isize, retVec
     }
 #endif
 
-    if ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && ( pivot == cntintarray(0) ) ) )
+    if ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && pivot && pivot->iscntintarray ) )
     {
         res.creset(*this);
 
@@ -3434,7 +3424,7 @@ const Vector<T> &Vector<T>::operator()(const DynArray<int> &i, int isize, retVec
         res.pivot = res.dsize ? &i : cntintarray(res.iib);
     }
 
-    else if ( ( iib == 0 ) && ( iis == 0 ) && ( pivot == zerointarray() ) )
+    else if ( ( iib == 0 ) && ( iis == 0 ) && pivot && pivot->iszerointarray )
     {
         res.creset(*this);
 
@@ -3472,7 +3462,7 @@ const Vector<T> &Vector<T>::operator()(const DynArray<int> &i, int ib, int is, i
         // we can't allocate it (without mutable) in the const context, so we
         // have an alternative vector (which we would be constructing) and use that.
 
-        static thread_local Vector<T> altres;
+        thread_local Vector<T> altres;
 
         return altres("&",i,ib,is,im,res); // note *non*-const return so that fix can be called.
     }
@@ -3489,7 +3479,7 @@ const Vector<T> &Vector<T>::operator()(const DynArray<int> &i, int ib, int is, i
     }
 #endif
 
-    if ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && ( pivot == cntintarray(0) ) ) )
+    if ( !nbase || ( ( iib == 0 ) && ( iis == 1 ) && pivot && pivot->iscntintarray ) )
     {
         res.creset(*this);
 
@@ -3499,7 +3489,7 @@ const Vector<T> &Vector<T>::operator()(const DynArray<int> &i, int ib, int is, i
         res.pivot = res.dsize ? &i : cntintarray(res.iib);
     }
 
-    else if ( ( iib == 0 ) && ( iis == 0 ) && ( pivot == zerointarray() ) )
+    else if ( ( iib == 0 ) && ( iis == 0 ) && pivot && pivot->iszerointarray )
     {
         res.creset(*this);
 
@@ -3540,7 +3530,7 @@ const Vector<T> &Vector<T>::operator()(int ib, int is, int im, retVector<T> &res
         // we can't allocate it (without mutable) in the const context, so we
         // have an alternative vector (which we would be constructing) and use that.
 
-        static thread_local Vector<T> altres;
+        thread_local Vector<T> altres;
 
         return altres("&",ib,is,im,res); // note *non*-const return so that fix can be called.
     }
@@ -4469,7 +4459,7 @@ Vector<T> &Vector<T>::resize(int tsize)
     {
         bkref    = this;
         MEMNEW(content,DynArray<T>);
-        (*content) = { nullptr,0,0,defaulttightalloc,false,false,false };
+        (*content) = { nullptr,0,0,defaulttightalloc,false,false,false,false,false };
         ccontent = content;
         pivot    = cntintarray(0);
 
@@ -4501,7 +4491,7 @@ Vector<T> &Vector<T>::resize(int tsize, int suggestedallocsize)
     {
         bkref    = this;
         MEMNEW(content,DynArray<T>);
-        (*content) = { nullptr,0,0,defaulttightalloc,false,false,false };
+        (*content) = { nullptr,0,0,defaulttightalloc,false,false,false,false,false };
         ccontent = content;
         pivot    = cntintarray(0);
 
@@ -4533,7 +4523,7 @@ const Vector<T> &Vector<T>::resize(int tsize) const
     {
         bkref    = this;
         MEMNEW(content,DynArray<T>);
-        (*content) = { nullptr,0,0,defaulttightalloc,false,false,false };
+        (*content) = { nullptr,0,0,defaulttightalloc,false,false,false,false,false };
         ccontent = content;
         pivot    = cntintarray(0);
 
@@ -5838,8 +5828,8 @@ const T &median(const Vector<T> &a, int &ii, const Vector<double> &weights)
 
     else
     {
-        static thread_local int frun = 1;
-        static thread_local T defres;
+        thread_local int frun = 1;
+        thread_local T defres;
 
         ii = 0;
 
@@ -5980,8 +5970,8 @@ const T &median(const Vector<T> &a, int &ii)
 
     else
     {
-        static thread_local int frun = 1;
-        static thread_local T defres;
+        thread_local int frun = 1;
+        thread_local T defres;
 
         ii = 0;
 
@@ -11462,13 +11452,13 @@ template <class T> Vector<T> &randtfill(Vector<T> &res) { return res.applyon(ran
 #define MINZEROSIZE        1000000
 #define ZEROALLOCAHEADFRAC 1.2
 
-inline const Vector<int> &zerointvecbasic(void) { const static thread_local Vector<int> zerores(zerointarray(),"&"); return zerores; }
-inline const Vector<int> &oneintvecbasic (void) { const static thread_local Vector<int> oneres (oneintarray (),"&"); return oneres;  }
+inline const Vector<int> &zerointvecbasic(void) { const thread_local Vector<int> zerores(zerointarray(),"&"); return zerores; }
+inline const Vector<int> &oneintvecbasic (void) { const thread_local Vector<int> oneres (oneintarray (),"&"); return oneres;  }
 
-inline const Vector<double> &zerodoublevecbasic(void) { const static thread_local Vector<double> zerores(zerodoublearray(),"&"); return zerores; }
-inline const Vector<double> &onedoublevecbasic (void) { const static thread_local Vector<double> oneres (onedoublearray (),"&"); return oneres;  }
-inline const Vector<double> &ninfdoublevecbasic(void) { const static thread_local Vector<double> ninfres(ninfdoublearray(),"&"); return ninfres; }
-inline const Vector<double> &pinfdoublevecbasic(void) { const static thread_local Vector<double> pinfres(pinfdoublearray(),"&"); return pinfres; }
+inline const Vector<double> &zerodoublevecbasic(void) { const thread_local Vector<double> zerores(zerodoublearray(),"&"); return zerores; }
+inline const Vector<double> &onedoublevecbasic (void) { const thread_local Vector<double> oneres (onedoublearray (),"&"); return oneres;  }
+inline const Vector<double> &ninfdoublevecbasic(void) { const thread_local Vector<double> ninfres(ninfdoublearray(),"&"); return ninfres; }
+inline const Vector<double> &pinfdoublevecbasic(void) { const thread_local Vector<double> pinfres(pinfdoublearray(),"&"); return pinfres; }
 
 inline const Vector<int> &zerointvec(int size, retVector<int> &tmpv) { return zerointvecbasic()(0,1,size-1,tmpv); }
 inline const Vector<int> &oneintvec (int size, retVector<int> &tmpv) { return oneintvecbasic ()(0,1,size-1,tmpv); }
@@ -11480,7 +11470,7 @@ inline const Vector<double> &pinfdoublevec(int size, retVector<double> &tmpv) { 
 
 inline const Vector<int> &cntintvec(int size, retVector<int> &tmpv)
 {
-    static thread_local Vector<int> cntres(cntintarray(MINZEROSIZE));
+    thread_local Vector<int> cntres(cntintarray(MINZEROSIZE));
 
     NiceAssert( size >= 0 );
 
@@ -11496,7 +11486,7 @@ inline const Vector<int> &cntintvec(int size, retVector<int> &tmpv)
 
 //inline const Vector<double> &cntdoublevec(int size, retVector<double> &tmpv)
 //{
-//    static thread_local Vector<double> cntres(cntdoublearray(MINZEROSIZE));
+//    thread_local Vector<double> cntres(cntdoublearray(MINZEROSIZE));
 //
 //    NiceAssert( size >= 0 );
 //

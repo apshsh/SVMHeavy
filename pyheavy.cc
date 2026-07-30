@@ -1,3 +1,6 @@
+
+//FIXME: in gentype remove global variables.functions. Instead, let the user set static functions (as per pyheavy function pointer) and use that
+
 //FIXME: make xy matrix contain vecInfo (see 2026_02_03_11_50_48keep/ml_base.hpp)
 //FIXME: build these vecInfo into K2 so that the calculation is short-cutted
 //FIXME: resetKernel needs to update xy (see svm_scalar.hpp)
@@ -22,6 +25,8 @@
 #include <iostream>
 #include <vector>
 #include <functional>
+#include <mutex>
+#include <atomic>
 
 namespace py = pybind11;
 
@@ -59,7 +64,10 @@ inline py::object *&postProInnerProd(py::object *&a) { return a; }
 //...
 //}
 
+std::mutex callback_lock;
 
+int pyAllowPrintOut(int mod = -1);
+int pyAllowPrintErr(int mod = -1);
 
 void dostartup(void);
 
@@ -69,11 +77,11 @@ int glob_DIRectInd    (int i = 0, int seti = 0);
 int glob_NelderMeadInd(int i = 0, int seti = 0);
 int glob_BayesianInd  (int i = 0, int seti = 0);
 
-int glob_MLInd        (int i, int seti) { static thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
-int glob_gridInd      (int i, int seti) { static thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
-int glob_DIRectInd    (int i, int seti) { static thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
-int glob_NelderMeadInd(int i, int seti) { static thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
-int glob_BayesianInd  (int i, int seti) { static thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
+int glob_MLInd        (int i, int seti) { thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
+int glob_gridInd      (int i, int seti) { thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
+int glob_DIRectInd    (int i, int seti) { thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
+int glob_NelderMeadInd(int i, int seti) { thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
+int glob_BayesianInd  (int i, int seti) { thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
 
 py::object &pygetbuiltin(void);
 py::object &pyisinstance(void);
@@ -112,16 +120,15 @@ py::object &pycomplex   (void) { return *pycomplexptr   (); }
 
 // Test python object type
 
-bool isValNone    (const py::object &src) { return src.is_none();                                                            }
-bool isValInteger (const py::object &src) { return !isValNone(src) && py::isinstance<py::int_>(src);                         }
-bool isValReal    (const py::object &src) { return !isValNone(src) && py::isinstance<py::float_>(src);                       }
-bool isValComplex (const py::object &src) { return !isValNone(src) && py::isinstance<py::bool_>(pyisinstance()(&src,pycomplex())) &&
-                                                                      py::cast<py::bool_>(pyisinstance()(&src,pycomplex())); }
-bool isValList    (const py::object &src) { return !isValNone(src) && py::isinstance<py::list>(src);                         }
-bool isValTuple   (const py::object &src) { return !isValNone(src) && py::isinstance<py::tuple>(src);                        }
-bool isValDict    (const py::object &src) { return !isValNone(src) && py::isinstance<py::dict>(src);                         }
-bool isValString  (const py::object &src) { return !isValNone(src) && py::isinstance<py::str>(src);                          }
-bool isValCallable(const py::object &src) { return !isValNone(src) && py::cast<py::bool_>(pycallable()(src));                }
+bool isValNone    (const py::object &src) { return src.is_none();                                      }
+bool isValInteger (const py::object &src) { return !isValNone(src) && py::isinstance<py::int_  >(src); }
+bool isValReal    (const py::object &src) { return !isValNone(src) && py::isinstance<py::float_>(src); }
+bool isValList    (const py::object &src) { return !isValNone(src) && py::isinstance<py::list  >(src); }
+bool isValTuple   (const py::object &src) { return !isValNone(src) && py::isinstance<py::tuple >(src); }
+bool isValDict    (const py::object &src) { return !isValNone(src) && py::isinstance<py::dict  >(src); }
+bool isValString  (const py::object &src) { return !isValNone(src) && py::isinstance<py::str   >(src); }
+bool isValComplex (const py::object &src) { return !isValNone(src) && py::isinstance<py::bool_>(pyisinstance()(&src,pycomplex())) && py::cast<py::bool_>(pyisinstance()(&src,pycomplex())); }
+bool isValCallable(const py::object &src) { return !isValNone(src) && py::cast<py::bool_>(pycallable()(src)); }
 
 bool isValNone    (const py::handle &src) { py::handle altsrc = src; return isValNone    (py::reinterpret_borrow<py::object>(altsrc)); }
 bool isValInteger (const py::handle &src) { py::handle altsrc = src; return isValInteger (py::reinterpret_borrow<py::object>(altsrc)); }
@@ -159,10 +166,12 @@ template <class T> py::object convToPy(const SparseVector<T>      &src);
                    py::object convToPy(const gentype              &src);
 template <class T> py::object convToPy(int size, const T          *src);
 
+void safecallback(gentype &res, const py::object &src, const gentype &x, int mode = 1);
+
 // python "error" type
 
 py::object makeError(const char        *src)              {                                                           return pyvalueerror()(src);       }
-py::object makeError(const std::string &src)              {                                                           return makeError(src.c_str());    }
+py::object makeError(const std::string &src)              {                                                           return makeError(src.c_str   ()); }
 py::object makeError(const std::string &src, int errcode) { std::string errstr = src+" "+std::to_string(errcode)+"."; return makeError(errstr.c_str()); }
 py::object makeError(const char        *src, int errcode) { std::string altsrc(src);                                  return makeError(altsrc,errcode); }
 
@@ -190,50 +199,53 @@ gentype convFromPy(const py::object &src);
 
 // Helper macros for python module constructions
 
-#define        QDO(modis,dofn,desc)        modis.def(#dofn,  &(mod_ ## dofn),  "\n\nDo "               desc);
-#define     QDOARG(modis,dofn,desc,pname)  modis.def(#dofn,  &(mod_ ## dofn),  "\n\nDo "               desc, py::arg(pname));
-#define       QGET(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "\n\nGet "              desc);
-#define    QGETCLA(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "\n\nFor class d, get " desc, py::arg("d"));
-#define    QGETSET(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "\n\nSet "              desc, py::arg(#getfn)); \
-                                           modis.def(#getfn, &(mod_ ## getfn), "\n\nGet "              desc);
-#define QGETSETCLA(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "\n\nFor class d, set " desc, py::arg("d"), py::arg(#getfn)); \
-                                           modis.def(#getfn, &(mod_ ## getfn), "\n\nFor class d, get " desc, py::arg("d"));
+#define    QDO(modis,dofn,desc)       modis.def(#dofn,  &(mod_ ## dofn), #dofn "() - "           desc "."                );
+#define QDOARG(modis,dofn,desc,pname) modis.def(#dofn,  &(mod_ ## dofn), #dofn "(" #pname ") - " desc ".", py::arg(pname));
 
-#define       QGETD(modis,getfn,getname,desc)               modis.def(getname, &(mod_ ## getfn), "\n\nGet "              desc);
-#define    QGETSETD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "\n\nDo "               desc, py::arg(getname)); \
-                                                            modis.def(getname, &(mod_ ## getfn), "\n\nGet "              desc);
-#define QGETSETCLAD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "\n\nFor class d, set " desc, py::arg("d"), py::arg(getname)); \
-                                                            modis.def(getname, &(mod_ ## getfn), "\n\nFor class d, get " desc, py::arg("d"));
+#define       QGET(modis,getfn,desca)       modis.def(#getfn, &(mod_ ## getfn), #getfn "() - "                 desca             "."                 );
+#define    QGETCLA(modis,getfn,desca)       modis.def(#getfn, &(mod_ ## getfn), #getfn "(d) - "                desca " for class d.", py::arg("d")   );
+#define    QGETSET(modis,getfn,setfn,desca) modis.def(#setfn, &(mod_ ## setfn), #setfn "("   #getfn ") - set " desca             ".", py::arg(#getfn)); \
+                                            modis.def(#getfn, &(mod_ ## getfn), #getfn "() - "                 desca             "."                 );
+#define QGETSETCLA(modis,getfn,setfn,desca) modis.def(#setfn, &(mod_ ## setfn), #setfn "(d," #getfn ") - set " desca " for class d.", py::arg("d"), py::arg(#getfn)); \
+                                            modis.def(#getfn, &(mod_ ## getfn), #getfn "(d) - "                desca " for class d.", py::arg("d")   );
 
-#define QGETSETOPT(modis,varname,ty,sub,desc) modis ## _ ## ty ## _ ## sub.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "\n\nFor " #ty          " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _ ## ty ## _ ## sub.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "\n\nFor " #ty          " optimiser, get " desc);
-#define QGETSETOPTB(modis,varname,ty,desc   ) modis ## _ ##             ty.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "\n\nFor " #ty          " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _ ##             ty.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "\n\nFor " #ty          " optimiser, get " desc);
-#define QGETSETOPTALL(modis,varname,desc)     modis ## _grid              .def("set" #varname, &(modoptset_grid_       ## varname), "\n\nFor " "grid"       " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _DIRect            .def("set" #varname, &(modoptset_DIRect_     ## varname), "\n\nFor " "DIRect"     " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _NelderMead        .def("set" #varname, &(modoptset_NelderMead_ ## varname), "\n\nFor " "NelderMead" " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _Bayesian          .def("set" #varname, &(modoptset_Bayesian_   ## varname), "\n\nFor " "Bayesian"   " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _grid              .def(      #varname, &(modoptget_grid_       ## varname), "\n\nFor " "grid"       " optimiser, get " desc); \
-                                              modis ## _DIRect            .def(      #varname, &(modoptget_DIRect_     ## varname), "\n\nFor " "DIRect"     " optimiser, get " desc); \
-                                              modis ## _NelderMead        .def(      #varname, &(modoptget_NelderMead_ ## varname), "\n\nFor " "NelderMead" " optimiser, get " desc); \
-                                              modis ## _Bayesian          .def(      #varname, &(modoptget_Bayesian_   ## varname), "\n\nFor " "Bayesian"   " optimiser, get " desc);
+#define       QGETD(modis,getfn,getname,desca,desc)               modis.def(getname, &(mod_ ## getfn), getname "() - "                  desca             ".\n\nOptions are:\n\n" desc);
+#define    QGETCLAD(modis,getfn,getname,desca,desc)               modis.def(getname, &(mod_ ## getfn), getname "(d) - "                 desca " for class d.\n\nOptions are:\n\n" desc, py::arg("d"));
+#define    QGETSETD(modis,getfn,setfn,getname,setname,desca,desc) modis.def(setname, &(mod_ ## setfn), setname "("   getname ") - set " desca             ".\n\n" "Set " desca ". Options are:\n\n" desc, py::arg(getname)); \
+                                                                  modis.def(getname, &(mod_ ## getfn), getname "() - "                  desca             ".\n\nOptions are:\n\n" desc);
+#define QGETSETCLAD(modis,getfn,setfn,getname,setname,desca,desc) modis.def(setname, &(mod_ ## setfn), setname "(d," getname ") - set " desca " for class d.\n\n" "Set " desca ". Options are:\n\n" desc, py::arg("d"), py::arg(getname)); \
+                                                                  modis.def(getname, &(mod_ ## getfn), getname "(d) - "                 desca " for class d.\n\nOptions are:\n\n" desc, py::arg("d"));
 
-#define QGETSETKERD(modis,getfn,setfn,getname,setname,desc)  modis.def(setname, &(mod_k ## setfn), "\n\nSet kernel param "                  desc, py::arg(getname)); \
-                                                             modis.def(getname, &(mod_k ## getfn), "\n\nGet kernel param "                  desc                  ); \
-                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "\n\nSet output kernel param "           desc, py::arg(getname)); \
-                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "\n\nGet output kernel param "           desc                  ); \
-                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "\n\nSet RFF kernel param "              desc, py::arg(getname)); \
-                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "\n\nGet RFF kernel param "              desc                  );
-#define QGETSETKERQD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_k ## setfn), "\n\nSet kernel element q param "        desc, py::arg(getname), py::arg("q") = 0); \
-                                                             modis.def(getname, &(mod_k ## getfn), "\n\nGet kernel element q param "        desc,                   py::arg("q") = 0); \
-                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "\n\nSet output kernel element q param " desc, py::arg(getname), py::arg("q") = 0); \
-                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "\n\nSet output kernel element q param " desc,                   py::arg("q") = 0); \
-                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "\n\nSet RFF kernel element q param "    desc, py::arg(getname), py::arg("q") = 0); \
-                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "\n\nSet RFF kernel element q param "    desc,                   py::arg("q") = 0);
+#define QGETSETOPT(modis,varname,ty,sub,desca,desc)   modis ## _ ## ty ## _ ## sub.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "set" #varname "(" #varname ") - set " desca " for " #ty " optimizer.\n\nSet " desca " for " #ty " optimiser.\n\nNote: " desc, py::arg(#varname)); \
+                                                      modis ## _ ## ty ## _ ## sub.def(      #varname, &(modoptget_ ## ty ## _ ## varname),       #varname "() - "                 desca " for " #ty " optimizer.\n\nNote: " desc);
+#define QGETSETOPTD(modis,varname,ty,sub,desca,desc)  modis ## _ ## ty ## _ ## sub.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "set" #varname "(" #varname ") - set " desca " for " #ty " optimizer.\n\nSet " desca " for " #ty " optimiser. Options are:\n\n" desc, py::arg(#varname)); \
+                                                      modis ## _ ## ty ## _ ## sub.def(      #varname, &(modoptget_ ## ty ## _ ## varname),       #varname "() - "                 desca " for " #ty " optimizer.\n\nOptions are:\n\n" desc);
+#define QGETSETOPTB(modis,varname,ty,desca,desc)      modis ## _ ## ty            .def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "set" #varname "(" #varname ") - set " desca " for " #ty " optimizer.\n\nSet " desca " for " #ty " optimiser.\n\nNote: " desc, py::arg(#varname)); \
+                                                      modis ## _ ## ty            .def(      #varname, &(modoptget_ ## ty ## _ ## varname),       #varname "() - "                 desca " for " #ty " optimizer.\n\nNote: " desc);
+#define QGETSETOPTBD(modis,varname,ty,desca,desc)     modis ## _ ## ty            .def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "set" #varname "(" #varname ") - set " desca " for " #ty " optimizer.\n\nSet " desca " for " #ty " optimiser. Options are:\n\n" desc, py::arg(#varname)); \
+                                                      modis ## _ ## ty            .def(      #varname, &(modoptget_ ## ty ## _ ## varname),       #varname "() - "                 desca " for " #ty " optimizer.\n\nOptions are:\n\n" desc);
+#define QGETSETOPTALL(modis,varname,desca,desc)       QGETSETOPTB(modis,varname,grid,      desca,desc) \
+                                                      QGETSETOPTB(modis,varname,DIRect,    desca,desc) \
+                                                      QGETSETOPTB(modis,varname,NelderMead,desca,desc) \
+                                                      QGETSETOPTB(modis,varname,Bayesian,  desca,desc)
 
-#define QIMPA(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "\n\nEvaluate " desc " in gentype", py::arg("x")                          );
-#define QIMPB(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "\n\nEvaluate " desc " in gentype", py::arg("x"),py::arg("y")             );
-#define QIMPC(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "\n\nEvaluate " desc " in gentype", py::arg("x"),py::arg("y"),py::arg("z"));
+
+#define QGETSETKERD(modis,getfn,setfn,getname,setname,desca,desc)  modis.def(setname, &(mod_k ## setfn), setname "(" getname ") - set " desca ".\n\nSet " desca ". Options are:\n\n" desc, py::arg(getname)); \
+                                                                   modis.def(getname, &(mod_k ## getfn), getname "() - "                desca ".\n\n"             "Options are:\n\n" desc                  ); \
+                                                         (modis ##  _UU).def(setname, &(mod_e ## setfn), setname "(" getname ") - set " desca ".\n\nSet " desca ". Options are:\n\n" desc, py::arg(getname)); \
+                                                         (modis ##  _UU).def(getname, &(mod_e ## getfn), getname "() - "                desca ".\n\n"             "Options are:\n\n" desc                  ); \
+                                                         (modis ## _RFF).def(setname, &(mod_r ## setfn), setname "(" getname ") - set " desca ".\n\nSet " desca ". Options are:\n\n" desc, py::arg(getname)); \
+                                                         (modis ## _RFF).def(getname, &(mod_r ## getfn), getname "() - "                desca ".\n\n"             "Options are:\n\n" desc                  );
+#define QGETSETKERQD(modis,getfn,setfn,getname,setname,desca,desc) modis.def(setname, &(mod_k ## setfn), setname "(" getname ",q=0) - set " desca " for K[q].\n\nSet " desca ".\n\nOptions are:\n\n" desc, py::arg(getname), py::arg("q") = 0); \
+                                                                   modis.def(getname, &(mod_k ## getfn), getname "(q=0) - "                 desca          ".\n\n"                "Options are:\n\n" desc,                   py::arg("q") = 0); \
+                                                         (modis ##  _UU).def(setname, &(mod_e ## setfn), setname "(" getname ",q=0) - set " desca " for K[q].\n\nSet:" desca ".\n\nOptions are:\n\n" desc, py::arg(getname), py::arg("q") = 0); \
+                                                         (modis ##  _UU).def(getname, &(mod_e ## getfn), getname "(q=0) - "                 desca          ".\n\n"                "Options are:\n\n" desc,                   py::arg("q") = 0); \
+                                                         (modis ## _RFF).def(setname, &(mod_r ## setfn), setname "(" getname ",q=0) - set " desca " for K[q].\n\nSet:" desca ".\n\nOptions are:\n\n" desc, py::arg(getname), py::arg("q") = 0); \
+                                                         (modis ## _RFF).def(getname, &(mod_r ## getfn), getname "(q=0) - "                 desca          ".\n\n"                "Options are:\n\n" desc,                   py::arg("q") = 0);
+
+#define QIMPA(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), #func     "(x) - evaluate " desc " in gentype", py::arg("x")                          );
+#define QIMPB(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), #func   "(x,y) - evaluate " desc " in gentype", py::arg("x"),py::arg("y")             );
+#define QIMPC(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), #func "(x,y,z) - evaluate " desc " in gentype", py::arg("x"),py::arg("y"),py::arg("z"));
 
 // Corresponding helper macros to auto-generate function definitions to be used by python module
 
@@ -331,7 +343,7 @@ py::object mloptDIRect    (int i, int dim, int numreps, py::object objfn, py::ob
 py::object mloptNelderMead(int i, int dim, int numreps, py::object objfn, py::object callback);
 py::object mloptBayesian  (int i, int dim, int numreps, py::object objfn, py::object callback);
 
-void plotregret(std::string &simname, py::object resnames, py::object listofres, double Rmin, double Rmax, int plotdata, int plotlogy, double Fmin, double Fmax);
+void plotregret(std::string &simname, py::object resnames, py::object listofres, double Rmin, double Rmax, int plotdata, int plotlogy, double Fmin, double Fmax, int xgrid, int ygrid);
 
 int selml(int i = 0);
 
@@ -365,9 +377,9 @@ void svmheavyc(const std::string commstr); // execute with string
 #define snakehigh 24
 #define snakewide 80
 
-py::object pyogetsrc(int k);                 // get object from heap store
-int        pyosetsrc(int k, py::object src); // put object into heap store
-void       pyoclrsrc(void);                  // empty heap store
+//py::object pyogetsrc(int k);                 // get object from heap store
+//int        pyosetsrc(int k, py::object src); // put object into heap store
+//void       pyoclrsrc(void);                  // empty heap store
 
 void logit        (py::object logstr);  // print to errstream
 void callintercalc(void);               // inbuilt interactive calculator
@@ -389,7 +401,7 @@ int removeTrainingVectorml(int j, int num);
 
 double mlcalcLOO   (void);
 double mlcalcRecall(void);
-double mlcalcCross (int m, int rndit = 0, int numreps = 1);
+double mlcalcCross (int m, int rndit = 0, int numreps = 1, int useThreads = 0);
 
 py::object muml      (py::object xa);
 py::object mugml     (py::object xa, int fmt);
@@ -472,7 +484,7 @@ GETSETDEF(theta,  settheta,  double)
 GETSETDEF(simnorm,setsimnorm,int   )
 
 GETDEF(loglikelihood)
-GETDEF(maxinfogain  )
+GETDEF(infogain     )
 GETDEF(RKHSnorm     )
 GETDEF(RKHSabs      )
 
@@ -690,10 +702,17 @@ OPTGETSETDEF(norepdist,      Bayesian,double )
 OPTGETSETDEF(blockdist,      Bayesian,double )
 OPTGETSETDEF(cgtepsgreedypof,Bayesian,double )
 OPTGETSETDEF(h,              Bayesian,double )
+OPTGETSETDEF(hcgt,           Bayesian,double )
+OPTGETSETDEF(hstep,          Bayesian,double )
+OPTGETSETDEF(hcgtstep,       Bayesian,double )
 OPTGETSETDEF(maxresamp,      Bayesian,int    )
 OPTGETSETDEF(weightmain,     Bayesian,double )
 OPTGETSETDEF(weightcgt,      Bayesian,double )
 OPTGETSETDEF(weightmisc,     Bayesian,double )
+OPTGETSETDEF(randweights,    Bayesian,int    )
+OPTGETSETDEF(minrandweight,  Bayesian,double )
+OPTGETSETDEF(maxrandweight,  Bayesian,double )
+OPTGETSETDEF(upsrandweight,  Bayesian,double )
 OPTGETSETDEF(alphascale,     Bayesian,double )
 OPTGETSETDEF(betascale,      Bayesian,double )
 OPTGETSETDEF(alphascalecgt,  Bayesian,double )
@@ -850,7 +869,6 @@ MAKEVISA(dawson   )
 void shutdown_module(void)
 {
     removeallaltpycall(); // remove any remaining std::function references back to python in gentype objects (separating code)
-    pyoclrsrc();          // clear local store
 
     // Clear local cache of python function pointers
 
@@ -861,6 +879,7 @@ void shutdown_module(void)
     pyvalueerrorptr(true);
     pycomplexptr   (true);
 
+    isMainThread(-1);
     //py::gil_scoped_acquire gil; - previously this was needed on exit, but no longer relevant
 }
 
@@ -940,18 +959,20 @@ PYBIND11_MODULE(pyheavy, m) {
 
     auto m_int = m.def_submodule("internal","Internal use.");
 
-    m_int.def("pyogetsrc",&pyogetsrc,    "Get python object k from heap.",py::arg("k"));
-    m_int.def("pyosetsrc",&pyosetsrc,    "Set python object k = val on heap. If val is a callable then this can be used  \n"
-                                         "used in a gentype expression via pycall(k,x).",py::arg("k"),py::arg("val"));
-    m_int.def("eval",     &svmeval,      "Evaluate function fn (gentype as string, or python function) provided (eg      \n"
-                                         "\"sin(x)\" for the gentype sin function) with argument x. x can be: None, int, \n"
-                                         "float, complex, list (mapped to vector), tuple (mapped to set) or dictionary.  \n"
-                                         "To explore available functions you use the inbuilt calculator (calc function). \n"
-                                         "See also pyheavy.maths.fn...",py::arg("fn"),py::arg("x"));
-    m_int.def("evalr",    &svmevalr,     "Like eval, but does computation on py::object not gentype.",py::arg("fn"),py::arg("x"));
-    m_int.def("snakes",   &callsnakes,   "Snakes (test io, streams).",py::arg("w")=snakewide,py::arg("h")=snakehigh);
-    m_int.def("calc",     &callintercalc,"Calculator (explore functions available in gentype expressions).");
-    m_int.def("log",      &logit,        "Print to log.",py::arg("str"));
+    m_int.def("eval",         &svmeval,        "eval(fn,x) - evaluate fn(x)                                                    \n"
+                                               "                                                                               \n"
+                                               "This will evaluate the fn (gentype as string, or python function) provided (eg \n"
+                                               "\"sin(x)\" for the gentype sin function) with argument x. x can be: None, int, \n"
+                                               "float, complex, list (mapped to vector), tuple (mapped to set) or dictionary.  \n"
+                                               "To explore available functions you use the inbuilt calculator (calc function). \n"
+                                               "See also pyheavy.maths.fn...                                                   ",
+                                               py::arg("fn"),py::arg("x"));
+    m_int.def("evalr",        &svmevalr,       "evalr(fn,x) - Like eval, but does computation on py::object not gentype.",py::arg("fn"),py::arg("x"));
+    m_int.def("snakes",       &callsnakes,     "snakes(w=24,h=80) - simple snake game to test iosgtream",py::arg("w")=snakewide,py::arg("h")=snakehigh);
+    m_int.def("calc",         &callintercalc,  "calc() - interactive calculator to explore gentype expressions");
+    m_int.def("log",          &logit,          "log(str) - print str to log.",py::arg("str"));
+    m_int.def("allowPrintOut",&pyAllowPrintOut,"allowPrintOut(mod) - enable (1) or disable (0) printing to outstream.",py::arg("mod")=1);
+    m_int.def("allowPrintErr",&pyAllowPrintErr,"allowPrintErr(mod) - Enable (1) or disable (0) printing to errstream.",py::arg("mod")=0);
 
 //    m_int.def("tester",&tester,"Tester.",py::arg("i")=0,py::arg("j")=0);
 
@@ -963,7 +984,9 @@ PYBIND11_MODULE(pyheavy, m) {
     auto m_maths = m.def_submodule("maths","Mathematics related.");
     auto m_maths_fn = m_maths.def_submodule("fn","Functions imported from c++.");
 
-    m_maths.def("test",&svmtest,"Return normalised (inputs and outputs in range [0,1]) test function (lambda)   \n"
+    m_maths.def("test",&svmtest,"test(i,type=\"norm\") - test functions for optimization:                       \n"
+                                "                                                                               \n"
+                                "Returns normalised (inputs and outputs in range [0,1]) test function (lambda)  \n"
                                 "for evaluating function i. Available test functions are:                       \n"
                                 "                                                                               \n"
                                 " 1: Rastrigin function        (n-dimensional).                                 \n"
@@ -1009,7 +1032,6 @@ PYBIND11_MODULE(pyheavy, m) {
                                 "on the range [0,1]^n with range [0,1]; and \"raw\", which returns the test     \n"
                                 "function with it's conventional domain and range.                              ",
                                 py::arg("i"),py::arg("type")="norm");
-    m_maths.def("calc",&callintercalc,"Calculator (explore functions available in gentype expressions).");
 
     QIMPA(m_maths_fn,sqrt,     "square root"                         )
     QIMPA(m_maths_fn,cbrt,     "cube root"                           )
@@ -1146,8 +1168,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     auto m_ml = m.def_submodule("ml","Machine Learning Modules.");
 
-    QGETSETD(m_ml,getMLType,ssetMLTypeClean,"type","settype", "ML type. Types are (strings):\n"
-                                            "                                                                               \n"
+    QGETSETD(m_ml,getMLType,ssetMLTypeClean,"type","settype", "ML type",
                                             "  s - SVM: single class classifier.                                            \n"
                                             "  c - SVM: binary classification (default).                                    \n"
                                             "  m - SVM: multi-class classification.                                         \n"
@@ -1196,7 +1217,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                             "svm - IMP: 1-norm 1-class modded SVM mono-surrogate.                           \n"
                                             "rls - IMP: Random linear scalarisation.                                        \n"
                                             "rns - IMP: Random draw from a GP xformed into an increasing fn on [0,1]^d.     \n"
-                                            "nop - BLK: NOP machine (holds data but does nothing, posterior = prior.        \n"
+                                            "nop - BLK: NOP machine (holds data but does nothing, posterior = prior).       \n"
                                             "mer - BLK: Mercer kernel inheritance block.                                    \n"
                                             "con - BLK: consensus machine.                                                  \n"
                                             "fna - BLK: user function machine (elementwise).*                               \n"
@@ -1214,7 +1235,9 @@ PYBIND11_MODULE(pyheavy, m) {
                                             "ker - BLK: kernel specialisation.***                                           \n"
                                             "mba - BLK: multi-block sum.                                                    ");
 
-    m_ml.def("sel",    &selml,   "Select ML i > 0. If i = 0, return current ML (default 1) without modification. \n"
+    m_ml.def("sel",    &selml,   "sel(i=0) - select ML i:                                                        \n"
+                                 "                                                                               \n"
+                                 "Select ML i > 0. If i = 0, return current ML (default 1) without modification. \n"
                                  "You can have arbitrarily many models at any given time. Notes:                 \n"
                                  "                                                                               \n"
                                  "- if i is negative then the ML is a member of a BO. See e.g. selaltmu etc. for \n"
@@ -1224,27 +1247,26 @@ PYBIND11_MODULE(pyheavy, m) {
                                  "          selmlsrcmodel, selmlmuapprox_prior, selmlcgtapprox_prior,            \n"
                                  "          selmlsigmaapprox_prior, selmldiffmodel_prior, selmlsrcmodel_prior    ",
                                  py::arg("i")=0);
-    m_ml.def("swap",   &swapml,  "Swap ML and ML j.",py::arg("i")=0,py::arg("j")=0);
-    m_ml.def("copy",   &copyml,  "Let ML := ML j.",  py::arg("i")=0,py::arg("j")=0);
-    m_ml.def("assign", &assignml,"Let ML j := ML.",  py::arg("i")=0,py::arg("j")=0);
+    m_ml.def("swap",   &swapml,  "swap(i=0,j=0) - wwap ML and ML j.",py::arg("i")=0,py::arg("j")=0);
+    m_ml.def("copy",   &copyml,  "copy(i=0,j=0) - let ML := ML j.",  py::arg("i")=0,py::arg("j")=0);
+    m_ml.def("assign", &assignml,"assign(i=0,j=0) - let ML j := ML.",py::arg("i")=0,py::arg("j")=0);
 
-    QDO(m_ml,train,  "training (if required)."                    );
-    QDO(m_ml,reset,  "undo training (alpha,bias = 0, if defined).");
-    QDO(m_ml,restart,"removing training data and reset."          );
+    QDO(m_ml,train,  "train ML model (if required)"                      );
+    QDO(m_ml,reset,  "undo training (and set alpha,bias = 0, if defined)");
+    QDO(m_ml,restart,"removing training data and reset"                  );
 
-    QDOARG(m_ml,scale,    "scale training variables (alpha,bias) by sf.","sf");
+    QDOARG(m_ml,scale,    "scale training variables (alpha,bias) by sf" ,"sf");
     QDOARG(m_ml,randomise,"randomise (alpha,bias) with sparsity 0<=s<=1","s" );
 
-    QGETSETD(m_ml,prim,  setprim,  "pritype","setpritype","set prior mean type:\n"
-                                                          "                                                                               \n"
+    QGETSETD(m_ml,prim,  setprim,  "pritype","setpritype","prior mean type",
                                                           "0 - no (0) prior mean (default).                                               \n"
                                                           "1 - primu(x) defined directly.                                                 \n"
                                                           "2 - prior is set to posterior mean of ML priML.                                ");
-    QGETSETD(m_ml,prival,setprival,"primu",  "setprimu",  "explicit prior mean mu (assuming pritype=1)");
-    m_ml.def("setpriML", &setpriml,"Set prior mean to posterior mean of ML j (assuming pritype=2).",py::arg("j"));
+    QGETSETD(m_ml,prival,setprival,"primu",  "setprimu",  "explicit prior mean function (for pritype == 1)","python function.");
+    m_ml.def("setpriML", &setpriml,"setpriML(j) - set prior mean to posterior mean of ML j (assuming pritype=2).",py::arg("j"));
 
-    QGETSETD(m_ml,tspaceDim,settspaceDim,"tspaceDim","settspaceDim", "target space dimension");
-    QGETSETD(m_ml,order,    setorder,    "order",    "setorder",     "target space order"    );
+    QGETSETD(m_ml,tspaceDim,settspaceDim,"tspaceDim","settspaceDim", "target space dimension","integer dimension");
+    QGETSETD(m_ml,order,    setorder,    "order",    "setorder",     "target space order"    ,"integer order");
 
     QGET(m_ml,N,                 "number of training vectors" );
     QGET(m_ml,type,              "ML type number"             );
@@ -1264,7 +1286,7 @@ PYBIND11_MODULE(pyheavy, m) {
     QGET(m_ml,isRegression,      "is ML a regressor?"         );
     QGET(m_ml,isPlanarType,      "is ML a planar-type method?");
 
-    QGETCLA(m_ml,NNC,"number of active training vectors for class d");
+    QGETCLA(m_ml,NNC,"number of active training vectors");
 
     QGET(m_ml,x,          "training vectors"                         );
     QGET(m_ml,d,          "training classifications/constraint types");
@@ -1277,27 +1299,29 @@ PYBIND11_MODULE(pyheavy, m) {
     QGET(m_ml,alphaState, "training alpha states"                    );
     QGET(m_ml,xtang,      "training class/vector/type specifics"     );
 
-    QGETSET(m_ml,C,        setC,        "regularization trade-off (empirical risk weight, C=1/lambda)"        );
-    QGETSET(m_ml,sigma,    setsigma,    "regularization trade-off (regularization weight, lambda=1/C)"        );
-    QGETSET(m_ml,sigma_cut,setsigma_cut,"sigma scale for JIT sampling"                                        );
-    QGETSET(m_ml,eps,      seteps,      "epsilon-insensitivity width"                                         );
+    QGETSET(m_ml,C,        setC,        "regularization trade-off (empirical risk weight, C=1/lambda)");
+    QGETSET(m_ml,sigma,    setsigma,    "regularization trade-off (regularization weight, lambda=1/C)");
+    QGETSET(m_ml,sigma_cut,setsigma_cut,"sigma scale for JIT sampling"                                );
+    QGETSET(m_ml,eps,      seteps,      "epsilon-insensitivity width"                                 );
 
-    m_ml.def("alpha",&mlalpha,"Get training alpha (SVM,LSV,GP).");
-    m_ml.def("bias", &mlbias, "Get training bias (SVM,LSV,GP)." );
+    m_ml.def("alpha",&mlalpha,"alpha() - get training alpha (SVM,LSV,GP).");
+    m_ml.def("bias", &mlbias,  "bias() - get training bias (SVM,LSV,GP)." );
 
-    m_ml.def("setalpha",&mlsetalpha,"Set training alpha (SVM,LSV,GP).",py::arg("alpha"));
-    m_ml.def("setbias", &mlsetbias, "Set training bias (SVM,LSV,GP).", py::arg("bias") );
+    m_ml.def("setalpha",&mlsetalpha,"setalpha(alpha) - set training alpha (SVM,LSV,GP).",py::arg("alpha"));
+    m_ml.def("setbias", &mlsetbias,   "setbias(bias) - set training bias (SVM,LSV,GP).", py::arg("bias") );
 
-    m_ml.def("Gp",&mlGp,"Get the Gp matrix (SVM,LSV,GP).");
+    m_ml.def("Gp",&mlGp,"Gp() - get the Gp matrix (SVM,LSV,GP).");
 
-    QGET(m_ml,loglikelihood,"log-likelihood (quasi for SVM,LSV, actual for GP)."      );
-    QGET(m_ml,maxinfogain,  "max-information-gain (quasi for SVM,LSV, actual for GP).");
-    QGET(m_ml,RKHSnorm,     "RKHS norm ||f||_H^2 (SVM,LSV,GP)."                       );
-    QGET(m_ml,RKHSabs,      "RKHS norm ||f||_H (SVM,LSV,GP)."                         );
+    QGET(m_ml,loglikelihood,"log-likelihood (quasi for SVM,LSV, actual for GP)"  );
+    QGET(m_ml,infogain,     "Information-gain (quasi for SVM,LSV, actual for GP)");
+    QGET(m_ml,RKHSnorm,     "RKHS norm ||f||_H^2 (SVM,LSV,GP)"                   );
+    QGET(m_ml,RKHSabs,      "RKHS norm ||f||_H (SVM,LSV,GP)"                     );
 
-    m_ml.def("constrain",&makeMonot,"Constrain the posterior mean / trained ML using inducing-point method.         \n"
+    m_ml.def("constrain",&makeMonot,"constrain(n=-1,t=1,xb=None,xlb=None,xub=None,d=1,y=None,Cweight=1.0,epsweight= \n"
+                                    "1.0,j=0) - constraint the posterior mean / trained ML:                         \n"
                                     "                                                                               \n"
-                                    "This adds n training observations (inducing points) where the constraints are  \n"
+                                    "Constrain the posterior mean / trained ML using inducing-point method.  This   \n"
+                                    "adds n training observations (inducing points) where the constraints are       \n"
                                     "strictly enforced, with the goal of global enforcement if the inducing points  \n"
                                     "are sufficiently dense. The grid type is controlled by parameter t:            \n"
                                     "                                                                               \n"
@@ -1330,52 +1354,69 @@ PYBIND11_MODULE(pyheavy, m) {
                                     "which, for a sufficiently dense set of inducing points, will approximate a     \n"
                                     "global constraint on the gradient. You can also include C and epsilon weights. \n"
                                     "                                                                               \n"
-                                    "Defaults are n=10^d, t=1, d=1.                                                 ",
+                                    "Defaults are n=10^d (use n=-1 to get this), t=1, d=1.                          ",
                                     py::arg("n")=-1,py::arg("t")=1,py::arg("xb")=py::none(),py::arg("xlb")=py::none(),
                                     py::arg("xub")=py::none(),py::arg("d")=1,py::arg("y")=py::none(),
                                     py::arg("Cweight")=1.0,py::arg("epsweight")=1.0,py::arg("j")=0);
 
-    m_ml.def("add", &addTrainingVectorml, "Add a single training vector pair [z,x] at position j (j=-1 to add at end),    \n"
-                                          "where x is a list (vector). To add multiple training pairs use z = (z1,z2,...),\n"
-                                          "x=(x1,x2,...). To set d, Cweight etc use z = {\"y\":y, \"d\":d, \"cw\":cw,     \n"
-                                          "\"ew\":ew} (all keys are optional).                                            ",
-                                          py::arg("x"),py::arg("z")=py::none(),py::arg("j")=-1);
-    m_ml.def("addf",&faddTrainingVectorml,"Add up to imax (let imax=0 (default) for all) training vector pairs [z,x] from \n"
-                                          "file fname at position j in the ML (j=-1 (default) to add, skipping ignoreStart\n"
-                                          "(default 0) training pairs at start of file.                                   \n"
-                                          "                                                                               \n"
-                                          "By default it is assumed that the file is in target-at-start format, but you   \n"
-                                          "can use target-at-end format by setting reverse=1 (reverse=0 by default). You  \n"
-                                          "can include Cweight, epsweight and d as described in the CLI documentation.    ",
-                                          py::arg("fname"),py::arg("ignoreStart")=0,py::arg("imax")=-1,py::arg("reverse")=0,
-                                          py::arg("j")=-1);
-
-    m_ml.def("remove",&removeTrainingVectorml,"Remove num training vectors at position j (j=-1 (default) to remove from end)",
+    m_ml.def("add", &addTrainingVectorml,     "add(x,z=None,j=-1) - add training pair:                                        \n"
+                                              "                                                                               \n"
+                                              "Add a single training vector pair [z,x] at position j (j=-1 to add at end),    \n"
+                                              "where x is a list (vector). To add multiple training pairs use z = (z1,z2,...),\n"
+                                              "x=(x1,x2,...). To set d, Cweight etc use z = {\"y\":y, \"d\":d, \"cw\":cw,     \n"
+                                              "\"ew\":ew} (all keys are optional).                                            ",
+                                              py::arg("x"),py::arg("z")=py::none(),py::arg("j")=-1);
+    m_ml.def("addf",&faddTrainingVectorml,    "addf(fname,ignoreStart=0,imax=-1,reverse=0,j=-1) - add data from file:         \n"
+                                              "                                                                               \n"
+                                              "Add up to imax (let imax=0 (default) for all) training vector pairs [z,x] from \n"
+                                              "file fname at position j in the ML (j=-1 (default) to add, skipping ignoreStart\n"
+                                              "(default 0) training pairs at start of file.                                   \n"
+                                              "                                                                               \n"
+                                              "By default it is assumed that the file is in target-at-start format, but you   \n"
+                                              "can use target-at-end format by setting reverse=1 (reverse=0 by default). You  \n"
+                                              "can include Cweight, epsweight and d as described in the CLI documentation.    ",
+                                              py::arg("fname"),py::arg("ignoreStart")=0,py::arg("imax")=-1,py::arg("reverse")=0,
+                                              py::arg("j")=-1);
+    m_ml.def("remove",&removeTrainingVectorml,"remove(j=-1,num=-1) - remove training data:                                    \n"
+                                              "                                                                               \n"
+                                              "Remove num training vectors at position j (j=-1 (default) to remove from end)  ",
                                               py::arg("j")=-1,py::arg("num")=1);
 
-    m_ml.def("mu", &muml,           "Calculate the posterior mean (output) mu(x), where x is either a vector (list) \n"
+    m_ml.def("mu", &muml,           "mu(x) - posterior mean:                                                        \n"
+                                    "                                                                               \n"
+                                    "Calculate the posterior mean (output) mu(x), where x is either a vector (list) \n"
                                     "or an integer indexing a training vector in the ML training set. To evaluate   \n"
                                     "multiple posterior means, let x be a tuple of vectors (lists).                 ",
                                     py::arg("x"));
-    m_ml.def("g",  &mugml,          "Calculate the underlying (ie continuous) output g(x), where x is either a      \n"
+    m_ml.def("g",  &mugml,          "g(x) - evaluate ML:                                                            \n"
+                                    "                                                                               \n"
+                                    "Calculate the underlying (ie continuous) output g(x), where x is either a      \n"
                                     "vector (list) or an integer indexing a training vector in the ML training set. \n"
                                     "Set fmt=1 (fmt=0 by default) for alternate return format (eg a vector if the ML\n"
                                     "is (nominally) a vector type at base or a vector of probabilities for a GP     \n"
                                     "binary classifier). To evaluate multiple outpuys, let x be a tuple of vectors  \n"
                                     "(lists).                                                                       ",
                                     py::arg("x")=py::none(),py::arg("fmt")=0);
-    m_ml.def("var",&varml,          "Calculate the posterior variance var(x), where x is either a vector (list) or  \n"
+    m_ml.def("var",&varml,          "var(x) - posterior variance:                                                   \n"
+                                    "                                                                               \n"
+                                    "Calculate the posterior variance var(x), where x is either a vector (list) or  \n"
                                     "an integer indexing a training vector in the ML training set. To evaluated     \n"
                                     "multiple posterior variances, let x be a tuple of vectors (lists).             ",
                                     py::arg("x"));
-    m_ml.def("cov",&covml,          "Calculate the posterior covariance cov(x,y), where each of x and y can be      \n"
+    m_ml.def("cov",&covml,          "cov(xa,xb) - posterior covariance:                                             \n"
+                                    "                                                                               \n"
+                                    "Calculate the posterior covariance cov(x,y), where each of x and y can be      \n"
                                     "either a vector (list) or an integer indexing a training vector in the ML      \n"
                                     "training set. To evaluated multiple posterior covariances, let x and/or y be a \n"
                                     "tuple of vectors (lists).                                                      ",
                                     py::arg("xa"),py::arg("xb"));
-    m_ml.def("setlevel",&setlevelml,"Calculate whether g(x)>h (+1), g(x)<-h (-1), or indet with confidence beta.    ",
+    m_ml.def("setlevel",&setlevelml,"setleval(x,beta,h) - level-set membership:                                     \n"
+                                    "                                                                               \n"
+                                    "Calculate whether g(x)>h (+1), g(x)<-h (-1), or indet. (0) with confidence beta",
                                     py::arg("x"),py::arg("beta"),py::arg("h"));
-    m_ml.def("predvar",&predvarml,  "Calculate the predictive posterior variance var(x) predicated on z being added \n"
+    m_ml.def("predvar",&predvarml,  "predvar(x,p,sigw=1) - calculate predictive posterior variance:                 \n"
+                                    "                                                                               \n"
+                                    "Calculate the predictive posterior variance var(x) predicated on z being added \n"
                                     "to the training set (ie. if we observed g(z), what would the posterior variance\n"
                                     "var(x) be). Each of x and z can be either a vector (list) or an integer        \n"
                                     "indexing a training vector in the ML trainig set. To evaluates multiple        \n"
@@ -1384,7 +1425,9 @@ PYBIND11_MODULE(pyheavy, m) {
                                     "Optional argument: sigw (default 1.0) controls the noise of the predicated     \n"
                                     "(assumed to be taken) observation g(z) ~ N(...,sigw*sigma()).                  ",
                                     py::arg("x"),py::arg("p"),py::arg("sigw")=1);
-    m_ml.def("predcov",&predcovml,  "Calculate the predictive posterior covariance cov(x,y) predicated on z being   \n"
+    m_ml.def("predcov",&predcovml,  "predcov(xa,xb,p,sigw=1) - calculate predictive posterior covariance:           \n"
+                                    "                                                                               \n"
+                                    "Calculate the predictive posterior covariance cov(x,y) predicated on z being   \n"
                                     "added to the training set (ie. if we observed g(z), what would the posterior   \n"
                                     "covariance cov(x,y) be). Each of x,y and z can be either a vector (list) or an \n"
                                     "integer indexing a training vector in the ML trainig set. To evaluate multiple \n"
@@ -1394,7 +1437,9 @@ PYBIND11_MODULE(pyheavy, m) {
                                     "(assumed to be taken) observation g(z) ~ N(...,sigw*sigma()).                  ",
                                     py::arg("xa"),py::arg("xb"),py::arg("p"),py::arg("sigw")=1);
 
-    m_ml.def("tuneKernel",&mltuneKernel,"Tune hyperparameters to minimise some metric, specified by method:             \n"
+    m_ml.def("tuneKernel",&mltuneKernel,"tuneKernel(method=2,xwidth=1,tuneK=1,tuneP=0) - hyperparameter tune:           \n"
+                                        "                                                                               \n"
+                                        "Tune hyperparameters to minimise some metric, specified by method:             \n"
                                         "                                                                               \n"
                                         "1 - negative log-likelihood (default)                                          \n"
                                         "2 - leave-one-out error                                                        \n"
@@ -1424,25 +1469,37 @@ PYBIND11_MODULE(pyheavy, m) {
                                         "       - 6 tune sigma and eps                                                  ",
                                         py::arg("method")=2,py::arg("xwidth")=1,py::arg("tuneK")=1,py::arg("tuneP")=0);
 
-    m_ml.def("K0",&mlK0,"Calculate K0()."                                                                   );
-    m_ml.def("K1",&mlK1,"Calculate K1(xa).",         py::arg("xa")                                          );
-    m_ml.def("K2",&mlK2,"Calculate K2(xa,xb).",      py::arg("xa"),py::arg("xb")                            );
-    m_ml.def("K3",&mlK3,"Calculate K3(xa,xb,xc).",   py::arg("xa"),py::arg("xb"),py::arg("xc")              );
-    m_ml.def("K4",&mlK4,"Calculate K4(xa,xb,xc,xd).",py::arg("xa"),py::arg("xb"),py::arg("xc"),py::arg("xd"));
-    m_ml.def("Km",&mlKm,"Calculate Km(xa) (list xa)",py::arg("xa")                                          );
+    m_ml.def("K0",&mlK0,           "K0() - evaluate 0-kernel."                                                        );
+    m_ml.def("K1",&mlK1,         "K1(xa) - evaluate 1-kernel.",py::arg("xa")                                          );
+    m_ml.def("K2",&mlK2,      "K2(xa,xb) - evaluate 2-kernel.",py::arg("xa"),py::arg("xb")                            );
+    m_ml.def("K3",&mlK3,   "K3(xa,xb,xc) - evaluate 3-kernel.",py::arg("xa"),py::arg("xb"),py::arg("xc")              );
+    m_ml.def("K4",&mlK4,"K4(xa,xb,xc,xd) - evaluate 4-kernel.",py::arg("xa"),py::arg("xb"),py::arg("xc"),py::arg("xd"));
+    m_ml.def("Km",&mlKm,         "Km(xa) - evaluate m-kernel for list xa",py::arg("xa")                               );
 
-    m_ml.def("calcLOO",   &mlcalcLOO,   "Calculate leave-one-out error.");
-    m_ml.def("calcRecall",&mlcalcRecall,"Calculate recall error."       );
-    m_ml.def("calcCross", &mlcalcCross, "Calculate n-fold validation error. If numreps>1 then does numreps repetitions, \n"
-                                        "which are randomised in rndit=1.                                               ",
-                                        py::arg("n"),py::arg("rndit")=0,py::arg("numreps")=1);
+    m_ml.def("calcLOO",   &mlcalcLOO,   "calcLOO() - calculate leave-one-out error.");
+    m_ml.def("calcRecall",&mlcalcRecall,"calcRecall() - calculate recall error.");
+    m_ml.def("calcCross", &mlcalcCross, "calcCross(n,rndit=0,numreps=1,useThreads=0) - n-fold cross-validation error:   \n"
+                                        "                                                                               \n"
+                                        "Calculate n-fold validation error:                                             \n"
+                                        "                                                                               \n"
+                                        "n:          number of folds.                                                   \n"
+                                        "numreps:    number of repetitions (default 1).                                 \n"
+                                        "rndit:      0 for non-random (in data order) folds (default).                  \n"
+                                        "            1 for random folds (you need this for numpres > 1).                \n"
+                                        "useThreads: 0 for non-threaded operation (default).                            \n"
+                                        "            1 to run each fold in a separate thread (faster).                  \n"
+                                        "                                                                               \n"
+                                        "Note: using threads is normally fine, but will fail if the ML has callbacks to \n"
+                                        "      python - for example if your GP model has a prior mean function that is  \n"
+                                        "      defined in python then the callback will be in the non-main thread, which\n"
+                                        "      will trigger the GIL.                                                    ",
+                                        py::arg("n"),py::arg("rndit")=0,py::arg("numreps")=1,py::arg("useThreads")=0);
 
     // ---------------------------
 
     auto m_ml_svm = m_ml.def_submodule("svm","Support Vector Machines specific options.");
 
-    QGETSETD(m_ml_svm,getMLType,ssetMLTypeClean,"type","settype", "SVM type. Types are:\n"
-                                                                  "                                                                               \n"
+    QGETSETD(m_ml_svm,getMLType,ssetMLTypeClean,"type","settype", "SVM type",
                                                                   "  s - SVM: single class.                                                       \n"
                                                                   "  c - SVM: binary classification (default).                                    \n"
                                                                   "  m - SVM: multiclass classification.                                          \n"
@@ -1463,51 +1520,44 @@ PYBIND11_MODULE(pyheavy, m) {
                                                                   "  d - SVM: basic SVM for kernel inheritance (-x).                              \n"
                                                                   "  B - SVM: binary classifier using random FF (kernels 3,4,13,19).              \n"
                                                                   "  R - SVM: scalar regression using random FF (kernels 3,4,13,19).              ");
-    QGETSETD(m_ml_svm,getVmethod,setVmethod,"typeVR","settypeVR", "SVM vector-regression method.  Methods are:\n"
-                                                                  "                                                                               \n"
+    QGETSETD(m_ml_svm,getVmethod,setVmethod,"typeVR","settypeVR", "SVM vector-regression method",
                                                                   "once - at-once regression.                                                     \n"
                                                                   "red  - reduction to binary regression (default).                               ");
-    QGETSETD(m_ml_svm,getCmethod,setCmethod,"typeMC","settypeMC", "SVM multi-class classification method.  Methods are:\n"
-                                                                  "                                                                               \n"
+    QGETSETD(m_ml_svm,getCmethod,setCmethod,"typeMC","settypeMC", "SVM multi-class classification method",
                                                                   "1vsA   - 1 versus all (reduction to binary).                                   \n"
                                                                   "1vs1   - 1 versus 1 (reduction to binary).                                     \n"
                                                                   "DAG    - directed acyclic graph (reduct to binary).                            \n"
                                                                   "MOC    - minimum output coding (reduct to binary).                             \n"
                                                                   "maxwin - max-wins SVM (at once).                                               \n"
                                                                   "recdiv - recursive division SVM (at once, default).                            ");
-    QGETSETD(m_ml_svm,getOmethod,setOmethod,"typeOC","settypeOC", "SVM one-class method.  Methods are:\n"
-                                                                  "                                                                               \n"
+    QGETSETD(m_ml_svm,getOmethod,setOmethod,"typeOC","settypeOC", "SVM one-class method",
                                                                   "sch - Scholkopt 1999 1-class SVM (default).                                    \n"
                                                                   "tax - Tax and Duin 2004, Support Vector Data Description.                      ");
-    QGETSETD(m_ml_svm,getAmethod,setAmethod,"typeCM","settypeCM", "SVM classification method.  Methods are:\n"
-                                                                  "                                                                               \n"
+    QGETSETD(m_ml_svm,getAmethod,setAmethod,"typeCM","settypeCM", "SVM classification method",
                                                                   "svc - normal SVM classifier (default).                                         \n"
                                                                   "svr - classify via regression.                                                 ");
-    QGETSETD(m_ml_svm,getRmethod,setRmethod,"typeER","settypeER", "SVM empirical risk type.  Methods are:\n"
-                                                                  "                                                                               \n"
+    QGETSETD(m_ml_svm,getRmethod,setRmethod,"typeER","settypeER", "SVM empirical risk type",
                                                                   "l - linear (default).                                                          \n"
                                                                   "q - quadratic.                                                                 \n"
                                                                   "o - linear, 1-norm regularization on alpha (not feature space: use -m for that)\n"
                                                                   "g - generalised linear (iterative fuzzy).                                      \n"
                                                                   "G - generalised quadratic (iterative fuzzy).                                   ");
-    QGETSETD(m_ml_svm,getTmethod,setTmethod,"typeSM","settypeSM", "SVM tube method.  Methods are:\n"
-                                                                  "                                                                               \n"
+    QGETSETD(m_ml_svm,getTmethod,setTmethod,"typeSM","settypeSM", "SVM tube method",
                                                                   "f - fixed tube (default).                                                      \n"
                                                                   "s - tube shrinking.                                                            ");
-    QGETSETD(m_ml_svm,getBmethod,setBmethod,"typeBias","settypeBias","SVM bias method.  Methods are:\n"
-                                                                     "                                                                               \n"
-                                                                     "var - variable bias (default).                                                 \n"
-                                                                     "fix - fixed bias (usually zero).                                               \n"
-                                                                     "pos - positive bias.                                                           \n"
-                                                                     "neg - negative bias.                                                           ");
-    QGETSETD(m_ml_svm,getMmethod,setMmethod,"typeM","settypeM",   "SVM monotonic method (sufficient, not necessary, and only for a few\n"
-                                                                  "kernels in finite dimensions, assuming all training x >= 0).  Methods are:     \n"
-                                                                  "                                                                               \n"
+    QGETSETD(m_ml_svm,getBmethod,setBmethod,"typeBias","settypeBias","SVM bias method",
+                                                                  "var - variable bias (default).                                                 \n"
+                                                                  "fix - fixed bias (usually zero).                                               \n"
+                                                                  "pos - positive bias.                                                           \n"
+                                                                  "neg - negative bias.                                                           ");
+    QGETSETD(m_ml_svm,getMmethod,setMmethod,"typeM","settypeM",   "SVM monotonic method",
                                                                   "n - none (default).                                                            \n"
                                                                   "i - increasing.                                                                \n"
                                                                   "d - decreasing.                                                                \n"
                                                                   "                                                                               \n"
-                                                                  "Note: this method is a a bit inefficient - recommend not using.                ");
+                                                                  "Note: this method is a a bit inefficient - not recommended. This is sufficient \n"
+                                                                  "but not necessary, and only works for a few kernels in finite dimensions, if   \n"
+                                                                  "x>=0 for all training vectors.                                                 ");
 
     QGET(m_ml_svm,NZ, "number training vectors with alpha = 0"                              );
     QGET(m_ml_svm,NF, "number training vectors with alpha unconstrained"                    );
@@ -1520,24 +1570,24 @@ PYBIND11_MODULE(pyheavy, m) {
 
     QGET(m_ml_svm,kerndiag,"diagonals of kernel matrix");
 
-    QGETSET(m_ml_svm,C,        setC,        "regularization trade-off (empirical risk weight, C=1/lambda)"        );
-    QGETSET(m_ml_svm,sigma,    setsigma,    "regularization trade-off (regularization weight, lambda=1/C)"        );
-    QGETSET(m_ml_svm,sigma_cut,setsigma_cut,"sigma scale for JIT sampling"                                        );
-    QGETSET(m_ml_svm,eps,      seteps,      "epsilon-insensitivity width"                                         );
-    QGETSET(m_ml_svm,m,        setm,        "margin-norm (default 2, or 2-kernel SVM)"                            );
-    QGETSET(m_ml_svm,theta,    settheta,    "theta (psd regularization) for similarity learning"                  );
-    QGETSET(m_ml_svm,simnorm,  setsimnorm,  "normalized (1, default) or un-normalized (0) similarity learning"    );
+    QGETSET(m_ml_svm,C,        setC,        "regularization trade-off (empirical risk weight, C=1/lambda)"    );
+    QGETSET(m_ml_svm,sigma,    setsigma,    "regularization trade-off (regularization weight, lambda=1/C)"    );
+    QGETSET(m_ml_svm,sigma_cut,setsigma_cut,"sigma scale for JIT sampling"                                    );
+    QGETSET(m_ml_svm,eps,      seteps,      "epsilon-insensitivity width"                                     );
+    QGETSET(m_ml_svm,m,        setm,        "margin-norm (default 2, or 2-kernel SVM)"                        );
+    QGETSET(m_ml_svm,theta,    settheta,    "theta (psd regularization) for similarity learning"              );
+    QGETSET(m_ml_svm,simnorm,  setsimnorm,  "normalized (1, default) or un-normalized (0) similarity learning");
 
-    QGETSETCLA(m_ml_svm,Cclass,  setCclass,  "regularization trade-off scale (empirical risk weight) C for class d");
-    QGETSETCLA(m_ml_svm,epsclass,setepsclass,"epsilon-insensitivity width eps scale for class d"                   );
+    QGETSETCLA(m_ml_svm,Cclass,  setCclass,  "regularization trade-off scale (empirical risk weight) C");
+    QGETSETCLA(m_ml_svm,epsclass,setepsclass,"epsilon-insensitivity width eps scale"                   );
 
     QGETSET(m_ml_svm,LinBiasForce, setLinBiasForce, "linear bias-forcing (binary, on/off)"   );
     QGETSET(m_ml_svm,QuadBiasForce,setQuadBiasForce,"quadratic bias-forcing (binary, on/off)");
     QGETSET(m_ml_svm,nu,           setnu,           "linear tube-shrinking constant"         );
     QGETSET(m_ml_svm,nuQuad,       setnuQuad,       "quadratic tube-shrinking constant"      );
 
-    QGETSETCLA(m_ml_svm,LinBiasForceclass, setLinBiasForceclass, "linear bias-forcing LinBiasForce scale for class d"    );
-    QGETSETCLA(m_ml_svm,QuadBiasForceclass,setQuadBiasForceclass,"quadratic bias-forcing QuadBiasForce scale for class d");
+    QGETSETCLA(m_ml_svm,LinBiasForceclass, setLinBiasForceclass, "linear bias-forcing LinBiasForce scale"    );
+    QGETSETCLA(m_ml_svm,QuadBiasForceclass,setQuadBiasForceclass,"quadratic bias-forcing QuadBiasForce scale");
 
        QDO(m_ml_svm,removeNonSupports,"remove all non-support vectors alpha=0");
     QDOARG(m_ml_svm,trimTrainingSet,  "trim training set to target size N","N");
@@ -1546,8 +1596,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     auto m_ml_lsv = m_ml.def_submodule("lsv","Least-Squares Support Vector Machines specific options.");
 
-    QGETSETD(m_ml_lsv,getMLType,ssetMLTypeClean,"type","settype",    "LSV type. Types are:\n"
-                                                                     "                                                                               \n"
+    QGETSETD(m_ml_lsv,getMLType,ssetMLTypeClean,"type","settype",    "LSV type",
                                                                      "lsc - LS-SVM: binary classification.                                           \n"
                                                                      "lsr - LS-SVM: scalar regression.                                               \n"
                                                                      "lsv - LS-SVM: vector regression.                                               \n"
@@ -1558,8 +1607,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                                                      "lsi - LS-SVM: planar regression.                                               \n"
                                                                      "lsh - LS-SVM: multi-expert ranking.                                            \n"
                                                                      "lsR - LS-SVM: scalar regression random FF (kernels 3,4,13,19).                 ");
-    QGETSETD(m_ml_lsv,getBmethod,setBmethod,"typeBias","settypeBias","LSV bias method.  Methods are:\n"
-                                                                     "                                                                               \n"
+    QGETSETD(m_ml_lsv,getBmethod,setBmethod,"typeBias","settypeBias","LSV bias method",
                                                                      "var - variable bias (default).                                                 \n"
                                                                      "fix - zero bias.                                                               ");
 
@@ -1568,33 +1616,29 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSET(m_ml_lsv,sigma_cut,setsigma_cut,"sigma scale for JIT sampling"                                );
     QGETSET(m_ml_lsv,eps,      seteps,      "epsilon-insensitivity width"                                 );
 
-    QGETSETCLA(m_ml_lsv,Cclass,  setCclass,  "regularization trade-off scale (empirical risk weight) C for class d");
-    QGETSETCLA(m_ml_lsv,epsclass,setepsclass,"epsilon-insensitivity width eps scale for class d"                   );
+    QGETSETCLA(m_ml_lsv,Cclass,  setCclass,  "regularization trade-off scale (empirical risk weight) C");
+    QGETSETCLA(m_ml_lsv,epsclass,setepsclass,"epsilon-insensitivity width eps scale"                   );
 
     // ---------------------------
 
     auto m_ml_gp = m_ml.def_submodule("gp","Gaussian Process specific options.");
 
-    QGETSETD(m_ml_gp,getMLType,ssetMLTypeClean,"type","settype",    "GP type. Types are:\n"
-                                                                    "                                                                               \n"
-                                                                    "gpc - GPR: gaussian process binary classification (unreliable).                \n"
-                                                                    "gpr - GPR: gaussian process scalar regression.                                 \n"
-                                                                    "gpv - GPR: gaussian process vector regression.                                 \n"
-                                                                    "gpa - GPR: gaussian process anionic regression.                                \n"
-                                                                    "gpg - GPR: gaussian process gentype regression.                                \n"
-                                                                    "gpC - GPR: gaussian process binary classify RFF (kernels 3,4,13,19).           \n"
-                                                                    "gpR - GPR: gaussian process scalar regression RFF (kernels 3,4,13,19).         ");
-    QGETSETD(m_ml_gp,getBmethod,setBmethod,"typeBias","settypeBias","set GP bias method.  Methods are:\n"
-                                                                    "                                                                               \n"
-                                                                    "var - variable bias.                                                           \n"
-                                                                    "fix - zero bias (default).                                                     ");
-    QGETSETD(m_ml_gp,getEmethod,setEmethod,"approxType","setapproxType","set GP inequality constraint/classifier approximation method.\n"
-                                                                        "Methods are:                                                               \n"
-                                                                        "                                                                           \n"
-                                                                        "Naive   - enforce alpha sign constraint (posterior variance will be wrong).\n"
-                                                                        "EP      - expectation propogation (CURRENTLY NOT WORKING).                 \n"
-                                                                        "LapNorm - Laplace approximation using normal CDF likelihood (default).     \n"
-                                                                        "LapLog  - Laplace approximation using Logit likelihood.                    ");
+    QGETSETD(m_ml_gp,getMLType,ssetMLTypeClean,"type","settype",        "GP type",
+                                                                        "gpc - GPR: gaussian process binary classification (unreliable).                \n"
+                                                                        "gpr - GPR: gaussian process scalar regression.                                 \n"
+                                                                        "gpv - GPR: gaussian process vector regression.                                 \n"
+                                                                        "gpa - GPR: gaussian process anionic regression.                                \n"
+                                                                        "gpg - GPR: gaussian process gentype regression.                                \n"
+                                                                        "gpC - GPR: gaussian process binary classify RFF (kernels 3,4,13,19).           \n"
+                                                                        "gpR - GPR: gaussian process scalar regression RFF (kernels 3,4,13,19).         ");
+    QGETSETD(m_ml_gp,getBmethod,setBmethod,"typeBias","settypeBias",    "GP bias method",
+                                                                        "var - variable bias.                                                           \n"
+                                                                        "fix - zero bias (default).                                                     ");
+    QGETSETD(m_ml_gp,getEmethod,setEmethod,"approxType","setapproxType","GP inequality constraint/classifier approximation method",
+                                                                        "Naive   - enforce alpha sign constraint (posterior variance will be wrong).    \n"
+                                                                        "EP      - expectation propogation (CURRENTLY NOT WORKING).                     \n"
+                                                                        "LapNorm - Laplace approximation using normal CDF likelihood (default).         \n"
+                                                                        "LapLog  - Laplace approximation using Logit likelihood.                        ");
 
     QGETSET(m_ml_gp,sigma,    setsigma,    "measurement noise variance sigma"                 );
     QGETSET(m_ml_gp,sigma_cut,setsigma_cut,"measurement noise variance scale for JIT sampling");
@@ -1605,8 +1649,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     auto m_ml_knn = m_ml.def_submodule("knn", "Kernel nearest neighbours specific options.");
 
-    QGETSETD(m_ml_knn,getMLType,ssetMLTypeClean,"type","settype","KNN type. Types are:\n"
-                                                                 "                                                                               \n"
+    QGETSETD(m_ml_knn,getMLType,ssetMLTypeClean,"type","settype","KNN type",
                                                                  "knc - KNN: binary classification.                                              \n"
                                                                  "knm - KNN: multiclass classification.                                          \n"
                                                                  "knr - KNN: scalar regression.                                                  \n"
@@ -1615,7 +1658,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                                                  "kng - KNN: gentype regression.                                                 \n"
                                                                  "knp - KNN: density estimation.                                                 ");
 
-    QGETCLA(m_ml_knn,NNC,"number of active training vectors for class d");
+    QGETCLA(m_ml_knn,NNC,"number of active training vectors");
 
     QGETSET(m_ml_knn,k,  setk,  "number of neighbours"     );
     QGETSET(m_ml_knn,ktp,setktp,"weight function (see -K).");
@@ -1624,8 +1667,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     auto m_ml_imp = m_ml.def_submodule("imp","Impulse model specific options.");
 
-    QGETSETD(m_ml_imp,getMLType,ssetMLTypeClean,"type","settype","IMP type. Types are:\n"
-                                                                 "                                                                               \n"
+    QGETSETD(m_ml_imp,getMLType,ssetMLTypeClean,"type","settype","IMP type",
                                                                  "ei  - IMP: expected (hypervolume) improvement.                                 \n"
                                                                  "svm - IMP: 1-norm 1-class modded SVM mono-surrogate.                           \n"
                                                                  "rls - IMP: Random linear scalarisation.                                        \n"
@@ -1635,8 +1677,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     auto m_ml_blk = m_ml.def_submodule("blk","Miscellaneous model specific options.");
 
-    QGETSETD(m_ml_blk,getMLType,ssetMLTypeClean,"type","settype","BLK type. Types are:\n"
-                                                                 "                                                                               \n"
+    QGETSETD(m_ml_blk,getMLType,ssetMLTypeClean,"type","settype","BLK type",
                                                                  "nop - BLK: no-operation machine (holds data but does nothing with it, lets     \n"
                                                                  "      mu(x),var(x),cov(x,x') remain the prior mean, variance and covariance).  \n"
                                                                  "mer - BLK: Mercer kernel inheritance block.                                    \n"
@@ -1686,12 +1727,57 @@ PYBIND11_MODULE(pyheavy, m) {
     auto m_opt_NelderMead = m_opt.def_submodule("NelderMead","Nelder-Mead Optimisation");
     auto m_opt_Bayesian   = m_opt.def_submodule("BO",        "Bayesian Optimisation"   );
 
-    m_opt_grid.def(      "opt", &mloptgrid,       "Optimise (minimise) fn : [0,1]^dim to [0,1] using grid optimiser i.\n"        ENHANCED_RETURN_BASE,py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
-    m_opt_DIRect.def(    "opt", &mloptDIRect,     "Optimise (minimise) fn : [0,1]^dim to [0,1] using DIRect optimiser i.\n"      ENHANCED_RETURN_BASE,py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
-    m_opt_NelderMead.def("opt", &mloptNelderMead, "Optimise (minimise) fn : [0,1]^dim to [0,1] using Nelder-Mead optimiser i.\n" ENHANCED_RETURN_BASE,py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
-    m_opt_Bayesian.def(  "opt", &mloptBayesian,   "Optimise (minimise) fn : [0,1]^dim to [0,1] using Bayesian optimiser i.\n"    ENHANCED_RETURN,     py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
+    m_opt_grid.def(      "opt", &mloptgrid,       "opt(i=0,dim=1,numreps=1,fn,callback=None) - min fn(x) using grid method:       \n"
+                                                  "                                                                               \n"
+                                                  "Minimize fn : [0,1]^dim to [0,1] using grid optimiser i. This is repeated      \n"
+                                                  "numreps time to assess average behaviour (set numreps < 0 for -numrepts repeats\n"
+                                                  "in parallel threads). Returns a data structure containing all data.            \n"
+                                                  "                                                                               \n"
+                                                  ENHANCED_RETURN_BASE,
+                                                  py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
+    m_opt_DIRect.def(    "opt", &mloptDIRect,     "opt(i=0,dim=1,numreps=1,fn,callback=None) - min fn(x) using DIRect method:     \n"
+                                                  "                                                                               \n"
+                                                  "Minimize fn : [0,1]^dim to [0,1] using grid optimiser i. This is repeated      \n"
+                                                  "numreps time to assess average behaviour (set numreps < 0 for -numrepts repeats\n"
+                                                  "in parallel threads). Returns a data structure containing all data.            \n"
+                                                  "                                                                               \n"
+                                                  ENHANCED_RETURN_BASE,
+                                                  py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
+    m_opt_NelderMead.def("opt", &mloptNelderMead, "opt(i=0,dim=1,numreps=1,fn,callback=None) - min fn(x) using Nelder-Mead method:\n"
+                                                  "                                                                               \n"
+                                                  "Minimize fn : [0,1]^dim to [0,1] using grid optimiser i. This is repeated      \n"
+                                                  "numreps time to assess average behaviour (set numreps < 0 for -numrepts repeats\n"
+                                                  "in parallel threads). Returns a data structure containing all data.            \n"
+                                                  "                                                                               \n"
+                                                  ENHANCED_RETURN_BASE,
+                                                  py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
+    m_opt_Bayesian.def(  "opt", &mloptBayesian,   "opt(i=0,dim=1,numreps=1,fn,callback=None) - minimize fn(x) using Bayesian opt: \n"
+                                                  "                                                                               \n"
+                                                  "Minimize fn : [0,1]^dim to [0,1] using grid optimiser i. This is repeated      \n"
+                                                  "numreps time to assess average behaviour (set numreps < 0 for -numrepts repeats\n"
+                                                  "in parallel threads). Returns a data structure containing all data.            \n"
+                                                  "                                                                               \n"
+                                                  ENHANCED_RETURN,
+                                                  py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
 
-    m_opt.def("plotRegret",&plotregret,"Plot regret. simname defines filenames, key is descriptions, res is a list of returns from opt.",py::arg("simname"),py::arg("key"),py::arg("res"),py::arg("rmin")=1.0,py::arg("rmax")=0.0,py::arg("plotdata")=0,py::arg("plotlogy")=0,py::arg("xmin")=1.0,py::arg("xmax")=0.0);
+    m_opt.def("plotRegret",&plotregret,           "plotRegret(simname,key,res,rmin=1,rmax=0,plotdata=0,plotlogy=0,xmin=1,xmax=0,..\n"
+                                                  "         ..xgrid=1,ygrid=1)                                                    \n"
+                                                  " - plot results of optimization:                                               \n"
+                                                  "                                                                               \n"
+                                                  "Plot regret. Here:                                                             \n"
+                                                  "                                                                               \n"
+                                                  "simname   - defines the filename                                               \n"
+                                                  "key       - list of descriptions                                               \n"
+                                                  "res       - list of return structures from opt.                                \n"
+                                                  "rmin,rmax - min and max results (use rmin>rmax for auto).                      \n"
+                                                  "xmin,xmax - min and max x-axis (use xmin>xmax for auto).                       \n"
+                                                  "plotdata  - 0 for normal, 1 to plot actual data.                               \n"
+                                                  "plotlogy  - 0 for normal, 1 for logarithmic y-axis.                            \n"
+                                                  "xgrid     - 0 no x-grid, 1 have x-grid.                                        \n"
+                                                  "ygrid     - 0 no x-grid, 1 have y-grid.                                        \n"
+                                                  "                                                                               \n"
+                                                  "Plotting is done by callback to gnuplot through pyheavy.                       ",
+                                                  py::arg("simname"),py::arg("key"),py::arg("res"),py::arg("rmin")=1.0,py::arg("rmax")=0.0,py::arg("plotdata")=0,py::arg("plotlogy")=0,py::arg("xmin")=1.0,py::arg("xmax")=0.0,py::arg("xgrid")=1,py::arg("ygrid")=1);
 
     auto m_opt_Bayesian_model = m_opt_Bayesian.def_submodule("models","Model Options"                               );
     auto m_opt_Bayesian_tune  = m_opt_Bayesian.def_submodule("tune",  "Model Tuning"                                );
@@ -1708,72 +1794,79 @@ PYBIND11_MODULE(pyheavy, m) {
 
     // All optimisers
 
-    QGETSETOPTALL(m_opt,optname,     "base-string from which all logfile names are derived"    );
-    QGETSETOPTALL(m_opt,maxtraintime,"maximum training time in seconds (default 0, unlimited)" );
-    QGETSETOPTALL(m_opt,softmin,     "soft minimum (clip if found) on objective (default -inf)");
-    QGETSETOPTALL(m_opt,softmax,     "soft maximum (clip if found) on objective (default +inf)");
-    QGETSETOPTALL(m_opt,hardmin,     "hard minimum (stop if found) on objective (default -inf)");
-    QGETSETOPTALL(m_opt,hardmax,     "hard maximum (stop if found) on objective (default +inf)");
+    QGETSETOPTALL(m_opt,optname,     "base-string from which all logfile names are derived",""                    );
+    QGETSETOPTALL(m_opt,maxtraintime,"maximum training time in seconds",                    "default 0, unlimited");
+    QGETSETOPTALL(m_opt,softmin,     "soft minimum (clip if found) on objective",           "default -inf"        );
+    QGETSETOPTALL(m_opt,softmax,     "soft maximum (clip if found) on objective",           "default +inf"        );
+    QGETSETOPTALL(m_opt,hardmin,     "hard minimum (stop if found) on objective",           "default -inf"        );
+    QGETSETOPTALL(m_opt,hardmax,     "hard maximum (stop if found) on objective",           "default +inf"        );
 
-    QGETSETOPTALL(m_opt,simname,     "base-name for regret plot (if simfreq = 1)");
-    QGETSETOPTALL(m_opt,simoutformat,"output format for regret plot (0 txt, 1 ps, 2 pdf, if simfreq = 1)");
-    QGETSETOPTALL(m_opt,simfreq,     "regret plot: 0 none, 1 plot regret at end");
-    QGETSETOPTALL(m_opt,simFmin,     "regret plot: x (iteration/budget) axis min (default 1, auto if Fmin>Fmax)");
-    QGETSETOPTALL(m_opt,simFmax,     "regret plot: x (iteration/budget) axis max (default 0, auto if Fmin>Fmax)");
-    QGETSETOPTALL(m_opt,simRmin,     "regret plot: y (regert) axis min (default 1, auto if Rmin>Rmax)");
-    QGETSETOPTALL(m_opt,simRmax,     "regret plot: y (regret) axis max (default 0, auto if Rmin>Rmax)");
+    QGETSETOPTALL(m_opt,simname,     "base-name for regret plot",                 "if simfreq = 1"                    );
+    QGETSETOPTALL(m_opt,simoutformat,"output format for regret plot",             "0 txt, 1 ps, 2 pdf, if simfreq = 1");
+    QGETSETOPTALL(m_opt,simfreq,     "regret plot: 0 none, 1 plot regret at end", ""                                  );
+    QGETSETOPTALL(m_opt,simFmin,     "regret plot: x (iteration/budget) axis min","default 1, auto if Fmin>Fmax"      );
+    QGETSETOPTALL(m_opt,simFmax,     "regret plot: x (iteration/budget) axis max","default 0, auto if Fmin>Fmax"      );
+    QGETSETOPTALL(m_opt,simRmin,     "regret plot: y (regert) axis min",          "default 1, auto if Rmin>Rmax"      );
+    QGETSETOPTALL(m_opt,simRmax,     "regret plot: y (regret) axis max",          "default 0, auto if Rmin>Rmax"      );
 
     // Grid options
 
-    m_opt_grid.def("selgridopt",&selgridopt,"Select grid optimiser i > 0. If i=0 then return current grid optimizer (default\n"
+    m_opt_grid.def("selgridopt",&selgridopt,"selgridopt(i=0,rst=0) - select grid optimizer:                                 \n"
+                                            "                                                                               \n"
+                                            "Select grid optimiser i > 0. If i=0 then return current grid optimizer (default\n"
                                             "1) without modification. You can have arbitrarily many grid optimizers at any  \n"
                                             "given time. Set rst = 1 to also reset.                                         ",
                                             py::arg("i")=0,py::arg("rst")=0);
 
-    QGETSETOPTB(m_opt,numZooms,grid,"number of grid-zooms (default 0)"                                              );
-    QGETSETOPTB(m_opt,zoomFact,grid,"scaling (zoom) factor for each grid-zoom (default 0.333)"                      );
-    QGETSETOPTB(m_opt,numPts,  grid,"grid-definition vector. Each index gives the number of points along that axis.");
+    QGETSETOPTB(m_opt,numZooms,grid,"number of grid-zooms",  "default 0"                                            );
+    QGETSETOPTB(m_opt,zoomFact,grid,"scaling (zoom) factor", "for each grid-zoom,default 0.333"                     );
+    QGETSETOPTB(m_opt,numPts,  grid,"grid-definition vector","each index gives the number of points along that axis");
 
     // DIRect options
 
-    m_opt_DIRect.def("selDIRectopt",&selDIRectopt,"Select DIRect optimiser i > 0. If i=0 then return current DIRect optimizer     \n"
+    m_opt_DIRect.def("selDIRectopt",&selDIRectopt,"selDIRectopt(i=0,rst=0) - select DIRect optimizer:                             \n"
+                                                  "                                                                               \n"
+                                                  "Select DIRect optimiser i > 0. If i=0 then return current DIRect optimizer     \n"
                                                   "(default 1) without modification. You can have arbitrarily many DIRect         \n"
                                                   "optimizers at any given time. Set rst = 1 to also reset.                       ",
                                                   py::arg("i")=0,py::arg("rst")=0);
 
-    QGETSETOPTB(m_opt,maxits,  DIRect,"maximum cube divisions (default 1000)."      );
-    QGETSETOPTB(m_opt,maxevals,DIRect,"maximum function evaluations (default 5000).");
-    QGETSETOPTB(m_opt,eps,     DIRect,"epsilon factor (default 1e-4)."              );
+    QGETSETOPTB(m_opt,maxits,  DIRect,"maximum cube divisions",      "default 1000");
+    QGETSETOPTB(m_opt,maxevals,DIRect,"maximum function evaluations","default 5000");
+    QGETSETOPTB(m_opt,eps,     DIRect,"epsilon factor",              "default 1e-4");
 
-    m_opt_DIRect.def("setgridsrc",&DIRectSetgridsource, "For DIRect, set grid source.",py::arg("j"));
+    m_opt_DIRect.def("setgridsrc",&DIRectSetgridsource, "setgridsrc(j) - select grid-data source ML for DIRect.",py::arg("j"));
 
     // Nelder-Mead options
 
-    m_opt_NelderMead.def("selNelderMeadopt",&selNelderMeadopt,"Select NelderMead optimiser i > 0. If i=0 then return current NelderMead       \n"
+    m_opt_NelderMead.def("selNelderMeadopt",&selNelderMeadopt,"selNelderMeadopt(i=0,rst=0) - select Nelder-Mead optimizer:                    \n"
+                                                              "                                                                               \n"
+                                                              "Select NelderMead optimiser i > 0. If i=0 then return current NelderMead       \n"
                                                               "optimizer (default 1) without modification. You can have arbitrarily many      \n"
                                                               "NelderMead optimizers at any given time. Set rst = 1 to also reset.            ",
                                                               py::arg("i")=0,py::arg("rst")=0);
 
-    QGETSETOPTB(m_opt,minf_max,NelderMead,"maximum f val (default -HUGE_VAL)."                  );
-    QGETSETOPTB(m_opt,ftol_rel,NelderMead,"relative tolerance of function value (default 0)."   );
-    QGETSETOPTB(m_opt,ftol_abs,NelderMead,"abolute tolerance of function value (default 0)."    );
-    QGETSETOPTB(m_opt,xtol_rel,NelderMead,"relative tolerance of x value (default 0)."          );
-    QGETSETOPTB(m_opt,xtol_abs,NelderMead,"abolute tolerance of x value (default 0)."           );
-    QGETSETOPTB(m_opt,maxeval, NelderMead,"max number of f evaluations (default 1000)."         );
-    QGETSETOPTB(m_opt,method,  NelderMead,"0 is subplex, 1 is original Nelder-Mead (default 0).");
+    QGETSETOPTB(m_opt,minf_max,NelderMead,"maximum f val"                          ,"default -HUGE_VAL");
+    QGETSETOPTB(m_opt,ftol_rel,NelderMead,"relative tolerance of function value"   ,"default 0"        );
+    QGETSETOPTB(m_opt,ftol_abs,NelderMead,"abolute tolerance of function value"    ,"default 0"        );
+    QGETSETOPTB(m_opt,xtol_rel,NelderMead,"relative tolerance of x value"          ,"default 0"        );
+    QGETSETOPTB(m_opt,xtol_abs,NelderMead,"abolute tolerance of x value"           ,"default 0"        );
+    QGETSETOPTB(m_opt,maxeval, NelderMead,"max number of f evaluations"            ,"default 1000"     );
+    QGETSETOPTB(m_opt,method,  NelderMead,"0 is subplex, 1 is original Nelder-Mead","default 0"        );
 
 
 
 
     // Bayesian options
 
-    m_opt_Bayesian.def("selBOopt",&selBayesianopt,"Select BO optimiser i > 0. If i=0 then return current BO optimizer (default 1) \n"
+    m_opt_Bayesian.def("selBOopt",&selBayesianopt,"selBOopr(i=0,rst=0) - select Bayesian optimizer:                               \n"
+                                                  "                                                                               \n"
+                                                  "Select BO optimiser i > 0. If i=0 then return current BO optimizer (default 1) \n"
                                                   "without modification. You can have arbitrarily many BO optimizers at any given \n"
                                                   "time. Set rst = 1 to also reset.                                               ",
                                                   py::arg("i")=0,py::arg("rst")=0);
 
-    QGETSETOPTB(m_opt,acq,    Bayesian,"Bayesian optimisation acquisition function:\n"
-                                       "                                                                               \n"
+    QGETSETOPTBD(m_opt,acq,   Bayesian,"acquisition function",
                                        " 0 - MO (pure exploitation, mean only minimisation).                           \n"
                                        " 1 - EI (expected improvement - default).                                      \n"
                                        " 2 - PI (probability of improvement).                                          \n"
@@ -1799,8 +1892,15 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "22 - Zero (minimize 0 placeholder).                                            \n"
                                        "23 - Level set (LSE) with Straddle Heuristic (Bry1).                           \n"
                                        "24 - Level set (LSE) with C2LSE (Ngo1).                                        \n"
-                                       "25 - Mean plus variance.                                                       \n"
-                                       "26 - Level set (LSE) with C2LSE (Mgo1), tanh to range 0-1.                     \n"
+                                       "25 - Level set (LSE) with C2LSE (Ngo1), log to range 0-1.                      \n"
+                                       "26 - Level set (LSE) with C2LSE (Mgo1), 1-confidence.                          \n"
+                                       "27 - Level set (LSE) with C2LSE (Ngo1), scaled as per Brochu GP-UCB.           \n"
+                                       "28 - Level set (LSE) with C2LSE (Ngo1), log, scaled as per Brochu GP-UCB.      \n"
+                                       "29 - Level set (LSE) with C2LSE (Mgo1), 1-conf, scaled as per Bruchu GP-UCB.   \n"
+                                       "30 - Mean plus variance.                                                       \n"
+                                       "31 - Level set (LSE) with C2LSE (Ngo1), scaled as beta_t = 5d/(t+0.1).         \n"
+                                       "32 - Level set (LSE) with C2LSE (Ngo1), log, scaled as beta_t = 5d/(t+0.1).    \n"
+                                       "33 - Level set (LSE) with C2LSE (Mgo1), 1-conf, scaled as beta_t = 5d/(t+0.1). \n"
                                        "                                                                               \n"
                                        "* beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))                               \n"
                                        "$ variance of model only.                                                      \n"
@@ -1808,153 +1908,186 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "# Chowdhury, On Kernelised Multi-Arm Bandits, Algorithm 2.                     \n"
                                        "~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1.                           \n"
                                        "^ Intendid to be combined with human prompt.                                   ");
-    QGETSETOPTB(m_opt,acqcgt, Bayesian,"Bayesian optimisation acquisition function (constraint part):\n"
-                                       "                                                                               \n"
+    QGETSETOPTBD(m_opt,acqcgt,Bayesian,"acquisition function (constraint part)",
                                        " 9 - PE (variance-only maximisation).                                          \n"
                                        "10 - PEc (variance-only maximisation).                                         \n"
                                        "11 - Multi-strategy learning or user-defined.                                  \n"
                                        "22 - Zero (minimize 0 placeholder, default).                                   \n"
                                        "23 - Level set (LSE) with Straddle Heuristic (Bry1).                           \n"
                                        "24 - Level set (LSE) with C2LSE (Ngo1).                                        \n"
-                                       "26 - Level set (LSE) with C2LSE (Mgo1), tanh to range 0-1.                     ");
-    QGETSETOPTB(m_opt,weightmain,Bayesian,"Scale main acquisition by this factor (default 1)."                          );
-    QGETSETOPTB(m_opt,weightcgt ,Bayesian,"Scale constraint acquisition by this factor (default 1)."                    );
-    QGETSETOPTB(m_opt,weightmisc,Bayesian,"Scale misc acquisition by this factor (default 1)."                          );
-    QGETSETOPTB(m_opt,alphascale,Bayesian,"Scale alpha (posterior mean) part of acquisition function (dflt 1)."         );
-    QGETSETOPTB(m_opt,betascale, Bayesian,"Scale beta (posterior variance) part of acquisition function (dflt 1)."      );
-    QGETSETOPTB(m_opt,alphascalecgt,Bayesian,"Scale alpha (posterior mean) part of cgt acquisition function (dflt 1)."      );
-    QGETSETOPTB(m_opt,betascalecgt, Bayesian,"Scale beta (posterior variance) part of cgt acquisition function (dflt 1)."   );
-    QGETSETOPTB(m_opt,cgtscale,Bayesian,"Scale constraint acquisition by this factor (default 1)."                      );
-    QGETSETOPTB(m_opt,acqvalexp,Bayesian,"Like acq, but defines beta scale for calculating prob feasible."              );
-    QGETSETOPTB(m_opt,maxresamp,Bayesian,"Max resamples if inner-loop fails in TS (default 6)."                         );
-    QGETSETOPTB(m_opt,betafn, Bayesian,"user-defined beta for acq 11. You can make this a function with the vars:\n"
-                                       "                                                                               \n"
-                                       "- x_0  = iteration number.                                                     \n"
-                                       "- x_1  = x dimension.                                                          \n"
-                                       "- x_2  = delta.                                                                \n"
-                                       "- x_3  = |D|.                                                                  \n"
-                                       "- x_4  = a.                                                                    \n"
-                                       "- x_5  = b.                                                                    \n"
-                                       "- x_6  = r.                                                                    \n"
-                                       "- x_7  = p.                                                                    \n"
-                                       "- x_8  = batch size (inner).                                                   \n"
-                                       "- x_9  = R.                                                                    \n"
-                                       "- x_10 = B.                                                                    \n"
-                                       "- x_11 = mig.                                                                  \n"
-                                       "- x_12 = RKHS norm.                                                            \n"
-                                       "- x_13 = kappa0.                                                               \n"
-                                       "- x_14 = lengthscale.                                                          \n"
-                                       "- x_15 = sigma.                                                                \n"
-                                       "- x_16 = ell1.                                                                 \n"
-                                       "- x_17 = pi.                                                                   \n"
-                                       "                                                                               \n"
-                                       "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition     \n"
-                                       "function (see acq variable). This will generate multiple recommendations in a  \n"
-                                       "single iteration, one for each of the acq f1,f2,... given.                     ");
-    QGETSETOPTB(m_opt,betafncgt,Bayesian,"user-defined beta for acqcgt 11. You can make this a function with the vars:\n"
-                                       "                                                                               \n"
-                                       "- x_0  = iteration number.                                                     \n"
-                                       "- x_1  = x dimension.                                                          \n"
-                                       "- x_2  = delta.                                                                \n"
-                                       "- x_3  = |D|.                                                                  \n"
-                                       "- x_4  = a.                                                                    \n"
-                                       "- x_5  = b.                                                                    \n"
-                                       "- x_6  = r.                                                                    \n"
-                                       "- x_7  = p.                                                                    \n"
-                                       "- x_8  = batch size (inner).                                                   \n"
-                                       "- x_9  = R.                                                                    \n"
-                                       "- x_10 = B.                                                                    \n"
-                                       "- x_11 = mig.                                                                  \n"
-                                       "- x_12 = RKHS norm.                                                            \n"
-                                       "- x_13 = kappa0.                                                               \n"
-                                       "- x_14 = lengthscale.                                                          \n"
-                                       "- x_15 = sigma.                                                                \n"
-                                       "- x_16 = ell1.                                                                 \n"
-                                       "- x_17 = pi.                                                                   \n"
-                                       "                                                                               \n"
-                                       "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition     \n"
-                                       "function (see acqcgt variable). This will generate multiple recommendations in \n"
-                                       "a single iteration, one for each of the acq f1,f2,... given. Note that in this \n"
-                                       "case betafn must be a vector of the same format and size, and that acq and     \n"
-                                       "acqcgt will then be taken in pairs from betafn and betafncgt.                  ");
-    QGETSETOPTB(m_opt,betafnvalexp,Bayesian,"user-defined beta for acqvalexp 11. See betafncgt."                        );
-    QGETSETOPTB(m_opt,randsearch,Bayesian,"select using random search acq(x) <= U(0,1)                                 ");
-    QGETSETOPTB(m_opt,PIscale,Bayesian,"PI scaling: set 0 for standard operation, 1 to scale aquisition function by    \n"
-                                       "the PI (probability of improvement) acquisition function. 2 is like 1 but with \n"
-                                       "a ``hard ratchett'' to avoid any experiments for no-progress (a bad idea).     \n"
-                                       "3 is like 1, but also scale acqcgt.                                            ");
-    QGETSETOPTB(m_opt,norepeats,Bayesian,"Prevent repeats:\n"
-                                       "                                                                               \n"
-                                       "0   - usual BO behaviour (default).                                            \n"
-                                       "1   - check all previous observations and skip them (on inner loop).           \n"
-                                       "n<0 - like 1, but only for the previous n experiments.                         \n"
-                                       "                                                                               \n"
-                                       "NB: this helps a lot when tuning hyperparameters on a grid (tunemu etc > 0) but\n"
-                                       "    does very little or nothing if using DIRect (tunemu etc < 0) as this tends \n"
-                                       "    to make the hyperparameters - and thus recommendations - noisier.          ");
-    QGETSETOPTB(m_opt,norepdist,Bayesian,"Repeat detection distance:\n"
-                                       "                                                                               \n"
-                                       "When using norepeats, set this so x = xi or ||x-xi||_2^2 < norepdist is tagged \n"
-                                       "as a repeat (default 0).                                                       ");
-    QGETSETOPTB(m_opt,blockdist,Bayesian,"Block detection distance:\n"
-                                       "                                                                               \n"
-                                       "If the user returns f(xi) = None then xi is stored, and from then forwards if  \n"
-                                       "||x-xi||_2^2 < blockdist then this point is marked infeasible.                 ");
-    QGETSETOPTB(m_opt,cgtepsgreedypof,Bayesian,"epsilon-greedy factor for probality of feasibility (PoF).              ");
+                                       "25 - Level set (LSE) with C2LSE (Ngo1), log to range 0-1.                      \n"
+                                       "26 - Level set (LSE) with C2LSE (Mgo1), 1-conf to range 0-1.                   \n"
+                                       "27 - Level set (LSE) with C2LSE (Ngo1), scaled as per Brochu GP-UCB.           \n"
+                                       "28 - Level set (LSE) with C2LSE (Ngo1), log, scaled as per Brochu GP-UCB.      \n"
+                                       "29 - Level set (LSE) with C2LSE (Mgo1), 1-conf, scaled as per Bruchu GP-UCB.   \n"
+                                       "31 - Level set (LSE) with C2LSE (Ngo1), scaled as beta_t = 20/(t+0.1).         \n"
+                                       "32 - Level set (LSE) with C2LSE (Ngo1), log, scaled as beta_t = 20/(t+0.1).    \n"
+                                       "33 - Level set (LSE) with C2LSE (Mgo1), 1-conf, scaled as beta_t = 20/(t+0.1). \n"
+                                       "34 - Entropy on PoF: -PoF.log2(PoF) - (1-PoF).log2(1-PoF).                     \n"
+                                       "35 - Entropy on PoF: -PoF.log2(PoF) - (1-PoF).log2(1-PoF), scaled 27-29.       \n"
+                                       "36 - Entropy on PoF: -PoF.log2(PoF) - (1-PoF).log2(1-PoF), scaled 31-33.       ");
 
-    QGETSETOPTB(m_opt,sigmuseparate,Bayesian,"posterior separation:\n"
+    QGETSETOPTB(m_opt,randweights,  Bayesian,"acquisition function combination method",
+                                             "0: acq(x) = weightmain.acqmain(x) + weightcgt.acqcgt(x)                        \n"
+                                             "1: acq(x) = acqmain(x) with probability weightmain/(weightmain+weightmisc)     \n"
+                                             "          = acqcgt(x) with probability weightcgt/(weightmain+weightcgt)        \n"
+                                             "2-3: reserved, buggy                                                           \n"
+                                             "4: acq(x) = acqmain(x) with probability P, acqcgt(x) otherwise, where:         \n"
+                                             "   P = minrw + (maxrw-minrw).(1-tanh(upsrandweight.(t-tmax)/totiters))         \n"
+                                             "   where: minrw, maxrw = minrandweight, maxrandweight                          \n"
+                                             "          t = iteration count, tmax = iteration where current max found        ");
+    QGETSETOPTB(m_opt,weightmain,   Bayesian,"Scale main acquisition by this factor",                           "default 1");
+    QGETSETOPTB(m_opt,weightcgt,    Bayesian,"Scale constraint acquisition by this factor",                     "default 1");
+    QGETSETOPTB(m_opt,weightmisc,   Bayesian,"Scale misc acquisition by this factor",                           "default 1");
+    QGETSETOPTB(m_opt,minrandweight,Bayesian,"Minimum randum weight for randweights",                           "default 0.25");
+    QGETSETOPTB(m_opt,maxrandweight,Bayesian,"Maximum random weight for randweights",                           "default 0.75");
+    QGETSETOPTB(m_opt,upsrandweight,Bayesian,"Random weight sensitivity",                                       "default 10"  );
+
+    QGETSETOPTB(m_opt,alphascale,   Bayesian,"Scale alpha (posterior mean) part of acquisition function",       "default 1");
+    QGETSETOPTB(m_opt,betascale,    Bayesian,"Scale beta (posterior variance) part of acquisition function",    "default 1");
+    QGETSETOPTB(m_opt,alphascalecgt,Bayesian,"Scale alpha (posterior mean) part of cgt acquisition function",   "default 1");
+    QGETSETOPTB(m_opt,betascalecgt, Bayesian,"Scale beta (posterior variance) part of cgt acquisition function","default 1");
+    QGETSETOPTB(m_opt,cgtscale,     Bayesian,"Scale constraint acquisition by this factor",                     "default 1");
+    QGETSETOPTB(m_opt,acqvalexp,    Bayesian,"Like acq, but defines beta scale for calculating prob feasible",  ""         );
+    QGETSETOPTB(m_opt,maxresamp,    Bayesian,"Max resamples if inner-loop fails in TS",                         "default 6");
+    QGETSETOPTBD(m_opt,betafn,      Bayesian,"user-defined beta for acq 11",
+                                             "- x_0  = iteration number.                                                     \n"
+                                             "- x_1  = x dimension.                                                          \n"
+                                             "- x_2  = delta.                                                                \n"
+                                             "- x_3  = |D|.                                                                  \n"
+                                             "- x_4  = a.                                                                    \n"
+                                             "- x_5  = b.                                                                    \n"
+                                             "- x_6  = r.                                                                    \n"
+                                             "- x_7  = p.                                                                    \n"
+                                             "- x_8  = batch size (inner).                                                   \n"
+                                             "- x_9  = R.                                                                    \n"
+                                             "- x_10 = B.                                                                    \n"
+                                             "- x_11 = mig.                                                                  \n"
+                                             "- x_12 = RKHS norm.                                                            \n"
+                                             "- x_13 = kappa0.                                                               \n"
+                                             "- x_14 = lengthscale.                                                          \n"
+                                             "- x_15 = sigma.                                                                \n"
+                                             "- x_16 = ell1.                                                                 \n"
+                                             "- x_17 = pi.                                                                   \n"
                                              "                                                                               \n"
-                                             "0 - use same model for posterior mean and variance (default).                  \n"
-                                             "1 - use separate models. This is required e.g. for hallucinated samples in.    \n"
-                                             "    some multi-recommendation methods, where the variance updates after each   \n"
-                                             "    individual recommendation but the posterior mean updates only after the    \n"
-                                             "    whole batch.                                                               ");
-
-    QGETSETOPTB(m_opt,startpoints,Bayesian,"number of initial (random, uniform) seeds points. Use -1 (default) for d+1.");
-    QGETSETOPTB(m_opt,totiters,   Bayesian,"number of iterations. Use 0 for unlimited, -1 (default) for 15d, -2 for\n"
-                                           "frequentist mode (stop when min_x err(x) < err).");
-    QGETSETOPTB(m_opt,err,        Bayesian,"when totiters=-2, the frequentist stopping condition is min_x err(x) < err.");
-    QGETSETOPTB(m_opt,minstdev,   Bayesian,"if nz and posterior variance less than this, mark infeasible for inner loop (default 0).");
-    QGETSETOPTB(m_opt,ztol,       Bayesian,"zero tolerance factor.");
-
-    QGETSETOPTB(m_opt,startseed,  Bayesian,"seed for RNG immediately prior to generating random seeds. -1 for no seed,\n"
-                                           "-2 to seed with time. If >=0 then this is incremented on each use (default 42).");
-    QGETSETOPTB(m_opt,algseed,    Bayesian,"seed for RNG immediately prior to the main algorithm loop. -1 for no seed,\n"
-                                           "-2 to seed with time. If >=0 then this is incremented on each use (default 42)");
-
-    QGETSETOPTB(m_opt,gamma,         Bayesian,"gamma factor to objective posterior variance (default 0)");
-    QGETSETOPTB(m_opt,gammacgt,      Bayesian,"gamma factor in constraint posterior variance (default 1e-6)");
-    QGETSETOPTB(m_opt,gammaheuristic,Bayesian,"0 normal, 1 for gammacgt heuristic in flatland (default 0).");
-    QGETSETOPTB(m_opt,tailweight,    Bayesian,"set >0 for leaky ReLU style EI (default 0)");
-
-
-
-    QGETSETOPT(m_opt,delta, Bayesian,gpucb,"delta factor used in GP-UCB (default 0.1).                      ");
-    QGETSETOPT(m_opt,numain,Bayesian,gpucb,"numain factor Srinivas GP-UCB (default 0.2, see Srivinas)       ");
-    QGETSETOPT(m_opt,modD,  Bayesian,gpucb,"|D| (grid siez) for GP-UCB finite (deflt -1: size of grid or 10)");
-    QGETSETOPT(m_opt,a,     Bayesian,gpucb,"a constant for Srinivas |D|-infinite gpUCB (default 1)          ");
-    QGETSETOPT(m_opt,b,     Bayesian,gpucb,"b constant for Srinivas |D|-infinite gpUCB (default 1)          ");
-    QGETSETOPT(m_opt,r,     Bayesian,gpucb,"r constant for Srinivas |D|-infinite gpUCB (default 1)          ");
-    QGETSETOPT(m_opt,p,     Bayesian,gpucb,"p value for GP-UCB p variants (default 2)                       ");
-    QGETSETOPT(m_opt,R,     Bayesian,gpucb,"R constant for acquisition functions 12,13,14 (default 1)       ");
-    QGETSETOPT(m_opt,B,     Bayesian,gpucb,"B constant for acquisition functions 12,13,14 (default 1)       ");
-
-
-    QGETSETOPT(m_opt,lseeps,Bayesian,lse,"epsilon factor in LSE (default 0.01).    ");
-    QGETSETOPT(m_opt,h,     Bayesian,lse,"level-set objective level h (default 0). ");
-
-
-    QGETSETOPT(m_opt,zeta,    Bayesian,ei,"zeta factor in EI (default 0, but 0.01 works ok).");
-
-    QGETSETOPT(m_opt,TSmode,     Bayesian,ts,"Thompson sampling mode:\n"
-                                             "\n"
-                                             "1 - use regular grid or random samples.\n"
-                                             "3 - use JIT sampling (default).");
-    QGETSETOPT(m_opt,TSNsamp,    Bayesian,ts,"number of samples for sample mode 1. Set >0 for fixed grid, <0 for random grid,\n"
-                                             "0 (default) for random grid of 10.j.dim^2 random points (here j is the number  \n"
-                                             "of prior samples in model).");
-    QGETSETOPT(m_opt,TSsampType, Bayesian,ts,"sample type for sample mode 1:\n"
+                                             "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition     \n"
+                                             "function (see acq variable). This will generate multiple recommendations in a  \n"
+                                             "single iteration, one for each of the acq f1,f2,... given.                     ");
+    QGETSETOPTBD(m_opt,betafncgt,   Bayesian,"user-defined beta for acqcgt 11",
+                                             "- x_0  = iteration number.                                                     \n"
+                                             "- x_1  = x dimension.                                                          \n"
+                                             "- x_2  = delta.                                                                \n"
+                                             "- x_3  = |D|.                                                                  \n"
+                                             "- x_4  = a.                                                                    \n"
+                                             "- x_5  = b.                                                                    \n"
+                                             "- x_6  = r.                                                                    \n"
+                                             "- x_7  = p.                                                                    \n"
+                                             "- x_8  = batch size (inner).                                                   \n"
+                                             "- x_9  = R.                                                                    \n"
+                                             "- x_10 = B.                                                                    \n"
+                                             "- x_11 = mig.                                                                  \n"
+                                             "- x_12 = RKHS norm.                                                            \n"
+                                             "- x_13 = kappa0.                                                               \n"
+                                             "- x_14 = lengthscale.                                                          \n"
+                                             "- x_15 = sigma.                                                                \n"
+                                             "- x_16 = ell1.                                                                 \n"
+                                             "- x_17 = pi.                                                                   \n"
                                              "                                                                               \n"
+                                             "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition     \n"
+                                             "function (see acqcgt variable). This will generate multiple recommendations in \n"
+                                             "a single iteration, one for each of the acq f1,f2,... given. Note that in this \n"
+                                             "case betafn must be a vector of the same format and size, and that acq and     \n"
+                                             "acqcgt will then be taken in pairs from betafn and betafncgt.                  ");
+    QGETSETOPTB(m_opt,betafnvalexp, Bayesian,"user-defined beta for acqvalexp 11","see betafncgt");
+    QGETSETOPTB(m_opt,randsearch,   Bayesian,"select using random search acq(x) <= U(0,1)","");
+    QGETSETOPTBD(m_opt,PIscale,     Bayesian,"PI scaling",
+                                             "0 - standard operation, no additional scaling.                                 \n"
+                                             "1 - scale aquisition function by the PI (prob of improvement) acquisition fn.  \n"
+                                             "2 - like 1 but with ``hard ratchett'' (DO NOT USE, HAS BUGS).                  \n"
+                                             "3 - like 1, but also scales acqcgt (so you can explore the constraint without  \n"
+                                             "    backsliding in the objective).                                             ");
+    QGETSETOPTBD(m_opt,norepeats,   Bayesian,"prevent repeats",
+                                             "0   - usual BO behaviour (default).                                            \n"
+                                             "1   - check all previous observations and skip them (on inner loop).           \n"
+                                             "n<0 - like 1, but only for the previous n experiments.                         \n"
+                                             "                                                                               \n"
+                                             "NB: this helps a lot when tuning hyperparameters on a grid (tunemu etc > 0) but\n"
+                                             "    does very little or nothing if using DIRect (tunemu etc < 0) as this tends \n"
+                                             "    to make the hyperparameters - and thus recommendations - noisier.          ");
+    QGETSETOPTBD(m_opt,norepdist,   Bayesian,"repeat detection distance",
+                                             "When using norepeats, set this so x = xi or ||x-xi||_2^2 < norepdist is tagged \n"
+                                             "as a repeat (default 0).                                                       ");
+    QGETSETOPTBD(m_opt,blockdist,   Bayesian,"block detection distance",
+                                             "If the user returns f(xi) = None then xi is stored, and from then forwards if  \n"
+                                             "||x-xi||_2^2 < blockdist then this point is marked infeasible.                 ");
+    QGETSETOPTB(m_opt,cgtepsgreedypof,Bayesian,"epsilon-greedy factor for probality of feasibility (PoF)","");
+
+    QGETSETOPTBD(m_opt,sigmuseparate,Bayesian,"posterior separation",
+                                              "0 - use same model for posterior mean and variance (default).                  \n"
+                                              "1 - use separate models. This is required e.g. for hallucinated samples in.    \n"
+                                              "    some multi-recommendation methods, where the variance updates after each   \n"
+                                              "    individual recommendation but the posterior mean updates only after the    \n"
+                                              "    whole batch.                                                               ");
+
+    QGETSETOPTBD(m_opt,startpoints,  Bayesian,"number of initial (random, uniform) seeds points",
+                                              ">0 - directly set                                                              \n"
+                                              "-1 - d+1 (default)                                                             ");
+    QGETSETOPTBD(m_opt,totiters,     Bayesian,"number of iterations",
+                                              ">0 - directly set                                                              \n"
+                                              "0  - unlimited                                                                 \n"
+                                              "-1 - 15d (default)                                                             \n"
+                                              "-2 - frequentist mode (stop when min_x err(x) < err).                          ");
+    QGETSETOPTBD(m_opt,err,          Bayesian,"frequentist stop error",
+                                              "err - when totiters=-2, the stopping condition is min_x err(x) < err.          ");
+    QGETSETOPTBD(m_opt,minstdev,     Bayesian,"minimum standard deviation for experiment",
+                                              "0  - no minimum standard deviation requirement (default)                       \n"
+                                              ">0 - never recomment a point with var(x) < this value.                         ");
+    QGETSETOPTB(m_opt,ztol,          Bayesian,"zero tolerance factor","");
+
+    QGETSETOPTBD(m_opt,startseed,    Bayesian,"RNG start seed (before generating initial random points)",
+                                              "-1  - no seed.                                                                 \n"
+                                              "-2  - seed with time().                                                        \n"
+                                              ">=0 - seed with this, incrementing this on each use (default 42).              ");
+    QGETSETOPTBD(m_opt,algseed,      Bayesian,"RNG main seed (before main loop)",
+                                              "-1  - no seed.                                                                 \n"
+                                              "-2  - seed with time().                                                        \n"
+                                              ">=0 - seed with this, incrementing this on each use (default 42).              ");
+
+    QGETSETOPTB(m_opt,gamma,         Bayesian,"gamma factor to objective posterior variance",  "default 0"   );
+    QGETSETOPTB(m_opt,gammacgt,      Bayesian,"gamma factor in constraint posterior variance", "default 1e-6");
+    QGETSETOPTB(m_opt,gammaheuristic,Bayesian,"0 normal, 1 for gammacgt heuristic in flatland","default 0"   );
+    QGETSETOPTB(m_opt,tailweight,    Bayesian,"Leaky-ReLU style EI (if >0)",                   "default 0"   );
+
+
+
+    QGETSETOPT(m_opt,delta, Bayesian,gpucb,"delta factor",   "used in GP-UCB, default 0.1");
+    QGETSETOPT(m_opt,numain,Bayesian,gpucb,"numain factor",  "Srinivas GP-UCB, default 0.2, see Srivinas");
+    QGETSETOPT(m_opt,modD,  Bayesian,gpucb,"|D| (grid size)","used for GP-UCB finite, default -1, size of grid");
+    QGETSETOPT(m_opt,a,     Bayesian,gpucb,"a constant",     "for Srinivas |D|-infinite gpUCB, default 1");
+    QGETSETOPT(m_opt,b,     Bayesian,gpucb,"b constant",     "for Srinivas |D|-infinite gpUCB, default 1");
+    QGETSETOPT(m_opt,r,     Bayesian,gpucb,"r constnat",     "for Srinivas |D|-infinite gpUCB, default 1");
+    QGETSETOPT(m_opt,p,     Bayesian,gpucb,"p value",        "for GP-UCB p variants, default 2");
+    QGETSETOPT(m_opt,R,     Bayesian,gpucb,"R constant",     "for acquisition functions 12,13,14, default 1");
+    QGETSETOPT(m_opt,B,     Bayesian,gpucb,"B constant",     "for acquisition functions 12,13,14, default 1");
+
+
+    QGETSETOPT(m_opt,lseeps,  Bayesian,lse,"epsilon factor",      "in level-set estimation, default 0.01");
+    QGETSETOPT(m_opt,h,       Bayesian,lse,"h level (main)",      "in level-set objective level h, default 0");
+    QGETSETOPT(m_opt,hcgt,    Bayesian,lse,"h level (constraint)","in level-set objective level h for constraint, default 0");
+    QGETSETOPT(m_opt,hstep,   Bayesian,lse,"h step (main)",       "in level-set objective level h decrease/iteration, default 0");
+    QGETSETOPT(m_opt,hcgtstep,Bayesian,lse,"h step (constraint)", "in level-set objective level h decrease/iteration for constraint, default 0");
+
+
+    QGETSETOPT(m_opt,zeta,       Bayesian,ei,"zeta factor", "for EI, default 0, but 0.01 works ok");
+
+    QGETSETOPTD(m_opt,TSmode,    Bayesian,ts,"Thompson sampling mode",
+                                             "1 - use regular grid or random samples.                                        \n"
+                                             "3 - use JIT sampling (default).                                                ");
+    QGETSETOPTD(m_opt,TSNsamp,   Bayesian,ts,"Thompson sampling size for sample mode 1",
+                                             ">0 - fixed grid of n samples.                                                  \n"
+                                             "<0 - random draw of -n of samples.                                             \n"
+                                             "=0 - random draw of 10.j.dim^2 of samples (j is # prior samples in model       ");
+    QGETSETOPTD(m_opt,TSsampType,Bayesian,ts,"sample type for sample mode 1",
                                              "0   - unbounded draw (default).                                                \n"
                                              "1   - positive (definite/symm) draw by clip max(0,y).                          \n"
                                              "2   - positive (definite/symm) draw by flip |y|.                               \n"
@@ -1968,38 +2101,40 @@ PYBIND11_MODULE(pyheavy, m) {
                                              "2xx - Like 1xx,  but existing observations treated as observations on the      \n"
                                              "      squared function.                                                        \n"
                                              "3xx - Like  2xx, but  return the  function *before* squaring occurs.           ");
-    QGETSETOPT(m_opt,TSxsampType,Bayesian,ts,"x sample type for sample mode 1:\n"
-                                             "                                                                               \n"
+    QGETSETOPTD(m_opt,TSxsampType,Bayesian,ts,"x sample type for sample mode 1",
                                              "0 - \"True\" pseudo-random (default).                                          \n"
                                              "1 - pre-defined sequence, sequentially generated.                              \n"
                                              "2 - pre-defined sequence, same every time.                                     \n"
                                              "3 - grid of Nsamp^dim samples                                                  ");
-    QGETSETOPT(m_opt,sigma_cut,  Bayesian,ts,"variance scale for JIT TS (default 0.1).");
+    QGETSETOPT(m_opt,sigma_cut,  Bayesian,ts,"variance scale for JIT TS","default 0.1");
 
 
-    QGETSETOPT(m_opt,numcgt,     Bayesian,cgt,"number of constraints enforced (default 0).");
-    QGETSETOPT(m_opt,cgtmethod,  Bayesian,cgt,"constraint method:\n"
-                                              "                                                                               \n"
-                                              "-1: don't enforce constraints.                                                 \n"
-                                              "0 - calculate P(c(x))>=0 and scale acquisition function by this (default).     \n"
-                                              "1 - optimise f(x).ind(c(x)>=0), so that the mean/variance of c are built into  \n"
-                                              "    the posterior mean/variance before calculating acquisition function.       \n"
-                                              "2 - like 1, but add beta.var(c(x)) to acquisition function.                    \n"
-                                              "3 - like 1, but add sgn(beta).var(c(x)) to acquisition function.               \n"
-                                              "4 - Thompson sample c(x) and enforce constraint per iteration.                 \n"
-                                              "5 - Thompson sample c(x) and enforce constraint per iteration (scaled variance)\n"
-                                              "6 - enforce constraint c(x) > 0 with confidence cgtcertain (level set version).");
-    QGETSETOPT(m_opt,cgtmargin,  Bayesian,cgt,"safety margin for enforcing inequality constraints in the acq fn (default 0)");
-    QGETSETOPT(m_opt,cgtcertain, Bayesian,cgt,"certainty for cgtmethod 6 (level set enforcement).");
-    QGETSETOPT(m_opt,cgtVarScale,Bayesian,cgt,"posterior constraint model variance scale. For example setting cgtVarScale less\n"
-                                              "than 1 will tend to increase the probability of feasibility, encouraging the BO\n"
-                                              "to explore nearer the margin of the feasible region (assuming PoF scaling).    \n");
-    QGETSETOPT(m_opt,cgtepsgreedypof,Bayesian,cgt,"epsilon-greedy constrained (default 0.0, Pr(c(x)>=0) -> Pr(c(x)>=0)+eps.var(x))");
+    QGETSETOPT(m_opt,numcgt,    Bayesian,cgt,"number of constraints","default 0");
+    QGETSETOPTD(m_opt,cgtmethod,Bayesian,cgt,"constraint method",
+                                             "-1: don't enforce constraints.                                                 \n"
+                                             "0 - calculate P(c(x))>=0 and scale acquisition function by this (default).     \n"
+                                             "1 - optimise f(x).ind(c(x)>=0), so that the mean/variance of c are built into  \n"
+                                             "    the posterior mean/variance before calculating acquisition function.       \n"
+                                             "2 - like 1, but add beta.var(c(x)) to acquisition function.                    \n"
+                                             "3 - like 1, but add sgn(beta).var(c(x)) to acquisition function.               \n"
+                                             "4 - Thompson sample c(x) and enforce constraint per iteration.                 \n"
+                                             "5 - Thompson sample c(x) and enforce constraint per iteration (scaled variance)\n"
+                                             "6 - enforce constraint c(x) > 0 with confidence cgtcertain (level set version).\n"
+                                             "7 - enforce constraint c(x) > 2.lseeps with confidence cgtcertain (level set). ");
+    QGETSETOPT(m_opt,cgtmargin,  Bayesian,cgt,"safety margin","for enforcing inequality constraints in the acq fn, default 0");
+    QGETSETOPT(m_opt,cgtcertain, Bayesian,cgt,"certainty","for cgtmethod 6, level set enforcement");
+    QGETSETOPTD(m_opt,cgtVarScale,Bayesian,cgt,"posterior constraint model variance scale",
+                                              ".\n\nExample: setting cgtVarScale less than 1 will tend to increase the probab.\n"
+                                              "of feasibility, encouraging the BO to explore nearer the margin of the feasible\n"
+                                              "region (assuming PoF scaling).                                                 ");
+    QGETSETOPT(m_opt,cgtepsgreedypof,Bayesian,cgt,"epsilon-greedy constraint","dflt 0, Pr(c(x)>=0) -> Pr(c(x)>=0)+eps.var(x)");
 
 
-    QGETSETOPT(m_opt,moodim,Bayesian,moo,"number of objectives (default 1, single-objective).");
+    QGETSETOPT(m_opt,moodim,Bayesian,moo,"number of objectives","default 1, single-objective");
 
-    m_opt_Bayesian_moo.def("setimp",&boSetimpmeas,"For BO, set improvement measure (IMP). This is required for multi-objective BO,\n"
+    m_opt_Bayesian_moo.def("setimp",&boSetimpmeas,"selimp(j) - set improvement measure:                                           \n"
+                                                  "                                                                               \n"
+                                                  "For BO, set improvement measure (IMP). This is required for multi-objective BO,\n"
                                                   "and defines how improvement is measured (vector to scalar). Essentially, mean  \n"
                                                   "imp(mean,var). Processing is done with the IMP given. Note that the acquisition\n"
                                                   "function defined by -gbH still be applied after this (to do passthrough use    \n"
@@ -2009,91 +2144,89 @@ PYBIND11_MODULE(pyheavy, m) {
                                                   py::arg("j"));
 
 
-    QGETSETOPT(m_opt,numfids,   Bayesian,fid,"number of fidelity levels per axis (default 0, no fidelity variables)."       );
-    QGETSETOPT(m_opt,dimfid,    Bayesian,fid,"number of fidelity axis (default 1, but meaningless unless numfids>0)."       );
-    QGETSETOPT(m_opt,fidbudget, Bayesian,fid,"fidelity budget (default -1, unlimited)."                                     );
-    QGETSETOPT(m_opt,fidpenalty,Bayesian,fid,"fidelity penalty function f(z), where z is the fidelity vector."              );
-    QGETSETOPT(m_opt,fidvar,    Bayesian,fid,"fidelity additive variance function n(z), added to measurement vari (dflt 0).");
-    QGETSETOPT(m_opt,fidmode,   Bayesian,fid,"");
-    QGETSETOPT(m_opt,fidover,   Bayesian,fid,"optional fidelity overwrite:\n"
-                                             "                                                                              \n"
-                                             "0  - use fidelity generated by algorithm.                                     \n"
-                                             "21 - randomly select fidelity <= recommended fidelity.                        ");
+    QGETSETOPT(m_opt,numfids,   Bayesian,fid,"fidelity levels per axis",                "default 0, no fidelity variables");
+    QGETSETOPT(m_opt,dimfid,    Bayesian,fid,"fidelity axis",                           "default 1, but meaningless unless numfids>0");
+    QGETSETOPT(m_opt,fidbudget, Bayesian,fid,"fidelity budget",                         "default -1, unlimited");
+    QGETSETOPT(m_opt,fidpenalty,Bayesian,fid,"fidelity penalty function f(z)",          "z is the fidelity vector");
+    QGETSETOPT(m_opt,fidvar,    Bayesian,fid,"fidelity additive variance function n(z)","added to measurement vari, default 0");
+    QGETSETOPT(m_opt,fidmode,   Bayesian,fid,"","");
+    QGETSETOPTD(m_opt,fidover,  Bayesian,fid,"optional fidelity overwrite",
+                                             "0  - use fidelity generated by algorithm.                                    \n"
+                                             "21 - randomly select fidelity <= recommended fidelity.                       ");
 
 
-    QGETSETOPT(m_opt,intrinbatch,      Bayesian,mr,"intrinsic batch size (default 1)."                                             );
-    QGETSETOPT(m_opt,intrinbatchmethod,Bayesian,mr,"intrinsic batch recommendation method:"
-                                                   "                                                                               \n"
-                                                   "0 - use max mean, det(covar)^(1/(2*ibs)) (default).                            \n"
-                                                   "1 - use ave mean, det(covar)^(1/(2*ibs)).                                      \n"
-                                                   "2 - use min mean, det(covar)^(1/(2*ibs)).                                      \n"
-                                                   "3 - use max mean, sqrt(ibs/Tr(inv(covar))).                                    \n"
-                                                   "4 - use ave mean, sqrt(ibs/Tr(inv(covar))).                                    \n"
-                                                   "5 - use min mean, sqrt(ibs/Tr(inv(covar))).                                    ");
+    QGETSETOPT(m_opt,intrinbatch,       Bayesian,mr,"intrinsic batch size","default 1");
+    QGETSETOPTD(m_opt,intrinbatchmethod,Bayesian,mr,"intrinsic batch recommendation method:",
+                                                    "0 - use max mean, det(covar)^(1/(2*ibs)) (default).                            \n"
+                                                    "1 - use ave mean, det(covar)^(1/(2*ibs)).                                      \n"
+                                                    "2 - use min mean, det(covar)^(1/(2*ibs)).                                      \n"
+                                                    "3 - use max mean, sqrt(ibs/Tr(inv(covar))).                                    \n"
+                                                    "4 - use ave mean, sqrt(ibs/Tr(inv(covar))).                                    \n"
+                                                    "5 - use min mean, sqrt(ibs/Tr(inv(covar))).                                    ");
 
 
-    m_opt_Bayesian_tl.def("setkxfersrc",&boSetkernapproxsource,"kernel transfer learning source ML.",py::arg("j"));
+    m_opt_Bayesian_tl.def("setkxfersrc",&boSetkernapproxsource,"setkxfersrc(j) - select kernel transfer-learning source:                       \n"
+                                                               "                                                                               \n"
+                                                               "Set kernel transfer learning source ML.                                        ",
+                                                               py::arg("j"));
 
-    QGETSETOPT(m_opt,tranmeth,Bayesian,tl,"Transfer learning data treatment:\n"
-                                          "                                                                               \n"
-                                          "0 - assume data from target model (default).                                   \n"
-                                          "1 - use env-GP as per Joy1/Shi21.                                              \n"
-                                          "2 - use diff-GP as per Shi21.                                                  ");
-    QGETSETOPT(m_opt,alpha0,  Bayesian,tl,"alpha0 value for env-GP.");
-    QGETSETOPT(m_opt,beta0,   Bayesian,tl,"beta0 value for env-GP.");
-    QGETSETOPT(m_opt,kxfnum,  Bayesian,tl,"kernel transfer learning method:\n"
-                                          "                                                                               \n"
-                                          "800 - trivial K(x,y) = Kj(x,y).                                                \n"
-                                          "801 - m-norm (free kernel) transfer (default).                                 \n"
-                                          "802 - moment (Der and Lee) transfer.                                           \n"
-                                          "804 - K-learn transfer.                                                        \n"
-                                          "805 - K2-learn transfer.                                                       \n"
-                                          "806 - Multi-layer transfer.                                                    ");
-    QGETSETOPT(m_opt,kxfnorm, Bayesian,tl,"kernel transfer normalization:\n"
-                                          "                                                                               \n"
-                                          "0 = no normalization.                                                          \n"
-                                          "0 = use normalization (default).                                               ");
+    QGETSETOPTD(m_opt,tranmeth,Bayesian,tl,"Transfer learning data treatment:",
+                                           "0 - assume data from target model (default).                                   \n"
+                                           "1 - use env-GP as per Joy1/Shi21.                                              \n"
+                                           "2 - use diff-GP as per Shi21.                                                  ");
+    QGETSETOPT(m_opt,alpha0,   Bayesian,tl,"alpha0 value for env-GP.","");
+    QGETSETOPT(m_opt,beta0,    Bayesian,tl,"beta0 value for env-GP.","");
+    QGETSETOPTD(m_opt,kxfnum,  Bayesian,tl,"kernel transfer learning method:",
+                                           "800 - trivial K(x,y) = Kj(x,y).                                                \n"
+                                           "801 - m-norm (free kernel) transfer (default).                                 \n"
+                                           "802 - moment (Der and Lee) transfer.                                           \n"
+                                           "804 - K-learn transfer.                                                        \n"
+                                           "805 - K2-learn transfer.                                                       \n"
+                                           "806 - Multi-layer transfer.                                                    ");
+    QGETSETOPTD(m_opt,kxfnorm, Bayesian,tl,"kernel transfer normalization:",
+                                           "0 = no normalization.                                                          \n"
+                                           "1 = use normalization (default).                                               ");
 
 
-    QGETSETOPT(m_opt,modelname,     Bayesian,vis,"model basename when plotting/logging (default smbomodel)"            );
-    QGETSETOPT(m_opt,modeloutformat,Bayesian,vis,"format for plotting posterior (0 terminal, 1 ps, 2 pdf (default))"   );
-    QGETSETOPT(m_opt,plotfreq,      Bayesian,vis,"plotting frequency for posterior (0 none (default), -1 only on exit)");
-    QGETSETOPT(m_opt,modelsave,     Bayesian,vis,"save model when plotting (0 don't save (default), 1 save)"           );
-    QGETSETOPT(m_opt,modelbaseline, Bayesian,vis,"baseline function for posterior plots (or none)"                     );
-    QGETSETOPT(m_opt,cgtsave,       Bayesian,vis,"save constraint model when plotting (0 don't save (default), 1 save)");
-    QGETSETOPT(m_opt,cgtbaseline,   Bayesian,vis,"baseline constraint function for posterior plots (or none)"          );
+    QGETSETOPT(m_opt,modelname,     Bayesian,vis,"model basename when plotting/logging",            "default smbomodel"                );
+    QGETSETOPT(m_opt,modeloutformat,Bayesian,vis,"format for plotting posterior",                   "0 terminal, 1 ps, 2 pdf (default)");
+    QGETSETOPT(m_opt,plotfreq,      Bayesian,vis,"plotting frequency for posterior",                "0 none (default), -1 only on exit");
+    QGETSETOPT(m_opt,modelsave,     Bayesian,vis,"save model when plotting",                        "0 don't save (default), 1 save"   );
+    QGETSETOPT(m_opt,modelbaseline, Bayesian,vis,"baseline function for posterior plots",           "or none"                          );
+    QGETSETOPT(m_opt,cgtsave,       Bayesian,vis,"save constraint model when plotting",             "0 don't save (default), 1 save"   );
+    QGETSETOPT(m_opt,cgtbaseline,   Bayesian,vis,"baseline constraint function for posterior plots","or none"                          );
 
-    QGETSETOPT(m_opt,tunemu,     Bayesian,tune,"Tuning for objective model (0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect." );
-    QGETSETOPT(m_opt,tunecgt,    Bayesian,tune,"Tuning for constraint model (0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect.");
-    QGETSETOPT(m_opt,tunesigma,  Bayesian,tune,"Tuning for noise model (0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect."     );
-    QGETSETOPT(m_opt,tunesrcmod, Bayesian,tune,"Tuning for source model (0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect."    );
-    QGETSETOPT(m_opt,tunediffmod,Bayesian,tune,"Tuning for difference model (0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect.");
+    QGETSETOPT(m_opt,tunemu,     Bayesian,tune,"Tuning for objective model", "0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect");
+    QGETSETOPT(m_opt,tunecgt,    Bayesian,tune,"Tuning for constraint model","0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect");
+    QGETSETOPT(m_opt,tunesigma,  Bayesian,tune,"Tuning for noise model",     "0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect");
+    QGETSETOPT(m_opt,tunesrcmod, Bayesian,tune,"Tuning for source model",    "0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect");
+    QGETSETOPT(m_opt,tunediffmod,Bayesian,tune,"Tuning for difference model","0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect");
 //    QGETSETOPT(m_opt,tuneaugxmod,Bayesian,tune,"Tuning for x augmentation (side-channel) model (0 none, 1 max-log-likelihood (default), 2 LOO, 3 recall.");
 
-    QGETSETOPT(m_opt,tunemu_sigma,     Bayesian,tune,"Tuning for objective model sigma (0 no, 1 yes)." );
-    QGETSETOPT(m_opt,tunecgt_sigma,    Bayesian,tune,"Tuning for constraint model sigma (0 no, 1 yes).");
-    QGETSETOPT(m_opt,tunesigma_sigma,  Bayesian,tune,"Tuning for noise model sigma (0 no, 1 yes)."     );
-    QGETSETOPT(m_opt,tunesrcmod_sigma, Bayesian,tune,"Tuning for source model sigma (0 no, 1 yes)."    );
-    QGETSETOPT(m_opt,tunediffmod_sigma,Bayesian,tune,"Tuning for difference model sigma (0 no, 1 yes).");
+    QGETSETOPT(m_opt,tunemu_sigma,     Bayesian,tune,"Tuning for objective model sigma", "0 no, 1 yes");
+    QGETSETOPT(m_opt,tunecgt_sigma,    Bayesian,tune,"Tuning for constraint model sigma","0 no, 1 yes");
+    QGETSETOPT(m_opt,tunesigma_sigma,  Bayesian,tune,"Tuning for noise model sigma",     "0 no, 1 yes");
+    QGETSETOPT(m_opt,tunesrcmod_sigma, Bayesian,tune,"Tuning for source model sigma",    "0 no, 1 yes");
+    QGETSETOPT(m_opt,tunediffmod_sigma,Bayesian,tune,"Tuning for difference model sigma","0 no, 1 yes");
 //    QGETSETOPT(m_opt,tuneaugxmod,Bayesian,tune,"Tuning for x augmentation sigma (0 no, 1 yes)."        );
 
+    m_opt_Bayesian_model.def("setgridsrc",&boSetgridsource, "setgridsrc(j) - select grid-data source ML for BO.",py::arg("j"));
 
-    m_opt_Bayesian_model.def("setgridsrc",&boSetgridsource, "For BO, set grid source.",py::arg("j"));
-    m_opt_Bayesian_model.def("selmu",    &selmlmuapprox,    "select objective model for BO i to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
-    m_opt_Bayesian_model.def("selcgt",   &selmlcgtapprox,   "select constraint model for BO i to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
-//    m_opt_Bayesian_model.def("selaug",   &selmlaugxapprox,  "select x augmentation (side-channel) model for BO i to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
-    m_opt_Bayesian_model.def("selsigma", &selmlsigmaapprox, "select noise model for BO i to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_Bayesian_model.def("selsrc",   &selmlsrcmodel,    "select source model for BO i to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_Bayesian_model.def("seldiff",  &selmldiffmodel,   "select src->destination difference model (transfer learning) for BO i to use   \n"
-                                                            "like any ML (see also selml).",py::arg("i")=0);
-
-    m_opt_Bayesian_model.def("selmu_prior",    &selmlmuapprox_prior,    "select prior objective model for BO i to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_Bayesian_model.def("selcgt_prior",   &selmlcgtapprox_prior,   "select prior constraint model for BO i to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_Bayesian_model.def("selmu_prior",   &selmlmuapprox_prior,      "selmu_prior(i=0) - select objective prior from BO i (see also selml).",  py::arg("i")=0);
+    m_opt_Bayesian_model.def("selcgt_prior",  &selmlcgtapprox_prior,    "selcgt_priot(i=0) - select cconstraint prior from BO i (see also selml).",py::arg("i")=0);
+    m_opt_Bayesian_model.def("selsigma_prior",&selmlsigmaapprox_prior,"selsigma_prior(i=0) - select noise prior from BO i (see also selml).",      py::arg("i")=0);
 //    m_opt_Bayesian_model.def("selaug_prior",   &selmlaugxapprox_prior,  "select prior x augmentation (side-channel) model for BO i to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_Bayesian_model.def("selsigma_prior", &selmlsigmaapprox_prior, "select prior noise model for BO i to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_Bayesian_model.def("selsrc_prior",   &selmlsrcmodel_prior,    "select prior source model for BO i to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_Bayesian_model.def("seldiff_prior",  &selmldiffmodel_prior,   "select prior src->destination difference model (transfer learning) for BO i to \n"
-                                                                        "use like any ML (see also selml).",py::arg("i")=0);
+
+    m_opt_Bayesian_model.def("selmu",   &selmlmuapprox,  "selmu(i=0,k=0) - select objective[k] posterior ML from BO i (see also selml).", py::arg("i")=0,py::arg("k")=0);
+    m_opt_Bayesian_model.def("selcgt",  &selmlcgtapprox,"selcgt(i=0,k=0) - select constraint[k] posterior ML from BO i (see also selml).",py::arg("i")=0,py::arg("k")=0);
+    m_opt_Bayesian_model.def("selsigma",&selmlsigmaapprox,"selsigma(i=0) - select noise posterior ML from BO i (see also selml).",        py::arg("i")=0);
+//    m_opt_Bayesian_model.def("selaug",   &selmlaugxapprox,  "select x augmentation (side-channel) model for BO i to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
+
+    m_opt_Bayesian_model.def("selsrc_prior", &selmlsrcmodel_prior,  "selsrc_prior(i=0) - select xfer learning source prior for BO i (see also selml).",        py::arg("i")=0);
+    m_opt_Bayesian_model.def("seldiff_prior",&selmldiffmodel_prior,"seldiff_prior(i=0) - select xfer learning src->dest diff prior for BO i (see also selml).",py::arg("i")=0);
+
+    m_opt_Bayesian_model.def("selsrc", &selmlsrcmodel,  "selsrc(i=0) - select xfer learning source posterior for BO i (see also selml).",        py::arg("i")=0);
+    m_opt_Bayesian_model.def("seldiff",&selmldiffmodel,"seldiff(i=0) - select xfer learning src->dest diff posterior for BO i (see also selml).",py::arg("i")=0);
 
 
 
@@ -2122,8 +2255,7 @@ PYBIND11_MODULE(pyheavy, m) {
     auto m_ml_kern_UU  = m_ml_kern.def_submodule("UU", "Output kernel Options for Model."        );
     auto m_ml_kern_RFF = m_ml_kern.def_submodule("RFF","RFF similarity kernel Options for Model.");
 
-    QGETSETKERQD(m_ml_kern,cType,   setType, "type", "settype", "kernel type, eg (z = <x,x'>, d=||x-x'||_2):\n"
-                                                                "                                                                               \n"
+    QGETSETKERQD(m_ml_kern,cType,   setType, "type", "settype", "kernel type",
                                                                 "   0: Constant:                 Kq(x,x') = rq_1                                \n"
                                                                 "   1: Linear:                   Kq(x,x') = z/(rq_0.rq_0)                       \n"
                                                                 "   2: Polynomial:               Kq(x,x') = ( rq_1 + z/(rq_0.rq_0) )^iq_0       \n"
@@ -2219,26 +2351,37 @@ PYBIND11_MODULE(pyheavy, m) {
                                                                 "2039: 3/2-Matern dense integ:%@ Kq(x,x') = (prod_k int_{x_k=0}^infty dx_k) ... \n"
                                                                 "                    (1+((sqrt(3)/rq_0).sqrt(d))) . exp(-(sqrt(3)/rq_0).sqrt(d))\n"
                                                                 "                                                                               \n"
+                                                                "here: z = <x,x'>                                                               \n"
+                                                                "      d = ||x-x'||_2^2 (unless otherwise specified)                            \n"
+                                                                "                                                                               \n"
                                                                 "Notes: % non-positive-definite kernel                                          \n"
                                                                 "       # conditionally positive definite kernel                                \n"
                                                                 "       * kernel is only positive definite in R^2                               \n"
                                                                 "       + kernel is only positive definite in R^3                               \n"
                                                                 "       @ kernel is only defined if set to operate product-wise                 ");
-    QGETSETKERD(m_ml_kern, getTypes,setTypes,"types","settypes","Kernel types [ t0, t1, ... ]\n"
-                                                                "(by default the overall kernel is the  weighted sum K(x,x') = sum_i wi Ki(x,x')\n"
-                                                                "of these, but you can change this (see (mul)split).                            ");
+    QGETSETKERD(m_ml_kern, getTypes,setTypes,"types","settypes","kernel types [ t0, t1, ... ]",
+                                                                "[ t0, t1, ... ] - kernel types as per settype.                                 \n"
+                                                                "                                                                               \n"
+                                                                "Note: by default this makes the overall kernel is the weighted sum:            \n"
+                                                                "                                                                               \n"
+                                                                "       K(x,x') = sum_i wi Ki(x,x')                                             \n"
+                                                                "                                                                               \n"
+                                                                "      however you can change this (see (mul)split).                            ");
 
-    QGETSETKERD(m_ml_kern,cScale,setScale,"scale","setscale","Kernel ARD-type scale x -> x./s (use empty to remove)");
+    QGETSETKERD(m_ml_kern,cScale,setScale,"scale","setscale","kernel ARD-type scale",
+                                                             "scale - a vector of scales so that x -> x./scale (use empty to remove).           ");
 
-    QGETSETKERQD(m_ml_kern,getRealConstZero,setRealConstZero,"l","setl","lengthscale rq_0=l");
-    QGETSETKERQD(m_ml_kern,getIntConstZero, setIntConstZero, "d","setd","order iq_0=d"      );
+    QGETSETKERQD(m_ml_kern,getRealConstZero,setRealConstZero,"l","setl","lengthscale","sets rq_0 = l");
+    QGETSETKERQD(m_ml_kern,getIntConstZero, setIntConstZero, "d","setd","order","sets iq_0 = d"      );
 
-    QGETSETKERQD(m_ml_kern,cWeight,       setWeight,       "weight","setweight","weight wq"                                 );
-    QGETSETKERQD(m_ml_kern,cRealConstants,setRealConstants,"hyperR","sethyperR","hyper-parameters [rq_0, rq_1, ...]"        );
-    QGETSETKERQD(m_ml_kern,cIntConstants, setIntConstants, "hyperZ","sethyperZ","integer hyper-parameters [iq_0, iq_1, ...]");
+    QGETSETKERQD(m_ml_kern,cWeight,       setWeight,       "weight","setweight","weight",                  "weight/variance wq"          );
+    QGETSETKERQD(m_ml_kern,cRealConstants,setRealConstants,"hyperR","sethyperR","real hyper-parameters",   "[rq_0, rq_1, ...] (see type)");
+    QGETSETKERQD(m_ml_kern,cIntConstants, setIntConstants, "hyperZ","sethyperZ","integer hyper-parameters","[iq_0, iq_1, ...] (see type)");
 
-    QGETSETKERD(m_ml_kern,getHyper,       setHyper,        "hyperWRs","sethyperWRs","weights, hyper-params [ [ w0,r0_0,r0_1, ...], [ w1,r1_0,r1_1, ...], ...]");
-    QGETSETKERD(m_ml_kern,getIntConstants,setIntConstantss,"hyperZs", "sethyperZs", "integer hyper-params [ [ i0_0,i0_1, ... ], [ i1_0,i1_1, ... ], ... ]");
+    QGETSETKERD(m_ml_kern,getHyper,       setHyper,        "hyperWRs","sethyperWRs","real-valued hyper-parameters",
+                                                                                    "hyperWRs = [ [ w0,r0_0,r0_1, ...], [ w1,r1_0,r1_1, ...], ...]");
+    QGETSETKERD(m_ml_kern,getIntConstants,setIntConstantss,"hyperZs", "sethyperZs", "integer-valued hyper-parameters",
+                                                                                    "hyperZs = [ [ i0_0,i0_1, ... ], [ i1_0,i1_1, ... ], ... ]");
 
     // ---------------------------
 
@@ -2247,62 +2390,101 @@ PYBIND11_MODULE(pyheavy, m) {
     auto m_ml_kern_obscure_UU  = m_ml_kern_obscure.def_submodule("UU", "More obscure output kernel Options for Model."        );
     auto m_ml_kern_obscure_RFF = m_ml_kern_obscure.def_submodule("RFF","More obscure RFF similarity kernel Options for Model.");
 
-    QGETSETKERD(m_ml_kern_obscure,isFullNorm,setFullNorm,"fullnorm","setfullnorm","overall normalization (0 normal, 1 K(x,y) = K(x,y)/sqrt(K(x,x).K(y,y)))");
-    QGETSETKERD(m_ml_kern_obscure,isSymmSet,setSymmSet,  "symm",    "setsymm",    "similarity 2-kernel symmetrization (0 normal, 1 K([x1~x2],[x3~x4]) = sqrt(K(x1,x3).K(x1,x4).K(x2,x3).K(x2.x4)))");
-    QGETSETKERD(m_ml_kern_obscure,isProd,   setProd,     "prod",    "setprod",    "product-wise kernel (0 normal, 1 K(x,y) = prod_i K(x_i,y_i))");
-    QGETSETKERD(m_ml_kern_obscure,isAltDiff,setAltDiff,  "altdiff", "setaltdiff", "metric:\n""0:   ||x-y||_2^2    -> ||x||_m^m + ||x'||_m^m + ... - m.<<x,x',...>>_m\n""1:   ||x-y||_2^2    -> ||x||_2^2 + ||x'||_2^2 + ... - 2.<<x,x',...>>_m (default)\n""2:   2*(||x-y||_2^2 -> ||x||_2^2 + ||x'||_2^2 + ... - (1/m).(sum_{ij} <xi,xj>))\n""     (the RBF has additional scaling as per paper - see Kbase)\n""5:   ||x-y||_2^2    -> ||x-x'||_2^2 + ||x''-x'''||_2^2 + ...\n""                     = ||x||_2^2 + ||x'||_x^2 + ... - 2<x,x'> - 2<x'',x'''> - ...\n""                     = ||x||_2^2 + ||x'||_x^2 + ... - 2 sum_{i=0,2,...} <x_i,x_{i+1}>\n""103: K(...) -> 1/2^{m-1} sum_{s = [ +-1 +-1 ... ] in R^m : |i:si=+1| + |i:si=-1| in 4Z_+} K(||sum_i s_i x_i ||_2^2)\n""104: K(...) -> 1/m!      sum_{s = [ +-1 +-1 ... ] in R^m : |i:si=+1| = |i:si=-1|         } K(||sum_i s_i x_i ||_2^2)\n""203: like 103, but kernel expansion occurs over first kernel in chain only\n""204: like 104, but kernel expansion occurs over first kernel in chain only\n""300: true moment-kernel expension to 2-kernels\n");
-    QGETSETKERD(m_ml_kern_obscure,rankType, setrankType, "ranktype","setranktype","rank type (0: normal phi(x,x') = phi(x)-phi(x'), 1: phi(x,x') = phi(x)+phi(x'), 2: phi(x,x') = phi(x) otimes phi(x') - phi(x') otimes phi(x), 3: phi(x,x') = phi(x) otimes phi(x') - phi(x') otimes phi(x))");
+    QGETSETKERD(m_ml_kern_obscure,isFullNorm,setFullNorm,"fullnorm","setfullnorm","overall normalization",
+                                                                                  "fullnorm = 0 normal, 1 K(x,y) = K(x,y)/sqrt(K(x,x).K(y,y))");
+    QGETSETKERD(m_ml_kern_obscure,isSymmSet,setSymmSet,  "symm",    "setsymm",    "2-kernel symmetrization",
+                                                                                  "symm = 0 normal, 1 K([x1~x2],[x3~x4]) = sqrt(K(x1,x3).K(x1,x4).K(x2,x3).K(x2.x4))");
+    QGETSETKERD(m_ml_kern_obscure,isProd,   setProd,     "prod",    "setprod",    "product-wise kernel",
+                                                                                  "prod = 0 normal (sum), 1 K(x,y) = prod_i K(x_i,y_i)");
+    QGETSETKERD(m_ml_kern_obscure,isAltDiff,setAltDiff,  "altdiff", "setaltdiff", "input metric",
+                                                                                  "0:   ||x-y||_2^2    -> ||x||_m^m + ||x'||_m^m + ... - m.<<x,x',...>>_m         \n"
+                                                                                  "1:   ||x-y||_2^2    -> ||x||_2^2 + ||x'||_2^2 + ... - 2.<<x,x',...>>_m (deflt) \n"
+                                                                                  "2:   2*(||x-y||_2^2 -> ||x||_2^2 + ||x'||_2^2 + ... - (1/m).(sum_{ij} <xi,xj>))\n"
+                                                                                  "     (the RBF has additional scaling as per paper - see Kbase)                 \n"
+                                                                                  "5:   ||x-y||_2^2    -> ||x-x'||_2^2 + ||x''-x'''||_2^2 + ...                   \n"
+                                                                                  "                     = ||x||_2^2 + ||x'||_x^2 + ... - 2<x,x'> - 2<x'',x'''> -..\n"
+                                                                                  "                     = ||x||_2^2 + ||x'||_x^2 +..- 2sum_{i=0,2,.} <x_i,x_{i+1}>\n"
+                                                                                  "103: K(...) -> 1/2^{m-1} sum_{s = [ +-1 +-1 .. ] in R^m : |i:si=+1| + |i:si=-1|\n"
+                                                                                  "                                             in 4Z_+} K(||sum_i s_i x_i ||_2^2)\n"
+                                                                                  "104: K(...) -> 1/m!      sum_{s = [ +-1 +-1 ..] in R^m : |i:si=+1| = |i:si=-1|}\n"
+                                                                                  "                                                      K(||sum_i s_i x_i ||_2^2)\n"
+                                                                                  "203: like 103, but kernel expansion occurs over first kernel in chain only     \n"
+                                                                                  "204: like 104, but kernel expansion occurs over first kernel in chain only     \n"
+                                                                                  "300: true moment-kernel expension to 2-kernels                                 ");
+    QGETSETKERD(m_ml_kern_obscure,rankType, setrankType, "ranktype","setranktype","rank type",
+                                                                                  "0: normal phi(x,x') = phi(x)-phi(x')                                           \n"
+                                                                                  "1: phi(x,x') = phi(x)+phi(x')                                                  \n"
+                                                                                  "2: phi(x,x') = phi(x) otimes phi(x') - phi(x') otimes phi(x)                   \n"
+                                                                                  "3: phi(x,x') = phi(x) otimes phi(x') - phi(x') otimes phi(x)                   ");
 
-    QGETSETKERD(m_ml_kern_obscure,denseZeroPoint,setdenseZeroPoint,"iz","setiz","zero point for dense integration");
+    QGETSETKERD(m_ml_kern_obscure,denseZeroPoint,setdenseZeroPoint,"iz","setiz","zero point for dense integration","");
 
-    QGETSETKERD(m_ml_kern_obscure,getlinGradOrd, setlinGradOrd, "linGradOrd", "setlinGradOrd", "Order of linear gradient constraints (see Jidling)"      );
-    QGETSETKERD(m_ml_kern_obscure,getlinGradScal,setlinGradScal,"linGradScal","setlinGradScal","Matrix part of linear gradient constraints (see Jidling)");
+    QGETSETKERD(m_ml_kern_obscure,getlinGradOrd, setlinGradOrd, "linGradOrd", "setlinGradOrd", "order of linear gradient constraints",      "See Jidling)");
+    QGETSETKERD(m_ml_kern_obscure,getlinGradScal,setlinGradScal,"linGradScal","setlinGradScal","matrix part of linear gradient constraints","See Jidling");
 
-    QGETSETKERD(m_ml_kern_obscure,getlinParity,    setlinParity,    "linParity",    "setlinParity",    "Linear parity constraint"       );
-    QGETSETKERD(m_ml_kern_obscure,getlinParityOrig,setlinParityOrig,"linParityOrig","setlinParityOrig","Linear parity constraint origin");
+    QGETSETKERD(m_ml_kern_obscure,getlinParity,    setlinParity,    "linParity",    "setlinParity",    "linear parity constraint"       ,"");
+    QGETSETKERD(m_ml_kern_obscure,getlinParityOrig,setlinParityOrig,"linParityOrig","setlinParityOrig","linear parity constraint origin","");
 
-    QGETSETKERD(m_ml_kern_obscure,numSamples,        setnumSamples,        "sN","setsN","number of samples if interpretting functions as distributions");
-    QGETSETKERD(m_ml_kern_obscure,sampleDistribution,setSampleDistribution,"sD","setsD","distribution type if interpretting functions as distributions");
-    QGETSETKERD(m_ml_kern_obscure,sampleIndices,     setSampleIndices,     "sI","setsI","indices on which to interpret functions as distributions"     );
+    QGETSETKERD(m_ml_kern_obscure,numSamples,        setnumSamples,        "sN","setsN","number of distribution samples","If interpretting functions as distributions."              );
+    QGETSETKERD(m_ml_kern_obscure,sampleDistribution,setSampleDistribution,"sD","setsD","distribution type",             "If interpretting functions as distributions."              );
+    QGETSETKERD(m_ml_kern_obscure,sampleIndices,     setSampleIndices,     "sI","setsI","indices on distribution",       "Integers on which to interpret functions as distributions.");
 
-    QGETSETKERD(m_ml_kern_obscure,getChained, setChained, "chain",   "setchain",   "controls chaining ([0, 0, ...] normal, e.g. [ 0, 1, 1, 0, ... ] K(...) = K_0(...) + K_3(K_2(K_1(...))) + K_4(...) + ...)");
-    QGETSETKERD(m_ml_kern_obscure,getSplit,   setSplit,   "split",   "setsplit",   "controls splitting (termwise 0,1,2... see code)"                                                                         );
-    QGETSETKERD(m_ml_kern_obscure,getMulSplit,setMulSplit,"mulsplit","setmulsplit","controls multiplicative splitting (termwise 0,1,2... see code)"                                                          );
+    QGETSETKERD(m_ml_kern_obscure,getChained, setChained, "chain",   "setchain",   "compositional kernel chaining",
+                                                                                   "For example:                                                                   \n"
+                                                                                   "                                                                               \n"
+                                                                                   "[ 0, 0, ...       ] normal operation.                                          \n"
+                                                                                   "[ 0, 1, 1, 0, ... ] K(...) = K_0(...) + K_3(K_2(K_1(...))) + K_4(...) + ...)   ");
+    QGETSETKERD(m_ml_kern_obscure,getSplit,   setSplit,   "split",   "setsplit",   "compositional additive kernel splitting",
+                                                                                   "controls splitting (termwise 0,1,2... see code)");
+    QGETSETKERD(m_ml_kern_obscure,getMulSplit,setMulSplit,"mulsplit","setmulsplit","compositional multiplicative kernel splitting",
+                                                                                   "controls multiplicative splitting (termwise 0,1,2... see code)");
 
-    QGETSETKERD(m_ml_kern_obscure,getIsNormalised,setIsNormalised,"norms","setnorms","individual normalizations [n_0, n_1, ...] (n_q=0 normal, n_q=1 Kq(x,y) = Kq(x,y)/sqrt(Kq(x,x).Kq(y,y)))");
-    QGETSETKERD(m_ml_kern_obscure,getIsMagTerm,   setIsMagTerm,   "mags", "setmags", "individual magnitudization [m_0, m_1, ...] (n_q=0 normal, n_q=1 Kq(x,y) = Kq(x,x).Kq(y,y))"             );
+    QGETSETKERD(m_ml_kern_obscure,getIsNormalised,setIsNormalised,"norms","setnorms","termwise normalization",
+                                                                                     "[ n_0, n_1, ... : n_q in {0,1} ]                                               \n"
+                                                                                     "                                                                               \n"
+                                                                                     "When n_q = 1, Kq(x,y) -> Kq(x,y)/sqrt(Kq(x,x).Kq(y,y))                         ");
+    QGETSETKERD(m_ml_kern_obscure,getIsMagTerm,   setIsMagTerm,   "mags", "setmags", "termsise magnitudization",
+                                                                                     "[ m_0, m_1, ... : m_q in {0,1} ]                                               \n"
+                                                                                     "                                                                               \n"
+                                                                                     "When m_q = 1, Kq(x,y) = Kq(x,x).Kq(y,y)                                        ");
 
-    QGETSETKERD(m_ml_kern_obscure,getRealOverwrites,setRealOverwrites,"hyperRovrs","sethyperRovrs","hyper-parameters substitutions [i_0, i_1, ...]"        );
-    QGETSETKERD(m_ml_kern_obscure,getIntOverwrites, setIntOverwrites, "hyperZovrs","SethyperZovrs","integer hyper-parameters substitutions [i_0, i_1, ...]");
+    QGETSETKERD(m_ml_kern_obscure,getRealOverwrites,setRealOverwrites,"hyperRovrs","sethyperRovrs","real-valued hyper-parameter substitution",
+                                                                                                   "[ i_0, i_1, ... ] substitutes r0 = x[i_0].y[i_0]..., r1 = x[i_1].y[i_1]..., ...");
+    QGETSETKERD(m_ml_kern_obscure,getIntOverwrites, setIntOverwrites, "hyperZovrs","SethyperZovrs","integer-valued hyper-parameter substitution",
+                                                                                                   "[ i_0, i_1, ... ] substitutes i0 = x[i_0].y[i_0]..., i1 = x[i_1].y[i_1]..., ...");
 
-    QGETSETKERQD(m_ml_kern_obscure,isNormalised,setisNormalised,"norm","setnorm","individual normalization (0 normal, 1 Kq(x,y) = Kq(x,y)/sqrt(Kq(x,x).Kq(y,y)))");
-    QGETSETKERQD(m_ml_kern_obscure,isMagTerm,   setisMagTerm,   "mag", "setmag", "individual magnitudization (termwise 0 normal, 1 Kq(x,y) = Kq(x,x).Kq(y,y))"   );
+    QGETSETKERQD(m_ml_kern_obscure,isNormalised,setisNormalised,"norm","setnorm","element normalization",
+                                                                                 "0 - normal operation.                                                          \n"
+                                                                                 "1 - normalized Kq(x,y) = Kq(x,y)/sqrt(Kq(x,x).Kq(y,y))).                       ");
+    QGETSETKERQD(m_ml_kern_obscure,isMagTerm,   setisMagTerm,   "mag", "setmag", "element magnitudization",
+                                                                                 "0 - normal operation.                                                          \n"
+                                                                                 "1 - Kq(x,y) = Kq(x,x).Kq(y,y)).                                                ");
 
-    QGETSETKERQD(m_ml_kern_obscure,cRealOverwrite,setRealOverwrite,"hyperRovr","sethyperRovr","hyper-parameters substitution vector"        );
-    QGETSETKERQD(m_ml_kern_obscure,cIntOverwrite, setIntOverwrite, "hyperZovr","sethyperZovr","integer hyper-parameters substitution vector");
+    QGETSETKERQD(m_ml_kern_obscure,cRealOverwrite,setRealOverwrite,"hyperRovr","sethyperRovr","real hyper-parameters substitution vector",   "");
+    QGETSETKERQD(m_ml_kern_obscure,cIntOverwrite, setIntOverwrite, "hyperZovr","sethyperZovr","integer hyper-parameters substitution vector","");
 
-    QGETSETKERD(m_ml_kern,getHyperLB,       setHyperLB,        "hyperWRLBs","sethyperWRLBs","nominal lower bounds for weights and hyper-parameters"   );
-    QGETSETKERD(m_ml_kern,getIntConstantsLB,setIntConstantssLB,"hyperZLBs", "sethyperZLBs", "nominal lower bounds for integer hyper-parameters vector");
+    QGETSETKERD(m_ml_kern,getHyperLB,       setHyperLB,        "hyperWRLBs","sethyperWRLBs","nominal lower bounds for hyperWRs (real weights/hyperparams)","This is used by automatic hyper-parameter tuning.");
+    QGETSETKERD(m_ml_kern,getIntConstantsLB,setIntConstantssLB,"hyperZLBs", "sethyperZLBs", "nominal lower bounds for hyperZs (integer hyperparams)"      ,"This is used by automatic hyper-parameter tuning.");
 
-    QGETSETKERQD(m_ml_kern,cWeightLB,       setWeightLB,       "weightLB","setweightLB","nominal lower bound for weight"                   );
-    QGETSETKERQD(m_ml_kern,cRealConstantsLB,setRealConstantsLB,"hyperRLB","sethyperRLB","nominal lower bounds for hyper-parameters"        );
-    QGETSETKERQD(m_ml_kern,cIntConstantsLB, setIntConstantsLB, "hyperZLB","sethyperZLB","nominal lower bounds for integer hyper-parameters");
+    QGETSETKERQD(m_ml_kern,cWeightLB,       setWeightLB,       "weightLB","setweightLB","nominal lower bound for weight"                   ,"");
+    QGETSETKERQD(m_ml_kern,cRealConstantsLB,setRealConstantsLB,"hyperRLB","sethyperRLB","nominal lower bounds for real hyper-parameters"   ,"");
+    QGETSETKERQD(m_ml_kern,cIntConstantsLB, setIntConstantsLB, "hyperZLB","sethyperZLB","nominal lower bounds for integer hyper-parameters","");
 
-    QGETSETKERQD(m_ml_kern,getRealConstZeroLB,setRealConstZeroLB,"lLB","setlLB","nominal lower bound for lengthscale");
-    QGETSETKERQD(m_ml_kern,getIntConstZeroLB, setIntConstZeroLB, "dLB","setdLB","nominal lower bounds for order"     );
+    QGETSETKERQD(m_ml_kern,getRealConstZeroLB,setRealConstZeroLB,"lLB","setlLB","nominal lower bound for lengthscale","");
+    QGETSETKERQD(m_ml_kern,getIntConstZeroLB, setIntConstZeroLB, "dLB","setdLB","nominal lower bounds for order"     ,"");
 
-    QGETSETKERD(m_ml_kern,getHyperUB,       setHyperUB,        "hyperWRUBs","sethyperWRUBs","nominal upper bounds for weights and hyper-parameters"   );
-    QGETSETKERD(m_ml_kern,getIntConstantsUB,setIntConstantssUB,"hyperZUBs", "sethyperZUBs", "nominal upper bounds for integer hyper-parameters vector");
+    QGETSETKERD(m_ml_kern,getHyperUB,       setHyperUB,        "hyperWRUBs","sethyperWRUBs","nominal upper bounds for hyperWRs (real weights/hyperparams)","This is used by automatic hyper-parameter tuning.");
+    QGETSETKERD(m_ml_kern,getIntConstantsUB,setIntConstantssUB,"hyperZUBs", "sethyperZUBs", "nominal upper bounds for hyperZs (integer hyperparams)"      ,"This is used by automatic hyper-parameter tuning.");
 
-    QGETSETKERQD(m_ml_kern,cWeightUB,       setWeightUB,       "weightUB","setweightUB","nominal upper bound for weight"                   );
-    QGETSETKERQD(m_ml_kern,cRealConstantsUB,setRealConstantsUB,"hyperRUB","sethyperRUB","nominal upper bounds for hyper-parameters"        );
-    QGETSETKERQD(m_ml_kern,cIntConstantsUB, setIntConstantsUB, "hyperZUB","sethyperZUB","nominal upper bounds for integer hyper-parameters");
+    QGETSETKERQD(m_ml_kern,cWeightUB,       setWeightUB,       "weightUB","setweightUB","nominal upper bound for weight"                   ,"");
+    QGETSETKERQD(m_ml_kern,cRealConstantsUB,setRealConstantsUB,"hyperRUB","sethyperRUB","nominal upper bounds for real hyper-parameters"   ,"");
+    QGETSETKERQD(m_ml_kern,cIntConstantsUB, setIntConstantsUB, "hyperZUB","sethyperZUB","nominal upper bounds for integer hyper-parameters","");
 
-    QGETSETKERQD(m_ml_kern,getRealConstZeroUB,setRealConstZeroUB,"lUB","setlUB","nominal upper bound for lengthscale");
-    QGETSETKERQD(m_ml_kern,getIntConstZeroUB, setIntConstZeroUB, "dUB","setdUB","nominal upper bounds for order"     );
+    QGETSETKERQD(m_ml_kern,getRealConstZeroUB,setRealConstZeroUB,"lUB","setlUB","nominal upper bound for lengthscale","");
+    QGETSETKERQD(m_ml_kern,getIntConstZeroUB, setIntConstZeroUB, "dUB","setdUB","nominal upper bounds for order"     ,"");
 
-    QGETSETKERD(m_ml_kern,cScaleLB,setScaleLB,"scaleLB","setscaleLB","Kernel ARD-type scale x -> x./s nominal lower bound");
-    QGETSETKERD(m_ml_kern,cScaleUB,setScaleUB,"scaleUB","setscaleUB","Kernel ARD-type scale x -> x./s nominal upper bound");
+    QGETSETKERD(m_ml_kern,cScaleLB,setScaleLB,"scaleLB","setscaleLB","Kernel ARD-type nominal lower bound","This is used by automatic hyper-parameter tuning.");
+    QGETSETKERD(m_ml_kern,cScaleUB,setScaleUB,"scaleUB","setscaleUB","Kernel ARD-type nominal upper bound","This is used by automatic hyper-parameter tuning.");
 }
 
 //void logit(const std::string logstr) { errstream() << "python: " << logstr << "\n"; }
@@ -2321,14 +2503,19 @@ void internobjfn(gentype &res, Vector<gentype> &x, void *arg)
 
     // In the evaluate case x is a non-zero sized vector, and res is the result of evaluating argp[0] on x
     // In the callback case x is empty, argp[1] is callable and res is an integer (callback type); and we evaluate argp[1] on res
+    // we use safecallback to keep all the threading nonsense in one place so we can isolate it from python
 
-    if      ( x.size() )                                            { convFromPy(res,(*(argp[0]))(convToPy(x  ))); }
-    else if ( !isValNone(*(argp[1])) && isValCallable(*(argp[1])) ) {                (*(argp[1]))(convToPy(res));  }
+    gentype xx( x.size() ? x : res );
+
+    if      ( x.size()                                            ) { safecallback(res,(*argp[0]),xx,1); }
+    else if ( !isValNone(*(argp[1])) && isValCallable(*(argp[1])) ) { safecallback(res,(*argp[1]),xx,1); }
 }
 
 py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objfn, py::object callback)
 {
     dostartup();
+
+    if ( numreps < 0 ) { numreps = -numreps; optimiser.threadreps = true; }
 
     // Check arguments make sense
 
@@ -2382,8 +2569,13 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
 
     const py::object *optargs[2] = { &objfn, &callback };
 
-    //optimiser.ispydirect = true;
-    int retcode = optimiser.optim(dim,
+    int retcode = 0;
+
+    if ( !optimiser.threadreps )
+    {
+        // single-threaded operation
+
+        retcode = optimiser.optim(dim,
                                   xres,rawxres,fres,cres,Fres,mres,sres,ires,
                                   mInd,
                                   allxres,allrawxres,allfres,allcres,allFres,allmres,allsres,s_score,is_feas,
@@ -2391,7 +2583,104 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
                                   &internobjfn,(void *) optargs,dummy,numreps,
                                   meanfres,varfres,meanFres,varFres,meanires,varires,meantres,vartres,meanTres,varTres,
                                   meanallfres,varallfres,meanallFres,varallFres,meanallmres,varallmres);
-    //optimiser.ispydirect = false;
+    }
+
+    else
+    {
+        // Multi-threaded operation
+
+        // Capture by pointer
+
+        Vector<gentype> *xresptr = &xres;
+        Vector<gentype> *Xresptr = &rawxres;
+        gentype         *fresptr = &fres;
+        Vector<gentype> *cresptr = &cres;
+        gentype         *Fresptr = &Fres;
+        gentype         *mresptr = &mres;
+        gentype         *sresptr = &sres;
+        int             *iresptr = &ires;
+        int             *mIndptr = &mInd;
+
+        Vector<Vector<Vector<gentype>>> *allxresptr = &allxres;
+        Vector<Vector<Vector<gentype>>> *allXresptr = &allrawxres;
+        Vector<Vector<gentype>>         *allfresptr = &allfres;
+        Vector<Vector<Vector<gentype>>> *allcresptr = &allxres;
+        Vector<Vector<gentype>>         *allFresptr = &allFres;
+        Vector<Vector<gentype>>         *allmresptr = &allmres;
+        Vector<Vector<gentype>>         *allsresptr = &allsres;
+        Vector<Vector<double>>          *s_scoreptr = &s_score;
+        Vector<Vector<int>>             *is_feasptr = &is_feas;
+
+        const Vector<gentype> *xminptr     = &xmin;
+        const Vector<gentype> *xmaxptr     = &xmax;
+        const Vector<int>     *distModeptr = &distMode;
+        const Vector<int>     *varsTypeptr = &varsType;
+
+        svmvolatile int *killSwitchptr = &dummy;
+
+        gentype *meanfresptr = &meanfres; gentype *varfresptr = &varfres;
+        gentype *meanFresptr = &meanFres; gentype *varFresptr = &varFres;
+        gentype *meaniresptr = &meanires; gentype *variresptr = &varires;
+        gentype *meantresptr = &meantres; gentype *vartresptr = &vartres;
+        gentype *meanTresptr = &meanTres; gentype *varTresptr = &varTres;
+
+        Vector<gentype> *meanallfresptr = &meanallfres; Vector<gentype> *varallfresptr = &varallfres;
+        Vector<gentype> *meanallFresptr = &meanallFres; Vector<gentype> *varallFresptr = &varallFres;
+        Vector<gentype> *meanallmresptr = &meanallmres; Vector<gentype> *varallmresptr = &varallmres;
+
+        // result in atomic
+
+        std::atomic<int> altretcode(-123321);
+        std::atomic<int> *altretcodeptr = &altretcode;
+
+        // Don't want to initialize *any* pythonic stuff in the thread!
+
+        py::object dummycall;
+        py::object *dummycallptr = &dummycall;
+
+        // optimiser object
+
+        GlobalOptions *optimiserptr = &optimiser;
+
+        std::thread t([dummycallptr,optimiserptr,altretcodeptr,dim,
+                       xresptr,Xresptr,fresptr,cresptr,Fresptr,mresptr,sresptr,iresptr,
+                       mIndptr,
+                       allxresptr,allXresptr,allfresptr,allcresptr,allFresptr,allmresptr,allsresptr,s_scoreptr,is_feasptr,
+                       xminptr,xmaxptr,distModeptr,varsTypeptr,
+                       optargs,killSwitchptr,numreps,
+                       meanfresptr,varfresptr,meanFresptr,varFresptr,meaniresptr,variresptr,meantresptr,vartresptr,meanTresptr,varTresptr,
+                       meanallfresptr,varallfresptr,meanallFresptr,varallFresptr,meanallmresptr,varallmresptr]()
+                       {
+                           *altretcodeptr = optimiserptr->optim(dim,
+                                  *xresptr,*Xresptr,*fresptr,*cresptr,*Fresptr,*mresptr,*sresptr,*iresptr,
+                                  *mIndptr,
+                                  *allxresptr,*allXresptr,*allfresptr,*allcresptr,*allFresptr,*allmresptr,*allsresptr,*s_scoreptr,*is_feasptr,
+                                  *xminptr,*xmaxptr,*distModeptr,*varsTypeptr,
+                                  &internobjfn,(void *) optargs,*killSwitchptr,numreps,
+                                  *meanfresptr,*varfresptr,*meanFresptr,*varFresptr,*meaniresptr,*variresptr,*meantresptr,*vartresptr,*meanTresptr,*varTresptr,
+                                  *meanallfresptr,*varallfresptr,*meanallFresptr,*varallFresptr,*meanallmresptr,*varallmresptr);
+
+                           gentype dummyres,dummyx;
+                           safecallback(dummyres,*dummycallptr,dummyx,2); // stop callback worker
+
+                           altretcodeptr->notify_one(); // final trigger to make sure everything propogates
+                       });
+
+        // Put thread in detached waiting state
+
+        t.detach();
+
+        // Start callback worker
+
+        gentype dummyres,dummyx;
+        safecallback(dummyres,dummycall,dummyx,0);
+
+        // wait for the optimiser to finish
+
+        altretcode.wait(-123321);
+
+        retcode = altretcode;
+    }
 
     // Setup return dictionary
 
@@ -2436,10 +2725,12 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
 
     // ...and we're done
 
+    optimiser.threadreps = false;
+
     return res;
 }
 
-void plotregret(std::string &simname, py::object pyresname, py::object pylistofres, double Rmin, double Rmax, int plotdata, int plotlogy, double Fmin, double Fmax)
+void plotregret(std::string &simname, py::object pyresname, py::object pylistofres, double Rmin, double Rmax, int plotdata, int plotlogy, double Fmin, double Fmax, int xgrid, int ygrid)
 {
     Vector<std::string> resname;
     Vector<Dict<gentype,dictkey>> listofres;
@@ -2474,7 +2765,7 @@ void plotregret(std::string &simname, py::object pyresname, py::object pylistofr
 //        resallfres("&",i) = -((const Vector<Vector<gentype>> &) listofres(i)("allf"));
     }
 
-    temp.plotregret(simname,resmeanallFres,resmeanallmres,resvarallmres,resname,resallFres,resallfres,plotdata,plotlogy);
+    temp.plotregret(simname,resmeanallFres,resmeanallmres,resvarallmres,resname,resallFres,resallfres,plotdata,plotlogy,xgrid,ygrid);
 
     return;
 }
@@ -2834,13 +3125,13 @@ void callsnakes(int wide, int high) { dostartup(); snakes(wide,high,(20*high)/23
 
 void svmheavy(int method, int permode, const std::string commstr, int wml);
 
-void svmheavya(void)                      { static thread_local std::string dummy; svmheavy(1,-1,dummy,-1);      }
-void svmheavyb(int permode)               { static thread_local std::string dummy; svmheavy(2,permode,dummy,-1); }
+void svmheavya(void)                      { thread_local std::string dummy; svmheavy(1,-1,dummy,-1);      }
+void svmheavyb(int permode)               { thread_local std::string dummy; svmheavy(2,permode,dummy,-1); }
 void svmheavyc(const std::string commstr) {                                        svmheavy(3,-1,commstr,-1);    }
 
-double mlcalcLOO   (void)                          { dostartup(); int i = glob_MLInd(0); return calcLOO(getMLref(i));                   }
-double mlcalcRecall(void)                          { dostartup(); int i = glob_MLInd(0); return calcRecall(getMLref(i));                }
-double mlcalcCross (int m, int rndit, int numreps) { dostartup(); int i = glob_MLInd(0); return calcCross(getMLref(i),m,rndit,numreps); }
+double mlcalcLOO   (void)                                          { dostartup(); int i = glob_MLInd(0); return calcLOO(getMLref(i));                                  }
+double mlcalcRecall(void)                                          { dostartup(); int i = glob_MLInd(0); return calcRecall(getMLref(i));                               }
+double mlcalcCross (int m, int rndit, int numreps, int useThreads) { dostartup(); int i = glob_MLInd(0); return calcCross(getMLref(i),m,rndit,numreps,0,0,useThreads); }
 
 int selgridopt      (int i, int rst) { dostartup(); int res = glob_gridInd      (i,1); if ( rst ) { getgridref      (i).reset(); } return res; }
 int selDIRectopt    (int i, int rst) { dostartup(); int res = glob_DIRectInd    (i,1); if ( rst ) { getDIRectref    (i).reset(); } return res; }
@@ -3250,6 +3541,98 @@ py::object convToPy(const gentype &src)
 
 // Convert python to C++ types
 
+void safecallback(gentype &res, const py::object &src, const gentype &x, int mode)
+{
+    static std::atomic<bool> a = false;
+    static std::atomic<bool> b = false;
+    static std::atomic<bool> c = true;
+
+    static       gentype    *resptr = nullptr;
+    static const py::object *srcptr = nullptr;
+    static const gentype    *  xptr = resptr = nullptr;
+
+    if ( mode == 0 )
+    {
+        // Main thread is operating as evaluator thread, because the python
+        // GIL needs to feign ignorance of other threads. While c is true
+        // we wait on a == true, evaluate arguments in shared pointers,
+        // then reset to a == false and set b == true so other thread can
+        // exit to make way for next evaluation.
+
+        StrucAssert( isMainThread() );
+
+        while ( c == true )
+        {
+            a.wait(false); // wait for other thread to set pointers and flag that an evaluation is required.
+
+            if ( c == true )
+            {
+                NiceAssert( resptr );
+                NiceAssert( srcptr );
+                NiceAssert(   xptr );
+
+                *resptr = convFromPy((*srcptr)(convToPy(*xptr))); // carry out requested evaluation
+
+                a = false; a.notify_one(); // clear flag for next evaluation
+                b = true;  b.notify_one(); // tell other thread that result is ready
+            }
+        }
+
+        // Cleanup on exit
+
+        a = false;
+        b = false;
+        c = true;
+
+        resptr = nullptr;
+        srcptr = nullptr;
+          xptr = nullptr;
+    }
+
+    else if ( ( mode == 1 ) && isMainThread() )
+    {
+        // single-threaded evaluation
+
+        res = convFromPy(src(convToPy(x)));
+    }
+
+    else if ( ( mode == 1 ) && !isMainThread() )
+    {
+        // Evaluator for not-the-main-thread.
+
+        const std::lock_guard<std::mutex> lock(callback_lock); // in case the optimiser is running in parallel
+
+        StrucAssert( c == true ); // make sure we're in multi-threaded mode!
+
+        resptr = &res; // result pointer for main thread
+        srcptr = &src; // source pointer for main thread
+          xptr = &x;   // argument pointer for main thread
+
+        a = true;  a.notify_one(); // trigger main thread to do evaluation
+
+        b.wait(false); // wait for main thread to complete operation, setting res
+
+        resptr = nullptr; // cleanup
+        srcptr = nullptr; // cleanup
+          xptr = nullptr; // cleanup
+
+        a = false; a.notify_one(); // clear flag for next run
+        b = false; b.notify_one(); // clear flag for next run
+    }
+
+    else
+    {
+        // We're all done now, but the evaluator thread needs to
+        // tell the main thread to unlock itself and return to
+        // single-threaded mode
+
+        StrucAssert( mode == 2 );
+
+        c = false; c.notify_one(); // exit flag
+        a = true;  a.notify_one(); // initiate exit
+    }
+}
+
 int convFromPy(gentype &res, const py::object &src)
 {
     int errcode = 4096;
@@ -3266,8 +3649,8 @@ int convFromPy(gentype &res, const py::object &src)
     else if ( isValTuple(src)    ) { errcode = convFromPy(res.force_set(),   src);               }
     //else if ( isValMatrix(src)   ) { errcode = convFromPy(res.force_matrix(),src);              } - can't disambiguate between array of vectors and matrices at present
     else if ( isValComplex(src)  ) { errcode = convFromPy(tmpres,            src); res = tmpres; }
-    else if ( isValCallable(src) ) { errcode = gentype_function(gentype(const gentype &),res,[src](const gentype &x) { return convFromPy(src(convToPy(x))); }); }
-    else                           { errcode = 2048; }
+    else if ( isValCallable(src) ) { errcode = gentype_function(gentype(const gentype &),res,[src](const gentype &x) { gentype resres; safecallback(resres,src,x,1); return resres; }); }
+    else                           { errcode = 2048;                                             }
 
     if ( errcode )
     {
@@ -3318,9 +3701,9 @@ template <class T> int naivePyToSet(Set<T>                &res, const py::object
 template <class T> int naivePyToDct(Dict<T,dictkey>       &res, const py::object &src);
 template <class T> int naivePyToSpv(SparseVector<T>       &res, const py::object &src);
 template <>        int naivePyToSpv(SparseVector<gentype> &res, const py::object &src);
-                   int naivePyToEqn(gentype               &res, const py::object &src);
 
 template <class T> int convFromPy(T                     &res, const py::handle &src) { py::handle altsrc = src; return convFromPy(res,py::reinterpret_borrow<py::object>(altsrc)); }
+
                    int convFromPy(int                   &res, const py::object &src) { if ( isValCastableToInteger(src) ) { return naivePyToInt(res,src); } res = 0;                                return 1;   }
                    int convFromPy(double                &res, const py::object &src) { if ( isValCastableToReal   (src) ) { return naivePyToDbl(res,src); } res = nan("py::object not castable to double");    return 2;   }
                    int convFromPy(std::complex<double>  &res, const py::object &src) { if ( isValCastableToComplex(src) ) { return naivePyToCpl(res,src); } res = nan("py::object not castable to complex");   return 4;   }
@@ -3565,29 +3948,6 @@ int naivePyToSpv(SparseVector<T> &res, const py::object &src)
     return errcode ? (errcode+32796) : 0;
 }
 
-//int naivePyToEqn(gentype &res, const py::object src)
-//{
-//    // Method: make res a call to pycall, and then set altpycall (which
-//    // will override the usual functionality of pycall) to a
-//    // std::function wrapper around a lambda that captures src
-//
-//    res = "pycall(0,x)";
-//    res.altpycall = new std::function<gentype(const gentype &)>([src](const gentype &x) { gentype altres; convFromPy(altres,src(convToPy(x))); return altres; });
-//
-////Old version: store a copy, make pycall caller to retrieve it and evaluate through eval functionality
-////             (not a good ideal to rely on eval!)
-////    py::object *altsrc = new py::object(src);
-////    (*altsrc).inc_ref(); // want the copy to hang around forever!
-////
-////    int i = pyosetsrc(-1,altsrc);
-////
-////    res = "pycall(y,x)";
-////    SparseVector<SparseVector<gentype>> ii;
-////    ii("&",0)("&",1) = i; // this is y
-////    res.substitute(ii);
-//
-//    return 0;
-//}
 
 
 
@@ -3605,196 +3965,6 @@ int naivePyToSpv(SparseVector<T> &res, const py::object &src)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// pycall support - allow gentype to directly call python functions (named or
-// stored on heap via pyosetsrc) via eval
-//
-// Data translation, heap store
-
-py::object &setgetsrc(int &i, int doset, py::object *val = nullptr);
-py::object &setgetsrc(int &i, int doset, py::object *val)
-{
-    static thread_local SparseVector<py::object *> xval;
-    static thread_local SparseVector<int> useind;
-
-    if ( doset == 1 )
-    {
-        // Adding element to store
-
-        StrucAssert(val);
-
-        if ( i == -1 )
-        {
-            i = 0;
-
-            while ( useind.isindpresent(i) ) { ++i; } // This is shared between all stores, so indices are unique.
-        }
-
-        xval("&",i) = val;
-        useind("&",i) = 1;
-    }
-
-    if ( doset == -1 )
-    {
-        // Clear and delete stored objects
-
-        StrucAssert(val);
-
-        useind.zero();
-
-        for ( int j = 0 ; j < xval.indsize() ; ++j )
-        {
-            if ( xval.direref(j) )
-            {
-                MEMDEL(xval.direref(j));
-            }
-        }
-
-        xval.zero();
-
-        return *val;
-    }
-
-    // return object reference
-
-    StrucAssert( i >= 0 );
-    StrucAssert( useind.isindpresent(i) );
-
-    return *(xval(i));
-}
-
-int        pyosetsrc(int k, py::object src) { py::object *newsrc; MEMNEW(newsrc,py::object(src)); setgetsrc(k,1,newsrc); return k; }
-py::object pyogetsrc(int k)                 { return setgetsrc(k,0);                                                               }
-void       pyoclrsrc(void)                  { int k = 0; py::object dummy = py::cast(1); setgetsrc(k,-1,&dummy);                   }
-
-// drop-in replacement for pycall function in gentype.cc
-// (the gentype version, which uses a system call, is disabled by the macro PYLOCAL)
-//
-// NB these aren't really necessary now that gentype conversion uses lambdas, but could be handy for other purposes
-
-void pycall_x(const std::string &fn, gentype &res, py::object &xx);
-void pycall_x(const std::string &fn, gentype &res, py::object &xx)
-{
-    dostartup();
-
-    // Store in transfer indices (will never be deleted)
-
-    int i = pyosetsrc(-1,xx);
-
-    // Construct run command
-
-    std::string evalfn;
-
-    evalfn =  fn;
-    evalfn += "(pyheavy.internal.pyogetsrc(";
-    evalfn += std::to_string(i);
-    evalfn += "))";
-
-    // Evaluated run command
-
-    py::object resobj = pyeval()(evalfn);
-
-    // Retrieve results of operation
-
-    convFromPy(res,resobj);
-
-    return;
-}
-
-void pycall_x(int fni, gentype &res, py::object &xx);
-void pycall_x(int fni, gentype &res, py::object &xx)
-{
-    if ( fni >= 0 )
-    {
-        dostartup();
-
-        convFromPy(res,pyogetsrc(fni)(xx));
-    }
-
-    else
-    {
-        res.force_null();
-    }
-
-    return;
-}
-
-template <> void pycall(const std::string &fn, gentype &res, const SparseVector<gentype> &x) { dostartup(); py::object xx = convToPy(x); pycall_x(fn, res,xx); }
-template <> void pycall(int fni,               gentype &res, const SparseVector<gentype> &x) { dostartup(); py::object xx = convToPy(x); pycall_x(fni,res,xx); }
-
-void pycall(const std::string &fn, gentype &res, int size, const double *x)
-{
-    dostartup();
-
-    py::list xx(size);
-
-    for ( int i = 0 ; i < size ; ++i )
-    {
-        xx[i] = py::cast(x[i]);
-    }
-
-    pycall_x(fn,res,xx);
-}
-
-void pycall(int fni, gentype &res, int size, const double *x)
-{
-    dostartup();
-
-    py::list xx(size);
-
-    for ( int i = 0 ; i < size ; ++i )
-    {
-        xx[i] = py::cast(x[i]);
-    }
-
-    pycall_x(fni,res,xx);
-}
-
-                   void pycall(const std::string &fn, gentype &res,       int                   x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fn,res,xx); }
-                   void pycall(const std::string &fn, gentype &res,       double                x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fn,res,xx); }
-                   void pycall(const std::string &fn, gentype &res,       std::complex<double>  x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-                   void pycall(const std::string &fn, gentype &res, const d_anion              &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-                   void pycall(const std::string &fn, gentype &res, const std::string          &x) { dostartup(); py::object xx = py::cast(x.c_str()); pycall_x(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>            &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>            &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>               &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey>      &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T>      &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-                   void pycall(const std::string &fn, gentype &res, const gentype              &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-
-                   void pycall(int fni, gentype &res,       int                   x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fni,res,xx); }
-                   void pycall(int fni, gentype &res,       double                x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fni,res,xx); }
-                   void pycall(int fni, gentype &res,       std::complex<double>  x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-                   void pycall(int fni, gentype &res, const d_anion              &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-                   void pycall(int fni, gentype &res, const std::string          &x) { dostartup(); py::object xx = py::cast(x.c_str()); pycall_x(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const Vector<T>            &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const Matrix<T>            &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const Set<T>               &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const Dict<T,dictkey>      &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const SparseVector<T>      &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-                   void pycall(int fni, gentype &res, const gentype              &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-
-//void pycall(const std::string &fn, gentype &res, int size, const double *x)
-//{
-//    dostartup();
-//
-//    py::object xx = convToPy(size,x);
-//    pycall_x(fn,res,xx);
-//}
 
 
 
@@ -3851,8 +4021,8 @@ int cligetsetExtVar(gentype &res, const gentype &src, int num)
 // Print state: 0 no output to stream (but file still done)
 //              1 output to stream and file
 
-int pyAllowPrintOut(int mod = -1);
-int pyAllowPrintErr(int mod = -1);
+//int pyAllowPrintOut(int mod = -1);
+//int pyAllowPrintErr(int mod = -1);
 
 void cliCharPrintOut(char c);
 void cliCharPrintErr(char c);
@@ -3870,6 +4040,18 @@ void dostartup(void)
 
     if ( firstrun )
     {
+        // set up statics for potential multi-threaded operation
+
+        zerointarray();
+        oneintarray();
+        zerodoublearray();
+        onedoublearray();
+        ninfdoublearray();
+        pinfdoublearray();
+        cntintarray(10);
+
+        isMainThread(1);
+
         void(*xcliCharPrintErr)(char c) = cliCharPrintErr;
         static LoggingOstreamErr clicerr(xcliCharPrintErr);
         seterrstream(&clicerr);
@@ -3886,6 +4068,7 @@ void dostartup(void)
         firstrun = false;
 
         //suppresserrstreamcout();
+        //pyAllowPrintOut(0);
         pyAllowPrintErr(0);
     }
 
@@ -3901,11 +4084,9 @@ void dostartup(void)
 
 void svmheavy(int method, int permode, const std::string commstr, int wml)
 {
-    static thread_local int hasbeeninit = 0;
-    static thread_local int persistenceset = 0;
-    static thread_local int persistencereq = 1;
-
-    isMainThread(1);
+    thread_local int hasbeeninit = 0;
+    thread_local int persistenceset = 0;
+    thread_local int persistencereq = 1;
 
     try
     {
@@ -3948,11 +4129,6 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
             outstream() << "Author: Alistair Shilton                                                      \n";
             outstream() << "                                                                              \n";
             outstream() << "Basic operation: pyheavy.exec(\"commands\")                                     \n";
-            outstream() << "                                                                              \n";
-            outstream() << "Example:                                                                      \n";
-            outstream() << "                                                                              \n";
-            outstream() << ">>> import pyheavy,pyheavypy,math                                             \n";
-            outstream() << ">>> pyheavy.exec(\"-ECHO pycall(\\\"math.sin\\\",5/pi)\")                           \n";
             outstream() << "                                                                              \n";
             outstream() << "Translation rules:                                                            \n";
             outstream() << "                                                                              \n";
@@ -4035,7 +4211,7 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
 
         // Define global variable store
 
-        static thread_local svmvolatile SparseVector<SparseVector<gentype>> globargvariables;
+        thread_local svmvolatile SparseVector<SparseVector<gentype>> globargvariables;
 
         // Construct command stack.  All commands must be in awarestream, which
         // is similar to a regular stream but can supply commands from a
@@ -4052,8 +4228,8 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
         MEMNEW(commlinestringbox,awarestream(commlinestring,1));
         commstack->push(commlinestringbox);
 
-//        static thread_local int MLInd = 0;
-        static thread_local SVMThreadContext *svmContext;
+//        thread_local int MLInd = 0;
+        thread_local SVMThreadContext *svmContext;
         MEMNEW(svmContext,SVMThreadContext(glob_MLInd()));
         errstream() << "{";
 
@@ -4117,8 +4293,6 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
         outstream() << "Unknown error: " << errcode << ".\n";
         return;
     }
-
-    isMainThread(0);
 
     return;
 }
@@ -4196,7 +4370,7 @@ void cliPrintToOutLog(char c, int mode)
 
     if ( LOGOUTTOFILE )
     {
-        static std::ofstream *outlog = nullptr;
+        static thread_local std::ofstream *outlog = nullptr;
 
         if ( !mode && !outlog )
         {
@@ -4204,8 +4378,12 @@ void cliPrintToOutLog(char c, int mode)
 
             NiceAssert(outlog);
 
-            std::string outfname("svmheavy.out.log");
+            std::string outfname;
             std::string outfnamebase("svmheavy.out.log");
+
+            outfnamebase += std::to_string(getThreadID());
+
+            outfname = outfnamebase;
 
             int fcnt = 0;
 
@@ -4237,7 +4415,7 @@ void cliPrintToOutLog(char c, int mode)
 
         else if ( outlog && !LoggingOstreamOut::suppressStreamFile )
         {
-            static int bstring = 0;
+            static thread_local int bstring = 0;
 
             if ( c != '\b' )
             {
@@ -4267,7 +4445,7 @@ void cliPrintToErrLog(char c, int mode)
 
     if ( LOGERRTOFILE )
     {
-        static std::ofstream *errlog = nullptr;
+        static thread_local std::ofstream *errlog = nullptr;
 
         if ( !mode && !errlog )
         {
@@ -4275,8 +4453,12 @@ void cliPrintToErrLog(char c, int mode)
 
             NiceAssert(errlog);
 
-            std::string errfname("svmheavy.err.log");
+            std::string errfname;
             std::string errfnamebase("svmheavy.err.log");
+
+            errfnamebase += std::to_string(getThreadID());
+
+            errfname = errfnamebase;
 
             int fcnt = 0;
 
@@ -4308,7 +4490,7 @@ void cliPrintToErrLog(char c, int mode)
 
         else if ( errlog && !LoggingOstreamErr::suppressStreamFile )
         {
-            //static int bstring = 0;
+            //static thread_local int bstring = 0;
 
             if ( c != '\b' )
             {

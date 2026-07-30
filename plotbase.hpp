@@ -52,7 +52,8 @@ int doplot(double xmin, double xmax,
            double omin, double omax,
            const std::string &fname,
            const std::string &dname,
-           int outformat, int incdata, int incvar, int doline = 1, int numdat = 0, int plotlogy = 0);
+           int outformat, int incdata, int incvar, int doline = 1, int numdat = 0, int plotlogy = 0,
+           int xgrid = 1, int ygrid = 1);
 
 // Surface plot
 //
@@ -141,7 +142,8 @@ int domultiplot2d(double xmin, double xmax,
                   const Vector<int> &repind,
                   const Vector<int> &objind,
                   const Vector<std::string> &plotlabels,
-                  int maxobj, int incvar, int plotlogy);
+                  int maxobj, int incvar, int plotlogy,
+                  int xgrid = 1, int ygrid = 1);
 
 // Simple scatter plot
 //
@@ -160,7 +162,8 @@ int doscatterplot2d(double xmin, double xmax,
                     double ymin, double ymax,
                     const std::string &fname,
                     const std::string &dname,
-                    int outformat);
+                    int outformat,
+                    int xgrid = 1, int ygrid = 1);
 
 #endif
 

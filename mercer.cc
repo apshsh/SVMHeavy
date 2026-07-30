@@ -13,9 +13,6 @@
 #include <iostream>
 #include <string.h>
 #include <math.h>
-//#ifdef ENABLE_THREADS
-//#include <mutex>
-//#endif
 #include "mercer.hpp"
 #include "randfun.hpp"
 
@@ -25,9 +22,6 @@
 
 
 thread_local SparseVector<kernPrecursor *>* kernPrecursor::fullmllist = nullptr;
-//#ifdef ENABLE_THREADS
-//std::mutex kernPrecursor::kerneyelock;
-//#endif
 
 
 
@@ -50,7 +44,7 @@ MercerKernel::MercerKernel()
     xneedsDiff    = -1;
     xneedsNorm    = -1;
 
-    static const thread_local gentype tempsampdist("[ ]");
+    const thread_local gentype tempsampdist("[ ]");
 
     xnumsamples   = DEFAULT_NUMKERNSAMP;
     xsampdist     = tempsampdist;
@@ -2787,7 +2781,7 @@ double  MercerKernel::yyyK1(const SparseVector<gentype> &xa,
 
     else
     {
-        static thread_local const SparseVector<gentype> dummy;
+        thread_local const SparseVector<gentype> dummy;
 
         int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
         int xaind6present   = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
@@ -2879,7 +2873,7 @@ gentype &MercerKernel::yyyK1(gentype &res,
 
     else
     {
-        static thread_local const SparseVector<gentype> dummy;
+        thread_local const SparseVector<gentype> dummy;
 
         int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
         int xaind6present   = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
@@ -3034,7 +3028,7 @@ double  MercerKernel::yyyK2(const SparseVector<gentype> &xa, const SparseVector<
 
     else
     {
-        static thread_local const SparseVector<gentype> dummy;
+        thread_local const SparseVector<gentype> dummy;
 
         int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
         int xaind6present   = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
@@ -3170,7 +3164,7 @@ gentype &MercerKernel::yyyK2(gentype &res,
 
     else
     {
-        static thread_local const SparseVector<gentype> dummy;
+        thread_local const SparseVector<gentype> dummy;
 
         int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
         int xaind6present   = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
@@ -3803,9 +3797,9 @@ T &MercerKernel::yyyaaK1(T &res,
     {
         SparseVector<gentype> xxa(xa);
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        if ( linParityOrig.size() )
         {
-            if ( linParityOrig.size() )
+            for ( int i = 0 ; i < linParity.size() ; i++ )
             {
                 xxa("&",linParity(i)) -= linParityOrig(i);
             }
@@ -3818,9 +3812,9 @@ T &MercerKernel::yyyaaK1(T &res,
             if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
         }
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        if ( linParityOrig.size() )
         {
-            if ( linParityOrig.size() )
+            for ( int i = 0 ; i < linParity.size() ; i++ )
             {
                 xxa("&",linParity(i)) += linParityOrig(i);
             }
@@ -3850,9 +3844,9 @@ T &MercerKernel::yyyaaK2(T &res,
         SparseVector<gentype> xxa(xa);
         SparseVector<gentype> xxb(xb);
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        if ( linParityOrig.size() )
         {
-            if ( linParityOrig.size() )
+            for ( int i = 0 ; i < linParity.size() ; i++ )
             {
                 xxa("&",linParity(i)) -= linParityOrig(i);
                 xxb("&",linParity(i)) -= linParityOrig(i);
@@ -3868,9 +3862,9 @@ T &MercerKernel::yyyaaK2(T &res,
             if ( sb < 0 ) { xxb("&",linParity(i)).negate(); }
         }
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        if ( linParityOrig.size() )
         {
-            if ( linParityOrig.size() )
+            for ( int i = 0 ; i < linParity.size() ; i++ )
             {
                 xxa("&",linParity(i)) += linParityOrig(i);
                 xxb("&",linParity(i)) += linParityOrig(i);
@@ -3958,9 +3952,9 @@ T &MercerKernel::yyyaaK3(T &res,
         SparseVector<gentype> xxb(xb);
         SparseVector<gentype> xxc(xc);
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        if ( linParityOrig.size() )
         {
-            if ( linParityOrig.size() )
+            for ( int i = 0 ; i < linParity.size() ; i++ )
             {
                 xxa("&",linParity(i)) -= linParityOrig(i);
                 xxb("&",linParity(i)) -= linParityOrig(i);
@@ -3979,9 +3973,9 @@ T &MercerKernel::yyyaaK3(T &res,
             if ( sc < 0 ) { xxc("&",linParity(i)).negate(); }
         }
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        if ( linParityOrig.size() )
         {
-            if ( linParityOrig.size() )
+            for ( int i = 0 ; i < linParity.size() ; i++ )
             {
                 xxa("&",linParity(i)) += linParityOrig(i);
                 xxb("&",linParity(i)) += linParityOrig(i);
@@ -4015,9 +4009,9 @@ T &MercerKernel::yyyaaK4(T &res,
         SparseVector<gentype> xxc(xc);
         SparseVector<gentype> xxd(xd);
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        if ( linParityOrig.size() )
         {
-            if ( linParityOrig.size() )
+            for ( int i = 0 ; i < linParity.size() ; i++ )
             {
                 xxa("&",linParity(i)) -= linParityOrig(i);
                 xxb("&",linParity(i)) -= linParityOrig(i);
@@ -4039,9 +4033,9 @@ T &MercerKernel::yyyaaK4(T &res,
             if ( sd < 0 ) { xxd("&",linParity(i)).negate(); }
         }
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        if ( linParityOrig.size() )
         {
-            if ( linParityOrig.size() )
+            for ( int i = 0 ; i < linParity.size() ; i++ )
             {
                 xxa("&",linParity(i)) += linParityOrig(i);
                 xxb("&",linParity(i)) += linParityOrig(i);
@@ -4083,9 +4077,9 @@ T &MercerKernel::yyyaaKm(int m, T &res,
             xx("&",j) = altx;
             xq("&",j) = altx;
 
-            for ( int ii = 0 ; ii < linParity.size() ; ++ii )
+            if ( linParityOrig.size() )
             {
-                if ( linParityOrig.size() )
+                for ( int ii = 0 ; ii < linParity.size() ; ++ii )
                 {
                     (*altx)("&",linParity(ii)) -= linParityOrig(ii);
                 }
@@ -4098,9 +4092,9 @@ T &MercerKernel::yyyaaKm(int m, T &res,
                 if ( s < 0 ) { (*altx)("&",linParity(ii)).negate(); }
             }
 
-            for ( int ii = 0 ; ii < linParity.size() ; ++ii )
+            if ( linParityOrig.size() )
             {
-                if ( linParityOrig.size() )
+                for ( int ii = 0 ; ii < linParity.size() ; ++ii )
                 {
                     (*altx)("&",linParity(ii)) += linParityOrig(ii);
                 }
@@ -4133,9 +4127,9 @@ int MercerKernel::yyyaaphim(int m, Vector<T> &res,
     {
         SparseVector<gentype> xxa(xa);
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        if ( linParityOrig.size() )
         {
-            if ( linParityOrig.size() )
+            for ( int i = 0 ; i < linParity.size() ; i++ )
             {
                 xxa("&",linParity(i)) -= linParityOrig(i);
             }
@@ -4148,9 +4142,9 @@ int MercerKernel::yyyaaphim(int m, Vector<T> &res,
             if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
         }
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        if ( linParityOrig.size() )
         {
-            if ( linParityOrig.size() )
+            for ( int i = 0 ; i < linParity.size() ; i++ )
             {
                 xxa("&",linParity(i)) += linParityOrig(i);
             }
@@ -5494,7 +5488,7 @@ T &MercerKernel::yyybK1(T &res,
                     int iaset,
                     int assumreal, int justcalcip) const
 {
-    static thread_local const SparseVector<gentype> dummy;
+    thread_local const SparseVector<gentype> dummy;
 
     const SparseVector<gentype> &xan = xa.n();
     const SparseVector<gentype> &xaff = ( xafarfarpresent && !xaignorefarfar ) ? xa.f2() : dummy;
@@ -5590,7 +5584,7 @@ T &MercerKernel::yyybK2(T &res,
                     int assumreal, int justcalcip,
                     int adensetype, int bdensetype) const
 {
-    static thread_local const SparseVector<gentype> dummy;
+    thread_local const SparseVector<gentype> dummy;
 
     const SparseVector<gentype> &xan = xa.n();
     const SparseVector<gentype> &xbn = xb.n();
@@ -5827,7 +5821,7 @@ T &MercerKernel::yyybK2x2(T &res,
     (void) xfarfarfarpresent;
     (void) xignorefarfarfar;
 
-    static thread_local const SparseVector<gentype> dummy;
+    thread_local const SparseVector<gentype> dummy;
 
     const SparseVector<gentype> &xn  = x.n();
     const SparseVector<gentype> &xan = xa.n();
@@ -6072,7 +6066,7 @@ T &MercerKernel::yyybK3(T &res,
                     int iaset, int ibset, int icset,
                     int assumreal, int justcalcip) const
 {
-    static thread_local const SparseVector<gentype> dummy;
+    thread_local const SparseVector<gentype> dummy;
 
     const SparseVector<gentype> &xan = xa.n();
     const SparseVector<gentype> &xbn = xb.n();
@@ -6588,7 +6582,7 @@ T &MercerKernel::yyybK4(T &res,
                     int iaset, int ibset, int icset, int idset,
                     int assumreal, int justcalcip) const
 {
-    static thread_local const SparseVector<gentype> dummy;
+    thread_local const SparseVector<gentype> dummy;
 
     const SparseVector<gentype> &xan = xa.n();
     const SparseVector<gentype> &xbn = xb.n();
@@ -7782,7 +7776,7 @@ T &MercerKernel::yyybKm(int m, T &res,
                     const Vector<int> *iiset,
                     int assumreal, int justcalcip) const
 {
-    static thread_local const SparseVector<gentype> dummy;
+    thread_local const SparseVector<gentype> dummy;
 
     Vector<const SparseVector<gentype> *> xn(x);
     Vector<const SparseVector<gentype> *> xf(x);
@@ -7836,7 +7830,7 @@ T &MercerKernel::yyybKmb(int m, T &res,
 
     else if ( ( xranktype == 0 ) || ( xranktype == 1 ) )
     {
-        static thread_local const SparseVector<gentype> dummy;
+        thread_local const SparseVector<gentype> dummy;
 
         int j = 0;
         double resscale = 1;
@@ -7945,7 +7939,7 @@ T &MercerKernel::yyybKmb(int m, T &res,
 
     else
     {
-        static thread_local const SparseVector<gentype> dummy;
+        thread_local const SparseVector<gentype> dummy;
 
         int j,k,l;
 
@@ -8125,7 +8119,7 @@ int MercerKernel::yyybphim(int m, Vector<T>  &res,
 {
     int dres = 0;
 
-    static thread_local const SparseVector<gentype> dummy;
+    thread_local const SparseVector<gentype> dummy;
 
     const SparseVector<gentype> &xaff = ( xafarfarpresent && !xaignorefarfar ) ? xa.f2() : dummy;
 
@@ -8650,7 +8644,7 @@ void MercerKernel::yyycdnKK2del(Vector<T> &sc, Vector<Vector<int>> &n, int &minm
 inline int UPNTVI(int i, int off);
 inline int UPNTVI(int i, int off)
 {
-//    static size_t ind = 0;
+//    statiic size_t ind = 0;
 //
 //    return -(((ind++)%81)+10);
     return -((10*off)+i);
@@ -11538,20 +11532,9 @@ T &MercerKernel::xKK0(T &res,
     int logresvalid = 0;
     //int ns = numSplits();
 
-    if ( isfullnorm && !ns && !justcalcip )
-    {
-        res = 1.0;
-    }
-
-    else if ( isfullnorm && ns && !justcalcip )
-    {
-        res = 1.0; // Design decision: empty product evaluates to 1
-    }
-
-    else if ( !isfullnorm && ns && !justcalcip )
-    {
-        res = 1.0; // Design decision: empty product evaluates to 1
-    }
+    if      (  isfullnorm && !ns && !justcalcip ) { res = 1.0; }
+    else if (  isfullnorm &&  ns && !justcalcip ) { res = 1.0; } // Design decision: empty product evaluates to 1
+    else if ( !isfullnorm &&  ns && !justcalcip ) { res = 1.0; } // Design decision: empty product evaluates to 1
 
     else
     {
@@ -11579,15 +11562,8 @@ T &MercerKernel::xKK1(T &res,
     int logresvalid = 0;
     //int ns = numSplits();
 
-    if ( isfullnorm && !ns && !justcalcip )
-    {
-        res = xagradOrder ? 0.0 : 1.0;
-    }
-
-    else if ( isfullnorm && ns && !justcalcip )
-    {
-        res = xagradOrder ? 0.0 : 1.0;
-    }
+    if      ( isfullnorm && !ns && !justcalcip ) { res = xagradOrder ? 0.0 : 1.0; }
+    else if ( isfullnorm &&  ns && !justcalcip ) { res = xagradOrder ? 0.0 : 1.0; }
 
     else if ( !isfullnorm && ns && !justcalcip )
     {
@@ -15478,34 +15454,14 @@ void MercerKernel::xdnKK2del(Vector<T> &sc, Vector<Vector<int>> &n, int &minmaxi
 inline int isgentype(const gentype &ind);
 inline int isgentype(const double  &ind);
 
-inline int isgentype(const gentype &ind)
-{
-    (void) ind;
-
-    return 1;
-}
-
-inline int isgentype(const double &ind)
-{
-    (void) ind;
-
-    return 0;
-}
+inline int isgentype(const gentype &) { return 1; }
+inline int isgentype(const double  &) { return 0; }
 
 inline int isiteqn(const gentype &ind);
 inline int isiteqn(const double  &ind);
 
-inline int isiteqn(const gentype &ind)
-{
-    return ind.isValEqn();
-}
-
-inline int isiteqn(const double &ind)
-{
-    (void) ind;
-
-    return 0;
-}
+inline int isiteqn(const gentype &ind) { return ind.isValEqn(); }
+inline int isiteqn(const double  &   ) { return 0;              }
 
 
 
@@ -18042,7 +17998,7 @@ int MercerKernel::phim(int m, Vector<gentype> &res, const SparseVector<gentype> 
 
         if ( res.infsize() )
         {
-            const static Vector<gentype> temp(1);
+            const statiic Vector<gentype> temp(1);
 
             res = temp;
         }
@@ -18056,7 +18012,7 @@ int MercerKernel::phim(int m, Vector<gentype> &res, const SparseVector<gentype> 
 
         if ( res.infsize() )
         {
-            const static Vector<gentype> temp;
+            const statiic Vector<gentype> temp;
 
             res = temp;
         }
@@ -18076,7 +18032,7 @@ int MercerKernel::phim(int m, Vector<gentype> &res, const SparseVector<gentype> 
 
         if ( res.infsize() )
         {
-            const static Vector<gentype> temp;
+            const statiic Vector<gentype> temp;
 
             res = temp;
         }
@@ -18147,7 +18103,7 @@ int MercerKernel::phim(int, Vector<double> &res, const SparseVector<gentype> &x,
 
         if ( res.infsize() )
         {
-            const static Vector<double> temp(1);
+            const statiic Vector<double> temp(1);
 
             res = temp;
         }
@@ -18161,7 +18117,7 @@ int MercerKernel::phim(int, Vector<double> &res, const SparseVector<gentype> &x,
 
         if ( res.infsize() )
         {
-            const static Vector<double> temp;
+            const statiic Vector<double> temp;
 
             res = temp;
         }
@@ -18181,7 +18137,7 @@ int MercerKernel::phim(int, Vector<double> &res, const SparseVector<gentype> &x,
 
         if ( res.infsize() )
         {
-            const static Vector<double> temp;
+            const statiic Vector<double> temp;
 
             res = temp;
         }
@@ -23555,11 +23511,11 @@ void Jn(gentype &res, int n, const gentype &z)
 
         default:
         {
-            static thread_local SparseVector<gentype> JnFuncsVol;
+            thread_local SparseVector<gentype> JnFuncsVol;
             SparseVector<gentype> &JnFuncs = JnFuncsVol;
 
-            const static thread_local gentype sinfn("sin(x)");
-            const static thread_local gentype cosecfn("cosec(x)");
+            const thread_local gentype sinfn("sin(x)");
+            const thread_local gentype cosecfn("cosec(x)");
 
             // We need to calculate the function.  Because this is slow,
             // we want to keep that function once calculated.  The sparse
@@ -31320,7 +31276,7 @@ int MercerKernel::KKprosingle(T &res, const T &xyprod, const T &diffis, int *i, 
         {
             // K = 0 if real(z) < 0, 1 otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -31339,7 +31295,7 @@ int MercerKernel::KKprosingle(T &res, const T &xyprod, const T &diffis, int *i, 
         {
             // K = 0 if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -31360,7 +31316,7 @@ int MercerKernel::KKprosingle(T &res, const T &xyprod, const T &diffis, int *i, 
         {
             // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             res = xyprod;
             scaldiv(res,r(0));
@@ -31390,7 +31346,7 @@ int MercerKernel::KKprosingle(T &res, const T &xyprod, const T &diffis, int *i, 
         {
             // K = -1 if real(z) < 0, 1 otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -31409,7 +31365,7 @@ int MercerKernel::KKprosingle(T &res, const T &xyprod, const T &diffis, int *i, 
         {
             // K = 0 if real(z) < 0, z/(r0*r0) otherwise    - 1
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -31431,7 +31387,7 @@ int MercerKernel::KKprosingle(T &res, const T &xyprod, const T &diffis, int *i, 
         {
             // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             res = xyprod;
             scaldiv(res,r(0));
@@ -31859,7 +31815,7 @@ int MercerKernel::KKprosinglediffiszero(T &res, const T &xyprod, int ia, int ib,
         {
             // K = 0 if real(z) < 0, 1 otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -31878,7 +31834,7 @@ int MercerKernel::KKprosinglediffiszero(T &res, const T &xyprod, int ia, int ib,
         {
             // K = 0 if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -31899,7 +31855,7 @@ int MercerKernel::KKprosinglediffiszero(T &res, const T &xyprod, int ia, int ib,
         {
             // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             res = xyprod;
             scaldiv(res,r(0));
@@ -31929,7 +31885,7 @@ int MercerKernel::KKprosinglediffiszero(T &res, const T &xyprod, int ia, int ib,
         {
             // K = -1 if real(z) < 0, 1 otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -31948,7 +31904,7 @@ int MercerKernel::KKprosinglediffiszero(T &res, const T &xyprod, int ia, int ib,
         {
             // K = 0 if real(z) < 0, z/(r0*r0) otherwise    - 1
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -31970,7 +31926,7 @@ int MercerKernel::KKprosinglediffiszero(T &res, const T &xyprod, int ia, int ib,
         {
             // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             res = xyprod;
             scaldiv(res,r(0));
@@ -32052,7 +32008,7 @@ int MercerKernel::QQprosingle(int m, Vector<T> &res, const SparseVector<gentype>
 
             if ( res.infsize() )
             {
-                const static thread_local Vector<T> temp(1);
+                const thread_local Vector<T> temp(1);
 
                 res = temp;
             }
@@ -32068,7 +32024,7 @@ int MercerKernel::QQprosingle(int m, Vector<T> &res, const SparseVector<gentype>
 
             if ( res.infsize() )
             {
-                const static thread_local Vector<T> temp;
+                const thread_local Vector<T> temp;
 
                 res = temp;
             }
@@ -32088,7 +32044,7 @@ int MercerKernel::QQprosingle(int m, Vector<T> &res, const SparseVector<gentype>
 
             if ( res.infsize() )
             {
-                const static thread_local Vector<T> temp;
+                const thread_local Vector<T> temp;
 
                 res = temp;
             }
@@ -33387,7 +33343,7 @@ void MercerKernel::dKKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad, T &res
         {
             // K = 0 if real(z) < 0, 1 otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -33408,7 +33364,7 @@ void MercerKernel::dKKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad, T &res
         {
             // K = 0 if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -33435,7 +33391,7 @@ void MercerKernel::dKKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad, T &res
         {
             // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             res = xyprod;
             scaldiv(res,r(0));
@@ -33474,7 +33430,7 @@ void MercerKernel::dKKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad, T &res
         {
             // K = -1 if real(z) < 0, 1 otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -33495,7 +33451,7 @@ void MercerKernel::dKKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad, T &res
         {
             // K = 0 if real(z) < 0, z/(r0*r0) otherwise    - 1
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -33523,7 +33479,7 @@ void MercerKernel::dKKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad, T &res
         {
             // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             res = xyprod;
             scaldiv(res,r(0));
@@ -35148,7 +35104,7 @@ void MercerKernel::d2KKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad,
         {
             // K = 0 if real(z) < 0, 1 otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -35171,7 +35127,7 @@ void MercerKernel::d2KKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad,
         {
             // K = 0 if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -35200,7 +35156,7 @@ void MercerKernel::d2KKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad,
         {
             // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             res = xyprod;
             scaldiv(res,r(0));
@@ -35243,7 +35199,7 @@ void MercerKernel::d2KKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad,
         {
             // K = -1 if real(z) < 0, 1 otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -35266,7 +35222,7 @@ void MercerKernel::d2KKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad,
         {
             // K = 0 if real(z) < 0, z/(r0*r0) otherwise    - 1
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             if ( xyprod < zgt )
             {
@@ -35296,7 +35252,7 @@ void MercerKernel::d2KKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad,
         {
             // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
 
-            const static thread_local T zgt(0.0);
+            const thread_local T zgt(0.0);
 
             res = xyprod;
             scaldiv(res,r(0));
@@ -35602,7 +35558,7 @@ void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const
 
             if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
             {
-                const static thread_local T zgt(0.0);
+                const thread_local T zgt(0.0);
 
                 if ( xyprod < zgt )
                 {
@@ -35622,7 +35578,7 @@ void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const
 
             if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
             {
-                const static thread_local T zgt(0.0);
+                const thread_local T zgt(0.0);
 
                 if ( xyprod < zgt )
                 {
@@ -35639,7 +35595,7 @@ void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const
 
             else if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == 1 ) )
             {
-                const static thread_local T zgt(0.0);
+                const thread_local T zgt(0.0);
 
                 if ( xyprod < zgt )
                 {
@@ -35661,7 +35617,7 @@ void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const
 
             if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
             {
-                const static thread_local T zgt(0.0);
+                const thread_local T zgt(0.0);
 
                 res = xyprod;
                 scaldiv(res,r(0));
@@ -35675,7 +35631,7 @@ void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const
 
             else if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == 1 ) )
             {
-                const static thread_local T zgt(0.0);
+                const thread_local T zgt(0.0);
 
                 res = 1.0;
                 scaldiv(res,r(0));
@@ -35714,7 +35670,7 @@ void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const
 
             if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
             {
-                const static thread_local T zgt(0.0);
+                const thread_local T zgt(0.0);
 
                 if ( xyprod < zgt )
                 {
@@ -35734,7 +35690,7 @@ void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const
 
             if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
             {
-                const static thread_local T zgt(0.0);
+                const thread_local T zgt(0.0);
 
                 if ( xyprod < zgt )
                 {
@@ -35752,7 +35708,7 @@ void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const
 
             else if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == 1 ) )
             {
-                const static thread_local T zgt(0.0);
+                const thread_local T zgt(0.0);
 
                 if ( xyprod < zgt )
                 {
@@ -35774,7 +35730,7 @@ void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const
 
             if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
             {
-                const static thread_local T zgt(0.0);
+                const thread_local T zgt(0.0);
 
                 res = xyprod;
                 scaldiv(res,r(0));
@@ -35790,7 +35746,7 @@ void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const
 
             else if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == 1 ) )
             {
-                const static thread_local T zgt(0.0);
+                const thread_local T zgt(0.0);
 
                 res = 1.0;
                 scaldiv(res,r(0));
@@ -36626,10 +36582,8 @@ badout:
     return res;
 }
 
-inline int isCastableToRealWithoutLoss(const double &x)
+inline int isCastableToRealWithoutLoss(const double &)
 {
-    (void) x;
-
     return 1;
 }
 
@@ -36964,7 +36918,7 @@ T &MercerKernel::LL2(int adensetype, int bdensetype, T &res, T &logres, int &log
                 T xares;
                 T xbres;
 
-                const static thread_local T zerodiff(0.0);
+                const thread_local T zerodiff(0.0);
 
                 KKpro(xares,aaprod,zerodiff,iaa,locindstart,locindend,xdim,2,dummy,aavals);
                 KKpro(xbres,bbprod,zerodiff,ibb,locindstart,locindend,xdim,2,dummy,bbvals);
@@ -37025,7 +36979,7 @@ T &MercerKernel::LL2(int adensetype, int bdensetype, T &res, T &logres, int &log
 // res/sqrt(xres.yres) = exp((2*log(res)-log(xres)-log(yres))/2)
 
 /*
-const static T zerores(0.0); // zerores = 0.0;
+const statiic T zerores(0.0); // zerores = 0.0;
 
 if ( ( xres == zerores ) || ( yres == zerores ) )
 {

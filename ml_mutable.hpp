@@ -616,7 +616,7 @@ public:
     // Information functions:
 
     virtual double loglikelihood(void) const override { return getMLconst().loglikelihood(); }
-    virtual double maxinfogain  (void) const override { return getMLconst().maxinfogain  (); }
+    virtual double infogain     (void) const override { return getMLconst().infogain     (); }
     virtual double RKHSnorm     (void) const override { return getMLconst().RKHSnorm     (); }
     virtual double RKHSabs      (void) const override { return getMLconst().RKHSabs      (); }
 

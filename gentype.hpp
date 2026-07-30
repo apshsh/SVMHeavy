@@ -45,55 +45,6 @@ class gentype;
 
 
 
-// Python call default (override for python integration)
-//
-// The gentype function pycall("some_fn",x) will result in
-// a call to some_fn(x). In non-local version this triggers
-// a system call to python3 with x sent as a string and the
-// result being written to (and subsequently read from) a
-// temporary file, but in the python-local version you can
-// override this and do something more sensible.
-
-                   void pycall(const std::string &fn, gentype &res,       int                   x);
-                   void pycall(const std::string &fn, gentype &res,       double                x);
-                   void pycall(const std::string &fn, gentype &res,       std::complex<double>  x);
-                   void pycall(const std::string &fn, gentype &res, const d_anion              &x);
-                   void pycall(const std::string &fn, gentype &res, const std::string          &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>            &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>            &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>               &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey>      &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T>      &x);
-                   void pycall(const std::string &fn, gentype &res, const gentype              &x);
-                   void pycall(const std::string &fn, gentype &res, int size, const double     *x);
-
-                   void pycall(int fni, gentype &res,       int                   x);
-                   void pycall(int fni, gentype &res,       double                x);
-                   void pycall(int fni, gentype &res,       std::complex<double>  x);
-                   void pycall(int fni, gentype &res, const d_anion              &x);
-                   void pycall(int fni, gentype &res, const std::string          &x);
-template <class T> void pycall(int fni, gentype &res, const Vector<T>            &x);
-template <class T> void pycall(int fni, gentype &res, const Matrix<T>            &x);
-template <class T> void pycall(int fni, gentype &res, const Set<T>               &x);
-template <class T> void pycall(int fni, gentype &res, const Dict<T,dictkey>      &x);
-template <class T> void pycall(int fni, gentype &res, const SparseVector<T>      &x);
-                   void pycall(int fni, gentype &res, const gentype              &x);
-                   void pycall(int fni, gentype &res, int size, const double     *x);
-
-#ifndef PYLOCAL
-template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>       &x) { gentype xx(x); pycall(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>       &x) { gentype xx(x); pycall(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>          &x) { gentype xx(x); pycall(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey> &x) { gentype xx(x); pycall(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T> &x) { gentype xx(x); pycall(fn,res,xx); }
-
-template <class T> void pycall(int fni, gentype &res, const Vector<T>       &x) { gentype xx(x); pycall(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const Matrix<T>       &x) { gentype xx(x); pycall(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const Set<T>          &x) { gentype xx(x); pycall(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const Dict<T,dictkey> &x) { gentype xx(x); pycall(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const SparseVector<T> &x) { gentype xx(x); pycall(fni,res,xx); }
-#endif
-
 // Simple conversion functions. RVO should avoid copy
 
 inline const gentype &toGentype(void);      // null/none
@@ -167,10 +118,9 @@ template <> template <> Vector<SparseVector<gentype>> &Vector<SparseVector<genty
 // lambdas in one spot, so you can call removeallaltpycall to delete the lot
 // and null out all the references in one place
 
-void storealtpycall(std::function<gentype(const gentype &)> **newaltpycall);  // store altpycall in static memory
-void swapaltpycall(std::function<gentype(const gentype &)> **leftaltpycall, std::function<gentype(const gentype &)> **rightaltpycall);  // swap altpycalls in static memory
-void removealtpycall(std::function<gentype(const gentype &)> **oldaltpycall); // remove altpycall from static memory store
-void removeallaltpycall(void); // delete all altbycalls in static memory store
+void  storealtpycall(std::function<gentype(const gentype &)> *newaltpycall);  // store altpycall in statiic memory
+void removealtpycall(std::function<gentype(const gentype &)> *oldaltpycall); // remove altpycall from statiic memory store
+void removeallaltpycall(void); // delete all altbycalls in statiic memory store
 
 
 // Multithreaded initialisation function:
@@ -1231,8 +1181,8 @@ public:
     bool scalarfn_isscalarfn(void) const { return varid_isscalar; }
     int  scalarfn_numpts    (void) const { return varid_numpts;   }
 
-    const Vector<int> &scalarfn_i(void) const { if ( varid_xi ) { return *varid_xi; } const static int tmpval = (int) DEFAULTVARI; const static Vector<int> tmp(1,&tmpval); return tmp; }
-    const Vector<int> &scalarfn_j(void) const { if ( varid_xj ) { return *varid_xj; } const static int tmpval = (int) DEFAULTVARJ; const static Vector<int> tmp(1,&tmpval); return tmp; }
+    const Vector<int> &scalarfn_i(void) const { if ( varid_xi ) { return *varid_xi; } const static int tmpval((int) DEFAULTVARI); const static Vector<int> tmp(1,&tmpval); return tmp; }
+    const Vector<int> &scalarfn_j(void) const { if ( varid_xj ) { return *varid_xj; } const static int tmpval((int) DEFAULTVARJ); const static Vector<int> tmp(1,&tmpval); return tmp; }
 
     void scalarfn_setisscalarfn(int nv);
     void scalarfn_setnumpts    (int nv) { varid_numpts = nv; }
@@ -1448,14 +1398,15 @@ private:
         res.fnnameind  = fnnameind;
         res.thisfninfo = thisfninfo;
 
-        if ( anionval  != nullptr ) { MEMNEW(res.anionval ,d_anion                                (*anionval) ); }
-        if ( vectorval != nullptr ) { MEMNEW(res.vectorval,Vector<gentype>                        (*vectorval)); }
-        if ( matrixval != nullptr ) { MEMNEW(res.matrixval,Matrix<gentype>                        (*matrixval)); }
-        if ( setval    != nullptr ) { MEMNEW(res.setval   ,Set<gentype>                           (*setval)   ); }
-        if ( dictval   != nullptr ) { MEMNEW(res.dictval  ,xDict                                  (*dictval)  ); }
-        if ( dgraphval != nullptr ) { MEMNEW(res.dgraphval,xDgraph                                (*dgraphval)); }
-        if ( stringval != nullptr ) { MEMNEW(res.stringval,std::string                            (*stringval)); }
-        if ( altpycall != nullptr ) { MEMNEW(res.altpycall,std::function<gentype(const gentype &)>(*altpycall)); storealtpycall(&(res.altpycall)); }
+        if ( anionval  != nullptr ) { MEMNEW(res.anionval ,d_anion        (*anionval) );        }
+        if ( vectorval != nullptr ) { MEMNEW(res.vectorval,Vector<gentype>(*vectorval));        }
+        if ( matrixval != nullptr ) { MEMNEW(res.matrixval,Matrix<gentype>(*matrixval));        }
+        if ( setval    != nullptr ) { MEMNEW(res.setval   ,Set<gentype>   (*setval)   );        }
+        if ( dictval   != nullptr ) { MEMNEW(res.dictval  ,xDict          (*dictval)  );        }
+        if ( dgraphval != nullptr ) { MEMNEW(res.dgraphval,xDgraph        (*dgraphval));        }
+        if ( stringval != nullptr ) { MEMNEW(res.stringval,std::string    (*stringval));        }
+        if ( altpycall != nullptr ) { res.altpycall = altpycall; storealtpycall(res.altpycall); } // now there are at least two of this pointer in
+                                                                                                  // the store, so it won't be prematurely deleted.
 
         MEMNEW(res.eqnargs,Vector<gentype>(locargres));
     }
@@ -1479,8 +1430,9 @@ private:
         if ( ( dgraphval           != nullptr ) && ( ( targtype != 'G' ) )                               ) { MEMDEL(dgraphval);           dgraphval           = nullptr; }
         if ( ( stringval           != nullptr ) && ( ( targtype != 'S' ) && ( targtype != 'E' ) )        ) { MEMDEL(stringval);           stringval           = nullptr; }
         if ( ( eqnargs             != nullptr )                                                          ) { MEMDEL(eqnargs);             eqnargs             = nullptr; }
-        if ( ( altpycall           != nullptr )                                                          ) { removealtpycall(&altpycall);
-                                                                                                             MEMDEL(altpycall);           altpycall           = nullptr; }
+        if ( ( altpycall           != nullptr )                                                          ) { removealtpycall(altpycall);  altpycall           = nullptr; }
+                                                                                                           // Note that we don't delete altpycall here!
+                                                                                                           // (we might be in the wrong thread).
 
         typeis     = targtype;
         intval     = 0;
@@ -1644,11 +1596,11 @@ public:
 // Sorry about the macro, but I couldn't get f to pass through in the function
 // version and gave up after a few hours.
 
-#define gentype_function(F,res,f) 0; \
-{ \
-    res = "pycall(-1,x)"; \
+#define gentype_function(F,res,f) 0;         \
+{                                            \
+    res = "pycall(-1,x)";                    \
     res.altpycall = new std::function<F>(f); \
-    storealtpycall(&(res.altpycall)); \
+    storealtpycall(res.altpycall);           \
 }
 
 
@@ -1683,7 +1635,6 @@ inline void qswap(gentype &a, gentype &b)
     std::string                             *stringval;           stringval           = a.stringval;           a.stringval           = b.stringval;           b.stringval           = stringval;
     Vector<gentype>                         *eqnargs;             eqnargs             = a.eqnargs;             a.eqnargs             = b.eqnargs;             b.eqnargs             = eqnargs;
     std::function<gentype(const gentype &)> *altpycall;           altpycall           = a.altpycall;           a.altpycall           = b.altpycall;           b.altpycall           = altpycall;
-    swapaltpycall(&(a.altpycall),&(b.altpycall));
 
     const fninfoblock *thisfninfo; thisfninfo = a.thisfninfo; a.thisfninfo = b.thisfninfo; b.thisfninfo = thisfninfo;
 }
@@ -1775,11 +1726,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
     if ( size && nns && src.altcontent )
     {
         res.resize(size);
-
-	for ( int i = 0 ; i < size ; ++i )
-	{
-            res("&",i).force_double() = src.altcontent[i];
-        }
+	for ( int i = 0 ; i < size ; ++i ) { res("&",i).force_double() = src.altcontent[i]; }
     }
 
     else if ( size && nns )
@@ -1789,13 +1736,8 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 	for ( int i = 0 ; i < size ; ++i )
 	{
             gentype tmp(src.direcref(i));
-
             res.sv(i,tmp);
-
-            if ( res(i).isValNull() )
-            {
-                res("&",i).isNomConst = true;
-            }
+            if ( res(i).isValNull() ) { res("&",i).isNomConst = true; }
         }
     }
 
@@ -1806,11 +1748,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
             if ( src.ind(i) == prevind+1 )
             {
                 res.append(-1,toGentype(src.direcref(i)));
-
-                if ( res(res.size()-1).isValNull() )
-                {
-                    res("&",res.size()-1).isNomConst = true;
-                }
+                if ( res(res.size()-1).isValNull() ) { res("&",res.size()-1).isNomConst = true; }
             }
 
             else if ( ( baseind < INDF1OFFSTART ) && ( src.ind(i) >= INDF1OFFSTART ) && ( src.ind(i) <= INDF1OFFEND ) )
@@ -1819,22 +1757,14 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 
                 {
                     const static gentype tmp(":");
-
                     res.append(-1,tmp);
                 }
 
-                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
-                {
-                    res.append(-1,toGentype());
-                }
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii ) { res.append(-1,toGentype()); }
 
                 {
                     res.append(-1,toGentype(src.direcref(i)));
-
-                    if ( res(res.size()-1).isValNull() )
-                    {
-                        res("&",res.size()-1).isNomConst = true;
-                    }
+                    if ( res(res.size()-1).isValNull() ) { res("&",res.size()-1).isNomConst = true; }
                 }
             }
 
@@ -1844,22 +1774,14 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 
                 {
                     const static gentype tmp("::");
-
                     res.append(-1,tmp);
                 }
 
-                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
-                {
-                    res.append(-1,toGentype());
-                }
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii ) {res.append(-1,toGentype()); }
 
                 {
                     res.append(-1,toGentype(src.direcref(i)));
-
-                    if ( res(res.size()-1).isValNull() )
-                    {
-                        res("&",res.size()-1).isNomConst = true;
-                    }
+                    if ( res(res.size()-1).isValNull() ) { res("&",res.size()-1).isNomConst = true; }
                 }
             }
 
@@ -1869,22 +1791,14 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 
                 {
                     const static gentype tmp(":::");
-
                     res.append(-1,tmp);
                 }
 
-                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
-                {
-                    res.append(-1,toGentype());
-                }
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii ) { res.append(-1,toGentype()); }
 
                 {
                     res.append(-1,toGentype(src.direcref(i)));
-
-                    if ( res(res.size()-1).isValNull() )
-                    {
-                        res("&",res.size()-1).isNomConst = true;
-                    }
+                    if ( res(res.size()-1).isValNull() ) { res("&",res.size()-1).isNomConst = true; }
                 }
             }
 
@@ -1894,22 +1808,14 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 
                 {
                     const static gentype tmp("::::");
-
                     res.append(-1,tmp);
                 }
 
-                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
-                {
-                    res.append(-1,toGentype());
-                }
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii ) { res.append(-1,toGentype()); }
 
                 {
                     res.append(-1,toGentype(src.direcref(i)));
-
-                    if ( res(res.size()-1).isValNull() )
-                    {
-                        res("&",res.size()-1).isNomConst = true;
-                    }
+                    if ( res(res.size()-1).isValNull() ) { res("&",res.size()-1).isNomConst = true; }
                 }
             }
 
@@ -1921,44 +1827,25 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 
                 {
                     const static gentype tmp("~");
-
                     res.append(-1,tmp);
                 }
 
-                if ( (src.ind(i)-baseind) >= DEFAULT_TUPLE_INDEX_STEP )
-                {
-                    goto goover;
-                }
-
-                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
-                {
-                    res.append(-1,toGentype());
-                }
+                if ( (src.ind(i)-baseind) >= DEFAULT_TUPLE_INDEX_STEP ) { goto goover; }
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii ) { res.append(-1,toGentype()); }
 
                 {
                     res.append(-1,toGentype(src.direcref(i)));
-
-                    if ( res(res.size()-1).isValNull() )
-                    {
-                        res("&",res.size()-1).isNomConst = true;
-                    }
+                    if ( res(res.size()-1).isValNull() ) { res("&",res.size()-1).isNomConst = true; }
                 }
             }
 
             else
             {
-                for ( int ii = prevind+1 ; ii < src.ind(i) ; ++ii )
-                {
-                    res.append(-1,toGentype());
-                }
+                for ( int ii = prevind+1 ; ii < src.ind(i) ; ++ii ) { res.append(-1,toGentype()); }
 
                 {
                     res.append(-1,toGentype(src.direcref(i)));
-
-                    if ( res(res.size()-1).isValNull() )
-                    {
-                        res("&",res.size()-1).isNomConst = true;
-                    }
+                    if ( res(res.size()-1).isValNull() ) { res("&",res.size()-1).isNomConst = true; }
                 }
             }
 
@@ -2121,14 +2008,14 @@ inline void raiseto(double &a, int b) { a = pow(a,b); }
 
 gentype &postProInnerProd(gentype &x);
 
-inline gentype &setident        (gentype &a);
-inline gentype &setzero         (gentype &a);
-inline gentype &setzeropassive  (gentype &a);
-inline gentype &setposate       (gentype &a);
-inline gentype &setnegate       (gentype &a);
-inline gentype &setconj         (gentype &a);
-inline gentype &setrand         (gentype &a);
-inline gentype &settranspose    (gentype &a);
+inline gentype &setident      (gentype &a);
+inline gentype &setzero       (gentype &a);
+inline gentype &setzeropassive(gentype &a);
+inline gentype &setposate     (gentype &a);
+inline gentype &setnegate     (gentype &a);
+inline gentype &setconj       (gentype &a);
+inline gentype &setrand       (gentype &a);
+inline gentype &settranspose  (gentype &a);
 
 inline const gentype *&setident (const gentype *&a);
 inline const gentype *&setzero  (const gentype *&a);
@@ -2631,6 +2518,9 @@ inline gentype normp (const gentype &a, double qx);
 //
 // normDistr(x):   Normal distribution (0 mean, unit variance)
 // polyDistr(x,n): Polynomial distribution (0 mean, unit variance)
+//
+// phi(x): standard normal distribution pdf
+// Phi(x): standard normal distribution cdf
 
 gentype eabs1  (const gentype &a);
 gentype eabs2  (const gentype &a);
@@ -2772,6 +2662,9 @@ gentype bern(const gentype &w, const gentype &x);
 gentype normDistr(const gentype &x);
 gentype polyDistr(const gentype &x, const gentype &n);
 gentype PolyDistr(const gentype &x, const gentype &n);
+
+gentype phi(const gentype &x);
+gentype Phi(const gentype &x);
 
 // Various elementwise maths functions that do not yet have complex/anionic
 // implementations

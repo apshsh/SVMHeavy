@@ -38,16 +38,6 @@
 
 // constexpr with variables in function is available in c++14 and after
 
-//#ifdef IS_CPP14
-//#define svm_constexpr constexpr
-//#endif
-
-//#ifndef IS_CPP14
-//#define svm_constexpr
-//#endif
-
-
-
 template <class T> class Matrix;
 template <class T> class retMatrix;
 
@@ -300,13 +290,13 @@ public:
 
     // Row and column norms
 
-    double getColNorm(int i) const;
-    double getRowNorm(int i) const;
-    double getRowColNorm(void) const;
+    double getColNorm   (int i) const;
+    double getRowNorm   (int i) const;
+    double getRowColNorm(void)  const;
 
-    double getColAbs(int i) const;
-    double getRowAbs(int i) const;
-    double getRowColAbs(void) const;
+    double getColAbs   (int i) const;
+    double getRowAbs   (int i) const;
+    double getRowColAbs(void)  const;
 
     // Add and remove element functions.
     //
@@ -1388,7 +1378,7 @@ DynArray<int> *retMatrix<T>::reset_r(Matrix<T> &cover, int rowpivotsize)
     else
     {
 	MEMNEW(resval,DynArray<int>);
-        (*resval) = { nullptr,0,0,0,false,false,false };
+        (*resval) = { nullptr,0,0,0,false,false,false,false,false };
         (*resval).resize(rowpivotsize);
         (*resval).useSlackAllocation();
 
@@ -1444,7 +1434,7 @@ DynArray<int> *retMatrix<T>::reset_c(Matrix<T> &cover, int colpivotsize)
     else
     {
 	MEMNEW(resval,DynArray<int>);
-        (*resval) = { nullptr,0,0,0,false,false,false };
+        (*resval) = { nullptr,0,0,0,false,false,false,false,false };
         (*resval).resize(colpivotsize);
         (*resval).useSlackAllocation();
 
@@ -1485,7 +1475,7 @@ DynArray<int> *retMatrix<T>::reset_rc(Matrix<T> &cover, DynArray<int> *&tpivCol,
     else
     {
 	MEMNEW(tpivRow,DynArray<int>);
-        (*tpivRow) = { nullptr,0,0,0,false,false,false };
+        (*tpivRow) = { nullptr,0,0,0,false,false,false,false,false };
         (*tpivRow).resize(rowpivotsize);
         (*tpivRow).useSlackAllocation();
 
@@ -1501,7 +1491,7 @@ DynArray<int> *retMatrix<T>::reset_rc(Matrix<T> &cover, DynArray<int> *&tpivCol,
     else
     {
 	MEMNEW(tpivCol,DynArray<int>);
-        (*tpivCol) = { nullptr,0,0,0,false,false,false };
+        (*tpivCol) = { nullptr,0,0,0,false,false,false,false,false };
         (*tpivCol).resize(colpivotsize);
         (*tpivCol).useSlackAllocation();
 
@@ -1582,7 +1572,7 @@ DynArray<int> *retMatrix<T>::creset_r(const Matrix<T> &cover, int rowpivotsize)
     else
     {
 	MEMNEW(resval,DynArray<int>);
-        (*resval) = { nullptr,0,0,0,false,false,false };
+        (*resval) = { nullptr,0,0,0,false,false,false,false,false };
         (*resval).resize(rowpivotsize);
         (*resval).useSlackAllocation();
 
@@ -1638,7 +1628,7 @@ DynArray<int> *retMatrix<T>::creset_c(const Matrix<T> &cover, int colpivotsize)
     else
     {
 	MEMNEW(resval,DynArray<int>);
-        (*resval) = { nullptr,0,0,0,false,false,false };
+        (*resval) = { nullptr,0,0,0,false,false,false,false,false };
         (*resval).resize(colpivotsize);
         (*resval).useSlackAllocation();
 
@@ -1679,7 +1669,7 @@ DynArray<int> *retMatrix<T>::creset_rc(const Matrix<T> &cover, DynArray<int> *&t
     else
     {
 	MEMNEW(tpivRow,DynArray<int>);
-        (*tpivRow) = { nullptr,0,0,0,false,false,false };
+        (*tpivRow) = { nullptr,0,0,0,false,false,false,false,false };
         (*tpivRow).resize(rowpivotsize);
         (*tpivRow).useSlackAllocation();
 
@@ -1695,7 +1685,7 @@ DynArray<int> *retMatrix<T>::creset_rc(const Matrix<T> &cover, DynArray<int> *&t
     else
     {
 	MEMNEW(tpivCol,DynArray<int>);
-        (*tpivCol) = { nullptr,0,0,0,false,false,false };
+        (*tpivCol) = { nullptr,0,0,0,false,false,false,false,false };
         (*tpivCol).resize(colpivotsize);
         (*tpivCol).useSlackAllocation();
 
@@ -2307,7 +2297,7 @@ T &Matrix<T>::operator()(const char *dummy, int i, int j)
 
     if ( iscover )
     {
-        static thread_local retVector<T> tmpva;
+        thread_local retVector<T> tmpva;
 
         NiceAssert( elmfn );
         NiceAssert( !Lweight || !useLweight );
@@ -2332,7 +2322,7 @@ const T &Matrix<T>::operator()(int i, int j) const
 
     if ( iscover && ( !Lweight || !useLweight ) )
     {
-        static thread_local retVector<T> tmpva;
+        thread_local retVector<T> tmpva;
 
         NiceAssert( celmfn );
 
@@ -2341,8 +2331,8 @@ const T &Matrix<T>::operator()(int i, int j) const
 
     else if ( iscover )
     {
-        static thread_local retVector<T> tmpva;
-        static thread_local T tmpres;
+        thread_local retVector<T> tmpva;
+        thread_local T tmpres;
 
         NiceAssert( celmfn );
 
@@ -2368,7 +2358,7 @@ T Matrix<T>::v(int i, int j) const
 
     if ( iscover && celmfn_v && ( !Lweight || !useLweight ) )
     {
-        static thread_local retVector<T> tmpva;
+        thread_local retVector<T> tmpva;
 
         NiceAssert( celmfn_v );
 
@@ -2377,7 +2367,7 @@ T Matrix<T>::v(int i, int j) const
 
     else if ( iscover && celmfn_v )
     {
-        static thread_local retVector<T> tmpva;
+        thread_local retVector<T> tmpva;
 
         NiceAssert( celmfn_v );
 
@@ -2386,7 +2376,7 @@ T Matrix<T>::v(int i, int j) const
 
     else if ( iscover && ( !Lweight || !useLweight ) )
     {
-        static thread_local retVector<T> tmpva;
+        thread_local retVector<T> tmpva;
 
         NiceAssert( celmfn );
 
@@ -2395,7 +2385,7 @@ T Matrix<T>::v(int i, int j) const
 
     else if ( iscover )
     {
-        static thread_local retVector<T> tmpva;
+        thread_local retVector<T> tmpva;
 
         NiceAssert( celmfn );
 
@@ -3168,7 +3158,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, int ib, int is, int im, const Vec
     //jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         res.reset(*this);
 
@@ -3222,7 +3212,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, int ib, int is, int im, const Vec
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         res.reset(*this);
 
@@ -3274,7 +3264,7 @@ const Matrix<T> &Matrix<T>::operator()(int ib, int is, int im, const Vector<int>
     //jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         res.creset(*this);
 
@@ -3328,7 +3318,7 @@ const Matrix<T> &Matrix<T>::operator()(int ib, int is, int im, const Vector<int>
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         res.creset(*this);
 
@@ -3381,7 +3371,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, int jb, int
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         res.reset(*this);
 
@@ -3435,7 +3425,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, int jb, int
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         res.reset(*this);
 
@@ -3487,7 +3477,7 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, int jb, int js, int
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         res.creset(*this);
 
@@ -3541,7 +3531,7 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, int jb, int js, int
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         res.creset(*this);
 
@@ -3594,8 +3584,8 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     //jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && !(j.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) ) &&
-         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )    )
+    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) ) &&
+         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )    )
     {
         res.reset(*this);
 
@@ -3611,7 +3601,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     }
 
     //else if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         DynArray<int> *tpiv = res.reset_c(*this,jnumCols);
 
@@ -3631,7 +3621,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     }
 
     //else if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         DynArray<int> *tpiv = res.reset_r(*this,inumRows);
 
@@ -3692,8 +3682,8 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     //jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && !(j.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) ) &&
-         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )    )
+    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) ) &&
+         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )    )
     {
         res.reset(*this);
 
@@ -3709,7 +3699,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     }
 
     //else if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         DynArray<int> *tpiv = res.reset_c(*this,jnumCols);
 
@@ -3729,7 +3719,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     }
 
     //else if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         DynArray<int> *tpiv = res.reset_r(*this,inumRows);
 
@@ -3790,8 +3780,8 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && !(j.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) ) &&
-         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )    )
+    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) ) &&
+         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )    )
     {
         res.reset(*this);
 
@@ -3807,7 +3797,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     }
 
     //else if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         DynArray<int> *tpiv = res.reset_c(*this,jnumCols);
 
@@ -3827,7 +3817,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     }
 
     //else if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         DynArray<int> *tpiv = res.reset_r(*this,inumRows);
 
@@ -3890,8 +3880,8 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && !(j.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) ) &&
-         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )    )
+    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) ) &&
+         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )    )
     {
         res.reset(*this);
 
@@ -3907,7 +3897,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     }
 
     //else if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         DynArray<int> *tpiv = res.reset_c(*this,jnumCols);
 
@@ -3927,7 +3917,7 @@ Matrix<T> &Matrix<T>::operator()(const char *, const Vector<int> &i, const Vecto
     }
 
     //else if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         DynArray<int> *tpiv = res.reset_r(*this,inumRows);
 
@@ -3988,8 +3978,8 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     //jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && !(j.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) ) &&
-         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )    )
+    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) ) &&
+         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )    )
     {
         res.creset(*this);
 
@@ -4005,7 +3995,7 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     }
 
     //else if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         DynArray<int> *tpiv = res.creset_c(*this,jnumCols);
 
@@ -4025,7 +4015,7 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     }
 
     //else if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         DynArray<int> *tpiv = res.creset_r(*this,inumRows);
 
@@ -4087,8 +4077,8 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     //jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && !(j.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) ) &&
-         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )    )
+    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) ) &&
+         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )    )
     {
         res.creset(*this);
 
@@ -4104,7 +4094,7 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     }
 
     //else if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         DynArray<int> *tpiv = res.creset_c(*this,jnumCols);
 
@@ -4124,7 +4114,7 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     }
 
     //else if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         DynArray<int> *tpiv = res.creset_r(*this,inumRows);
 
@@ -4185,8 +4175,8 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && !(j.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) ) &&
-         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )    )
+    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) ) &&
+         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )    )
     {
         res.creset(*this);
 
@@ -4202,7 +4192,7 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     }
 
     //else if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         DynArray<int> *tpiv = res.creset_c(*this,jnumCols);
 
@@ -4222,7 +4212,7 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     }
 
     //else if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         DynArray<int> *tpiv = res.creset_r(*this,inumRows);
 
@@ -4285,8 +4275,8 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
     //if ( !nbase && !(i.base()) && !(j.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) ) &&
-         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )    )
+    if ( ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) ) &&
+         ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )    )
     {
         res.creset(*this);
 
@@ -4302,7 +4292,7 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     }
 
     //else if ( !nbase && !(i.base()) && ( iibRow == 0 ) && ( iisRow == 1 ) )
-    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && ( pivotRow == cntintarray(0) ) ) ) && !(i.base()) )
+    else if ( ( !nbase || ( ( iibRow == 0 ) && ( iisRow == 1 ) && pivotRow && pivotRow->iscntintarray ) ) && !(i.base()) )
     {
         DynArray<int> *tpiv = res.creset_c(*this,jnumCols);
 
@@ -4322,7 +4312,7 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
     }
 
     //else if ( !nbase && !(j.base()) && ( iibCol == 0 ) && ( iisCol == 1 ) )
-    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && ( pivotCol == cntintarray(0) ) ) ) && !(j.base()) )
+    else if ( ( !nbase || ( ( iibCol == 0 ) && ( iisCol == 1 ) && pivotCol && pivotCol->iscntintarray ) ) && !(j.base()) )
     {
         DynArray<int> *tpiv = res.creset_r(*this,inumRows);
 
@@ -4479,11 +4469,11 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
 
 #define MAXHACKYHEAD 1000000
 
-inline const Matrix<int> &zerointmatrixbasic(void) { const static thread_local Matrix<int> zerores("&",zerointvecbasic()); return zerores; }
-inline const Matrix<int> &oneintmatrixbasic (void) { const static thread_local Matrix<int> oneres ("&",oneintvecbasic ()); return oneres;  }
+inline const Matrix<int> &zerointmatrixbasic(void) { const thread_local Matrix<int> zerores("&",zerointvecbasic()); return zerores; }
+inline const Matrix<int> &oneintmatrixbasic (void) { const thread_local Matrix<int> oneres ("&",oneintvecbasic ()); return oneres;  }
 
-inline const Matrix<double> &zerodoublematrixbasic(void) { const static thread_local Matrix<double> zerores("&",zerodoublevecbasic()); return zerores; }
-inline const Matrix<double> &onedoublematrixbasic (void) { const static thread_local Matrix<double> oneres ("&",onedoublevecbasic ()); return oneres;  }
+inline const Matrix<double> &zerodoublematrixbasic(void) { const thread_local Matrix<double> zerores("&",zerodoublevecbasic()); return zerores; }
+inline const Matrix<double> &onedoublematrixbasic (void) { const thread_local Matrix<double> oneres ("&",onedoublevecbasic ()); return oneres;  }
 
 inline const Matrix<int> &zerointmatrix(int numRows, int numCols, retMatrix<int> &tmpm) { return zerointmatrixbasic()(0,1,numRows-1,0,1,numCols-1,tmpm); }
 inline const Matrix<int> &oneintmatrix (int numRows, int numCols, retMatrix<int> &tmpm) { return oneintmatrixbasic ()(0,1,numRows-1,0,1,numCols-1,tmpm); }
@@ -4510,16 +4500,16 @@ inline const Matrix<double> &onedoublematrix (int numRows, int numCols, retMatri
 /*
 inline const Matrix<int> &cntintmatrix(int numRows, int numCols, retMatrix<int> &tmpm)
 {
-    static thread_local bool firstcall = true;
-    static thread_local Matrix<int> cntres("&");
+    thread_local bool firstcall = true;
+    thread_local Matrix<int> cntres("&");
 
     NiceAssert( numRows >= 0 );
     NiceAssert( numCols >= 0 );
 
     if ( firstcall || ( numRows > cntres.dnumRows ) || ( numCols > cntres.dnumCols ) )
     {
-        static thread_local Vector<Vector<int>> *ccontent = nullptr;
-        static thread_local retVector<int> zvecstore;
+        thread_local Vector<Vector<int>> *ccontent = nullptr;
+        thread_local retVector<int> zvecstore;
 
         int locnumRows = ( firstcall || ( numRows > cntres.dnumRows ) ) ? numRows+MAXHACKYHEAD : cntres.dnumRows;
         int locnumCols = numCols;
@@ -4586,16 +4576,16 @@ inline const Matrix<int> &cntintmatrix(int numRows, int numCols, retMatrix<int> 
 
 inline const Matrix<int> &deltaintmatrix(int pos, int numRows, int numCols, retMatrix<int> &tmpm)
 {
-    static thread_local bool firstcall = true;
-    static thread_local Matrix<int> deltares("&");
+    thread_local bool firstcall = true;
+    thread_local Matrix<int> deltares("&");
 
     NiceAssert( numRows >= 0 );
     NiceAssert( numCols >= 0 );
 
     if ( firstcall || ( numRows > deltares.dnumRows ) || ( numCols > deltares.dnumCols ) )
     {
-        static thread_local Vector<Vector<int>> *ccontent = nullptr;
-        static thread_local retVector<int> zvecstore;
+        thread_local Vector<Vector<int>> *ccontent = nullptr;
+        thread_local retVector<int> zvecstore;
 
         int locnumRows = ( firstcall || ( numRows > deltares.dnumRows ) ) ? numRows+MAXHACKYHEAD : deltares.dnumRows;
         int locnumCols = numCols;
@@ -4667,8 +4657,8 @@ inline const Matrix<int> &identintmatrix(int numRows, int numCols, retMatrix<int
     // This could be large, so we don't use thread_local to (a) save memory and (b) avoid
     // "churn" when a new thread first comes here.
 
-    static thread_local bool firstcall = true;
-    static thread_local Matrix<int> identres("&");
+    thread_local bool firstcall = true;
+    thread_local Matrix<int> identres("&");
 
     //FIXME: currently ccontent and zvecstore are never deleted, need to fix this.
 
@@ -4677,9 +4667,9 @@ inline const Matrix<int> &identintmatrix(int numRows, int numCols, retMatrix<int
 
     if ( firstcall || ( numRows > identres.dnumRows ) || ( numCols > identres.dnumCols ) )
     {
-        static thread_local Vector<Vector<int>> *ccontent = nullptr;
-        static thread_local Vector<retVector<int>> *zvecstore = nullptr;
-        static thread_local retVector<int> zzvecst;
+        thread_local Vector<Vector<int>> *ccontent = nullptr;
+        thread_local Vector<retVector<int>> *zvecstore = nullptr;
+        thread_local retVector<int> zzvecst;
 
         if ( firstcall || ( numRows > identres.dnumRows ) || ( numCols > identres.dnumCols ) )
         {
@@ -4777,16 +4767,16 @@ inline const Matrix<int> &identintmatrix(int numRows, int numCols, retMatrix<int
 /*
 inline const Matrix<double> &cntdoublematrix(int numRows, int numCols, retMatrix<double> &tmpm)
 {
-    static thread_local bool firstcall = true;
-    static thread_local Matrix<double> cntres("&");
+    thread_local bool firstcall = true;
+    thread_local Matrix<double> cntres("&");
 
     NiceAssert( numRows >= 0 );
     NiceAssert( numCols >= 0 );
 
     if ( firstcall || ( numRows > cntres.dnumRows ) || ( numCols > cntres.dnumCols ) )
     {
-        static thread_local Vector<Vector<double>> *ccontent = nullptr;
-        static thread_local retVector<double> zvecstore;
+        thread_local Vector<Vector<double>> *ccontent = nullptr;
+        thread_local retVector<double> zvecstore;
 
         int locnumRows = ( firstcall || ( numRows > cntres.dnumRows ) ) ? numRows+MAXHACKYHEAD : cntres.dnumRows;
         int locnumCols = numCols;
@@ -4853,16 +4843,16 @@ inline const Matrix<double> &cntdoublematrix(int numRows, int numCols, retMatrix
 
 inline const Matrix<double> &deltadoublematrix(int pos, int numRows, int numCols, retMatrix<double> &tmpm)
 {
-    static thread_local bool firstcall = true;
-    static thread_local Matrix<double> deltares("&");
+    thread_local bool firstcall = true;
+    thread_local Matrix<double> deltares("&");
 
     NiceAssert( numRows >= 0 );
     NiceAssert( numCols >= 0 );
 
     if ( firstcall || ( numRows > deltares.dnumRows ) || ( numCols > deltares.dnumCols ) )
     {
-        static thread_local Vector<Vector<double>> *ccontent = nullptr;
-        static thread_local retVector<double> zvecstore;
+        thread_local Vector<Vector<double>> *ccontent = nullptr;
+        thread_local retVector<double> zvecstore;
 
         int locnumRows = ( firstcall || ( numRows > deltares.dnumRows ) ) ? numRows+MAXHACKYHEAD : deltares.dnumRows;
         int locnumCols = numCols;
@@ -4931,8 +4921,8 @@ inline const Matrix<double> &identdoublematrix(int numRows, int numCols, retMatr
 {
     int pos = numCols-1; // nominal, for size calculations (cause worst-case calculation)
 
-    static thread_local bool firstcall = true;
-    static thread_local Matrix<double> identres("&");
+    thread_local bool firstcall = true;
+    thread_local Matrix<double> identres("&");
 
     //FIXME: currently ccontent and zvecstore are never deleted, need to fix this.
 
@@ -4941,9 +4931,9 @@ inline const Matrix<double> &identdoublematrix(int numRows, int numCols, retMatr
 
     if ( firstcall || ( numRows > identres.dnumRows ) || ( numCols > identres.dnumCols ) )
     {
-        static thread_local Vector<Vector<double>> *ccontent = nullptr;
-        static thread_local Vector<retVector<double>> *zvecstore = nullptr;
-        static thread_local retVector<double> zzvecst;
+        thread_local Vector<Vector<double>> *ccontent = nullptr;
+        thread_local Vector<retVector<double>> *zvecstore = nullptr;
+        thread_local retVector<double> zzvecst;
 
         if ( firstcall || ( numRows > identres.dnumRows ) || ( numCols > identres.dnumCols ) )
         {
@@ -5071,6 +5061,9 @@ Matrix<T> &Matrix<T>::addRow(int i)
         (*content).add(i);
 //	(*content)("&",i).fixsize = 0;
         (*content)("&",i).resize(dnumCols);
+
+        if ( (*content).array_slack() ) { (*content)("&",i).useSlackAllocation(); }
+        if ( (*content).array_tight() ) { (*content)("&",i).useTightAllocation(); }
     }
 
     return *this;
@@ -5148,9 +5141,9 @@ Matrix<T> &Matrix<T>::padRow(int n)
     return *this;
 }
 
-template <class T> 
-Matrix<T> &Matrix<T>::padRowCol(int n) 
-{ 
+template <class T>
+Matrix<T> &Matrix<T>::padRowCol(int n)
+{
     padRow(n);
     padCol(n);
 
@@ -5262,6 +5255,9 @@ Matrix<T> &Matrix<T>::appendRow(int rowStart, const Matrix<T> &src)
 
 //          (*content)("&",i).fixsize = 0;
             (*content).set(i,src(i-rowStart,tmpva));
+
+            if ( (*content).array_slack() ) { (*content)("&",i).useSlackAllocation(); }
+            if ( (*content).array_tight() ) { (*content)("&",i).useTightAllocation(); }
         }
     }
 
@@ -5311,6 +5307,9 @@ Matrix<T> &Matrix<T>::resize(int targNumRows, int targNumCols)
             for ( i = dnumRows ; i < targNumRows ; ++i )
             {
                 (*content)("&",i).resize(targNumCols);
+
+                if ( (*content).array_slack() ) { (*content)("&",i).useSlackAllocation(); }
+                if ( (*content).array_tight() ) { (*content)("&",i).useTightAllocation(); }
             }
         }
 
@@ -5322,16 +5321,11 @@ Matrix<T> &Matrix<T>::resize(int targNumRows, int targNumCols)
             {
                 (*content)("&",i).resize(targNumCols);
             }
-        }
 
-        if ( (*content).array_slack() )
-        {
-            useSlackAllocation();
-        }
-
-        if ( (*content).array_tight() )
-        {
-            useTightAllocation();
+            if ( (*content).array_tight() )
+            {
+                useTightAllocation();
+            }
         }
     }
 
@@ -7727,7 +7721,7 @@ T Matrix<T>::det(void) const
         //}
 
         //Matrix<T> &locmatbuff = *matbuff;
-        static thread_local Matrix<T> locmatbuff;
+        thread_local Matrix<T> locmatbuff;
         Vector<int> p;
 
         locmatbuff = *this;
@@ -8347,7 +8341,7 @@ int Matrix<T>::LUPDecompose(Matrix<T> &res, Vector<int> &p, double ztol) const
 template <class T>
 int Matrix<T>::LUPDecompose(double ztol)
 {
-    static thread_local Vector<int> p("&",2);
+    thread_local Vector<int> p("&",2);
 
     return LUPDecompose(ztol,p);
 }
@@ -10271,8 +10265,8 @@ const T &median(const Matrix<T> &right_op, int &miniv, int &minjv)
         return right_op(miniv,minjv);
     }
 
-    static thread_local int frun = 1;
-    static thread_local T defres;
+    thread_local int frun = 1;
+    thread_local T defres;
 
     miniv = 0;
     minjv = 0;
@@ -11079,7 +11073,7 @@ template <> inline Matrix<double> &leftmult(      Matrix<double> &left_op, const
                 left_op.resize(resnumRows,resnumCols);
             }
 
-            static thread_local Vector<double> leftrow(resnumCols,nullptr,2);
+            thread_local Vector<double> leftrow(resnumCols,nullptr,2);
             leftrow.resize(resnumCols);
             double tmpres;
 
@@ -11153,7 +11147,7 @@ template <class T> Matrix<T> &leftmult(      Matrix<T> &left_op, const Matrix<T>
             }
 
             //Vector<T> leftrow(resnumCols);
-            static thread_local Vector<T> leftrow(resnumCols,nullptr,2);
+            thread_local Vector<T> leftrow(resnumCols,nullptr,2);
             leftrow.resize(resnumCols);
 
             for ( i = 0 ; i < resnumRows ; ++i )
@@ -11203,7 +11197,7 @@ template <> inline Vector<double> &leftmult (      Vector<double> &left_op, cons
         int innerdim = right_op.numRows();
         int resnumCols = right_op.numCols();
 
-        static thread_local Vector<double> res(resnumCols,nullptr,2);
+        thread_local Vector<double> res(resnumCols,nullptr,2);
         res.resize(resnumCols);
         double innerres;
 
@@ -11242,7 +11236,7 @@ template <class S, class T> Vector<S> &leftmult (      Vector<S> &left_op, const
         int resnumCols = right_op.numCols();
 
         //Vector<S> res(resnumCols);
-        static thread_local Vector<S> res(resnumCols,nullptr,2);
+        thread_local Vector<S> res(resnumCols,nullptr,2);
         res.resize(resnumCols);
 
         if ( resnumCols )
@@ -11334,7 +11328,7 @@ template <> inline Matrix<double> &rightmult(const Matrix<double> &left_op, Matr
                 right_op.resize(resnumRows,resnumCols);
             }
 
-            static thread_local Vector<double> rightcol(resnumRows,nullptr,2);
+            thread_local Vector<double> rightcol(resnumRows,nullptr,2);
             rightcol.resize(resnumRows);
             double tmpres;
 
@@ -11408,7 +11402,7 @@ template <class T> Matrix<T> &rightmult(const Matrix<T> &left_op, Matrix<T> &rig
             }
 
             //Vector<T> rightcol(resnumRows);
-            static thread_local Vector<T> rightcol(resnumRows,nullptr,2);
+            thread_local Vector<T> rightcol(resnumRows,nullptr,2);
             rightcol.resize(resnumRows);
 
             for ( j = 0 ; j < resnumCols ; ++j )
@@ -11460,7 +11454,7 @@ template <class S, class T> Vector<S> &rightmult(const Matrix<T> &left_op,      
         int resnumRows = left_op.numRows();
 
         //Vector<S> res(resnumRows);
-        static thread_local Vector<S> res(resnumRows,nullptr,2);
+        thread_local Vector<S> res(resnumRows,nullptr,2);
         res.resize(resnumRows);
 
         if ( resnumRows )

@@ -14,9 +14,6 @@
 #include <iostream>
 #include <string.h>
 #include <string>
-//#ifdef ENABLE_THREADS
-//#include <mutex>
-//#endif
 #include "svm_generic.hpp"
 
 std::ostream &SVM_Generic::printstream(std::ostream &output, int dep) const
@@ -1290,7 +1287,7 @@ errstream() << "BADBADBAD";
                 if ( ( getKernel().isAltDiff() == 0 ) || ( getKernel().isAltDiff() == 1 ) ||  ( getKernel().isAltDiff() == 2 ) || ( getKernel().isAltDiff() == 5 ) )
                 {
 //#ifdef ENABLE_THREADS
-//                    static std::mutex eyelock;
+//                    statiic std::mutex eyelock;
 //                    eyelock.lock();
 //#endif
 
@@ -2266,7 +2263,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
                 {
 //errstream() << "phantomx 1: " << getKernel().isAltDiff() << "\n";
 //#ifdef ENABLE_THREADS
-//                    static std::mutex eyelock;
+//                    statiic std::mutex eyelock;
 //                    eyelock.lock();
 //#endif
 

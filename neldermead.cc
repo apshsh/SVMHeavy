@@ -387,7 +387,7 @@ void nlopt_eval_constraint(double *result, double *grad,
    Richardson and Kuester (1973), as mentioned below. */
 
 /* heuristic "strategy" constants: */
-static const double alpha = 1, beta = 0.5, gamm = 2, delta = 0.5;
+const static double alpha = 1, beta = 0.5, gamm = 2, delta = 0.5;
 
 /* sort order in red-black tree: keys [f(x), x] are sorted by f(x) */
 static int simplex_compare(double *k1, double *k2)
@@ -854,8 +854,8 @@ void nlopt_qsort_r(void *base_, size_t nmemb, size_t size, void *thunk,
 //#include "neldermead.hpp"
 
 /* subplex strategy constants: */
-static const double psi = 0.25, omega = 0.1;
-static const int nsmin = 2, nsmax = 5;
+const static double psi = 0.25, omega = 0.1;
+const static int nsmin = 2, nsmax = 5;
 
 int sbplx_verbose = 0; /* for debugging */
 

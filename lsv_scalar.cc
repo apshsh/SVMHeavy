@@ -424,7 +424,7 @@ int LSV_Scalar::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***
             int j;
 
             Vector<double> Kia(N());
-            static thread_local Vector<double> itsone(1,1.0); //Vector<double> itsone(1);//isVarBias() ? 1 : 0); itsone("&",0) = 1.0;
+            thread_local Vector<double> itsone(1,1.0); //Vector<double> itsone(1);//isVarBias() ? 1 : 0); itsone("&",0) = 1.0;
 
             if ( i >= 0 )
             {

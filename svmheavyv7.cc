@@ -41,6 +41,16 @@ int main(int argc, char *argv[])
 {
     try
     {
+        // set up statics for potential multi-threaded operation
+
+        zerointarray();
+        oneintarray();
+        zerodoublearray();
+        onedoublearray();
+        ninfdoublearray();
+        pinfdoublearray();
+        cntintarray(10);
+
         // Initialisation of static, overall state, set-once type stuff
 
         // We do this for speed
@@ -160,7 +170,7 @@ int main(int argc, char *argv[])
         commstack->push(commlinestringbox);
 
         int svmInd = 1; // not 0 anymore - want to reserve that index for other stuff! 0;
-        static thread_local SVMThreadContext *svmContext;
+        thread_local SVMThreadContext *svmContext;
         MEMNEW(svmContext,SVMThreadContext(svmInd));
         errstream() << "{";
 

@@ -1125,16 +1125,16 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
     // IMPORTANT: if this is already a sample then we actually DO NOT want to re-sample as this might
     // subtly change it, and our BO method (maybe) relies on the assumption that it does not get changed
 
-    static thread_local Vector<int>    intype("&",2);
-    static thread_local Vector<double> insx("&",2);
-    static thread_local Vector<int>    indval("&",2);
+    thread_local Vector<int>    intype("&",2);
+    thread_local Vector<double> insx("&",2);
+    thread_local Vector<int>    indval("&",2);
 
-    static thread_local GPR_Generic *prior = nullptr;
+    thread_local GPR_Generic *prior = nullptr;
 
-    static thread_local int Npresamp = 0;
-    static thread_local int Ntotsamp = 0;
-    static thread_local int Nnontriv = 0;
-    static thread_local int Nhard    = 0;
+    thread_local int Npresamp = 0;
+    thread_local int Ntotsamp = 0;
+    thread_local int Nnontriv = 0;
+    thread_local int Nhard    = 0;
 
     if ( ( nv == 0 ) || ( nv == 3 ) || ( nv == 4 ) || ( nv == 5 ) )
     {
@@ -1633,15 +1633,15 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
         if ( yType <= 5 )
         {
-            // Kept thread-local static for speed (no new/free, just resize as needed)
+            // Kept thread-local statiic for speed (no new/free, just resize as needed)
 
-            static thread_local Matrix<double> vv; // We use these to avoid constant delete/alloc
-            static thread_local Matrix<double> L;
-            static thread_local Vector<double> m("&",2);
-            static thread_local Vector<int>    p("&",2);
-            static thread_local int            s;
-            static thread_local Vector<double> rr("&",2);
-            static thread_local Vector<double> yr("&",2);
+            thread_local Matrix<double> vv; // We use these to avoid constant delete/alloc
+            thread_local Matrix<double> L;
+            thread_local Vector<double> m("&",2);
+            thread_local Vector<int>    p("&",2);
+            thread_local int            s;
+            thread_local Vector<double> rr("&",2);
+            thread_local Vector<double> yr("&",2);
 
             vv.resize(Ntotsamp,Ntotsamp);
             L.resize(Ntotsamp,Ntotsamp);
@@ -1819,8 +1819,8 @@ errstream() << "&TS&";
 
             if ( Nnontriv )
             {
-                static thread_local Vector<double> gx("&",2);
-                static thread_local Vector<double> gz("&",2);
+                thread_local Vector<double> gx("&",2);
+                thread_local Vector<double> gz("&",2);
 
                 gx.resize(Npresamp);
                 gz.resize(Npresamp);
@@ -1828,8 +1828,8 @@ errstream() << "&TS&";
                 gx = 0.0;
                 gz = 0.0;
 
-                static thread_local Vector<double> dgx("&",2);
-                static thread_local Vector<double> dgz("&",2);
+                thread_local Vector<double> dgx("&",2);
+                thread_local Vector<double> dgz("&",2);
 
                 dgx.resize(Npresamp);
                 dgz.resize(Npresamp);
@@ -1949,8 +1949,8 @@ errstream() << "&TS&";
                     double yv,xr,zr;
                     double wx,wz;
 
-                    static thread_local Vector<double> hx("&",2);
-                    static thread_local Vector<double> hz("&",2);
+                    thread_local Vector<double> hx("&",2);
+                    thread_local Vector<double> hz("&",2);
 
                     hx.resize(Npresamp);
                     hz.resize(Npresamp);
@@ -1958,8 +1958,8 @@ errstream() << "&TS&";
                     hx = 0.0;
                     hz = 0.0;
 
-                    static thread_local Vector<double> dhx("&",2);
-                    static thread_local Vector<double> dhz("&",2);
+                    thread_local Vector<double> dhx("&",2);
+                    thread_local Vector<double> dhz("&",2);
 
                     dhx.resize(Npresamp);
                     dhz.resize(Npresamp);
@@ -2100,26 +2100,26 @@ errstream() << "&TS&";
 
                     // Storage previous hx,hz values
 
-                    static thread_local Vector<double> hxprev("&",2);
-                    static thread_local Vector<double> hzprev("&",2);
+                    thread_local Vector<double> hxprev("&",2);
+                    thread_local Vector<double> hzprev("&",2);
 
                     hxprev.resize(Npresamp);
                     hzprev.resize(Npresamp);
 
-                    static thread_local Vector<double> hxstep("&",2);
-                    static thread_local Vector<double> hzstep("&",2);
+                    thread_local Vector<double> hxstep("&",2);
+                    thread_local Vector<double> hzstep("&",2);
 
                     hxstep.resize(Npresamp);
                     hzstep.resize(Npresamp);
 
-                    static thread_local Vector<double> dhxprev("&",2);
-                    static thread_local Vector<double> dhzprev("&",2);
+                    thread_local Vector<double> dhxprev("&",2);
+                    thread_local Vector<double> dhzprev("&",2);
 
                     dhxprev.resize(Npresamp);
                     dhzprev.resize(Npresamp);
 
-                    static thread_local Vector<double> dhxstep("&",2);
-                    static thread_local Vector<double> dhzstep("&",2);
+                    thread_local Vector<double> dhxstep("&",2);
+                    thread_local Vector<double> dhzstep("&",2);
 
                     dhxstep.resize(Npresamp);
                     dhzstep.resize(Npresamp);
@@ -2354,7 +2354,7 @@ errstream() << "&TS&";
 
                 // Merge prior with *this
 
-                static thread_local Vector<gentype> muwval("&",2);
+                thread_local Vector<gentype> muwval("&",2);
 
                 muwval.resize(Npresamp+Ntotsamp);
 
@@ -2480,7 +2480,7 @@ errstream() << "&TS&";
         {
             // Pre-record alpha values
 
-            static thread_local Vector<gentype> alphaxform("&",2);
+            thread_local Vector<gentype> alphaxform("&",2);
 
             alphaxform.resize(Npresamp+Ntotsamp);
 
@@ -2839,7 +2839,7 @@ int main()
 }
 */
 
-        static const double xrandvals[10000] = {
+        const static double xrandvals[10000] = {
 0.84018771715471,
 0.394382926819093,
 0.783099223758606,
@@ -12841,8 +12841,8 @@ int main()
 0.373208572796177,
 0.888765524555354
         };
-        static const int numrands = 10000;
-        static thread_local int randpos = 0; // Thread-local to let asyTS-BO work!
+        const static int numrands = 10000;
+        thread_local int randpos = 0; // Thread-local to let asyTS-BO work!
 
         for ( i = 0 ; i < totsamp ; ++i )
         {

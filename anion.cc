@@ -78,10 +78,10 @@ int epsilon(int order, int q, int r, int s)
     int res = 0;
 
     // Machine generated from general case using gencomm.cc (just comment out the else if line below)
-    const static thread_local int commutateHR[3][3][3]  = { { { 0, 0, 0 }, { 0, 0, +1 }, { 0, -1, 0 } },
+    const thread_local int commutateHR[3][3][3]  = { { { 0, 0, 0 }, { 0, 0, +1 }, { 0, -1, 0 } },
                                              { { 0, 0, -1 }, { 0, 0, 0 }, { +1, 0, 0 } },
                                              { { 0, +1, 0 }, { -1, 0, 0 }, { 0, 0, 0 } } };
-    const static thread_local int commutateOR[7][7][7]  = { { { 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, +1, 0, 0, 0, 0 }, { 0, -1, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, +1, 0, 0 }, { 0, 0, 0, -1, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, -1 }, { 0, 0, 0, 0, 0, +1, 0 } },
+    const thread_local int commutateOR[7][7][7]  = { { { 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, +1, 0, 0, 0, 0 }, { 0, -1, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, +1, 0, 0 }, { 0, 0, 0, -1, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, -1 }, { 0, 0, 0, 0, 0, +1, 0 } },
                                              { { 0, 0, -1, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0 }, { +1, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, +1, 0 }, { 0, 0, 0, 0, 0, 0, +1 }, { 0, 0, 0, -1, 0, 0, 0 }, { 0, 0, 0, 0, -1, 0, 0 } },
                                              { { 0, +1, 0, 0, 0, 0, 0 }, { -1, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, +1 }, { 0, 0, 0, 0, 0, -1, 0 }, { 0, 0, 0, 0, +1, 0, 0 }, { 0, 0, 0, -1, 0, 0, 0 } },
                                              { { 0, 0, 0, 0, -1, 0, 0 }, { 0, 0, 0, 0, 0, -1, 0 }, { 0, 0, 0, 0, 0, 0, -1 }, { 0, 0, 0, 0, 0, 0, 0 }, { +1, 0, 0, 0, 0, 0, 0 }, { 0, +1, 0, 0, 0, 0, 0 }, { 0, 0, +1, 0, 0, 0, 0 } },
@@ -99,10 +99,7 @@ int epsilon(int order, int q, int r, int s)
 
 	res = commutateHR[q][r][s];
 
-	if ( isAnionEyesLeft() )
-	{
-            res *= -1;
-	}
+	if ( isAnionEyesLeft() ) { res *= -1; }
     }
 
     else if ( order == 3 )
@@ -113,10 +110,7 @@ int epsilon(int order, int q, int r, int s)
 
 	res = commutateOR[q][r][s];
 
-	if ( isAnionEyesLeft() )
-	{
-            res *= -1;
-	}
+	if ( isAnionEyesLeft() ) { res *= -1; }
     }
 
     else if ( order > 3 )
@@ -130,15 +124,8 @@ int epsilon(int order, int q, int r, int s)
 
 	tmpa = COMMUTATOR(tmpb,tmpc);
 
-	if ( tmpa(q+1) > 0.5 )
-	{
-	    res = +1;
-	}
-
-	else if ( tmpa(q+1) < -0.5 )
-	{
-	    res = -1;
-	}
+	if      ( tmpa(q+1) >  0.5 ) { res = +1; }
+	else if ( tmpa(q+1) < -0.5 ) { res = -1; }
     }
 
     return res;
@@ -149,7 +136,7 @@ int epsilon(int order, int q, int r, int s, int t)
     int res = 0;
 
     // Machine generated from general case using genassoc.cc (just comment out the else if line below)
-    const static thread_local int associateOR[7][7][7][7]  = { { { { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, } },
+    const thread_local int associateOR[7][7][7][7]  = { { { { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, } },
                                                   { { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, -1, }, { 0, 0, 0, 0, 0, 1, 0, }, { 0, 0, 0, 0, -1, 0, 0, }, { 0, 0, 0, 1, 0, 0, 0, } },
                                                   { { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 1, 0, }, { 0, 0, 0, 0, 0, 0, 1, }, { 0, 0, 0, -1, 0, 0, 0, }, { 0, 0, 0, 0, -1, 0, 0, } },
                                                   { { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 1, }, { 0, 0, 0, 0, 0, -1, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 0, 0, 0, 0, 0, }, { 0, 0, 1, 0, 0, 0, 0, }, { 0, -1, 0, 0, 0, 0, 0, } },
@@ -222,15 +209,8 @@ int epsilon(int order, int q, int r, int s, int t)
 
 	tmpd = ASSOCIATOR(tmpa,tmpb,tmpc);
 
-	if ( tmpd(t+1) > 0.5 )
-	{
-	    res = +1;
-	}
-
-	else if ( tmpd(t+1) < -0.5 )
-	{
-	    res = -1;
-	}
+	if      ( tmpd(t+1) >  0.5 ) { res = +1; }
+	else if ( tmpd(t+1) < -0.5 ) { res = -1; }
     }
 
     return res;
@@ -240,35 +220,18 @@ int epsilon(int order, int q, int r, int s, int t)
 static int getsetanioneyes(int val);
 static int getsetanioneyes(int val)
 {
-    static thread_local int setval = 1; // 0 is eyes left, 1 is eyes right
+    thread_local int setval = 1; // 0 is eyes left, 1 is eyes right
 
-    if ( ( val == 0 ) || ( val == 1 ) )
-    {
-        setval = val;
-    }
+    if ( ( val == 0 ) || ( val == 1 ) ) { setval = val; }
 
     return setval;
 }
 
-int isAnionEyesLeft()
-{
-    return !getsetanioneyes(-1);
-}
+int isAnionEyesLeft () { return !getsetanioneyes(-1); }
+int isAnionEyesRight() { return getsetanioneyes (-1); }
 
-int isAnionEyesRight()
-{
-    return getsetanioneyes(-1);
-}
-
-void setAnionEyesLeft()
-{
-    getsetanioneyes(0);
-}
-
-void setAnionEyesRight()
-{
-    getsetanioneyes(1);
-}
+void setAnionEyesLeft () { getsetanioneyes(0); }
+void setAnionEyesRight() { getsetanioneyes(1); }
 
 d_anion &d_anion::operator=(double source)
 {
@@ -400,7 +363,7 @@ int d_anion::order(void) const
         return 0;
     }
 
-    resultleft = value_inf->order();
+    resultleft  = value_inf->order();
     resultright = value_0->order();
 
     if ( resultleft > resultright )
@@ -427,10 +390,7 @@ int d_anion::isindet(void) const
 
 double d_anion::realpart(void) const
 {
-    if ( !is_im )
-    {
-        return value_real;
-    }
+    if ( !is_im ) { return value_real; }
 
     return value_inf->realpart();
 }
@@ -508,23 +468,9 @@ double d_anion::operator()(int i) const
 {
     int maxi = 1 << order();
 
-    if ( i >= maxi )
-    {
-        return 0.0;
-    }
-
-    if ( is_im )
-    {
-	if ( ( i/(maxi/2) ) == 0 )
-	{
-            return (*value_inf)(i%(maxi/2));
-	}
-
-	else
-	{
-            return (*value_0)(i%(maxi/2));
-	}
-    }
+    if ( i >= maxi ) { return 0.0; }
+    if ( is_im     ) { if ( ( i/(maxi/2) ) == 0 ) { return (*value_inf)(i%(maxi/2)); }
+                       else                       { return (*value_0)(i%(maxi/2));   } }
 
     return value_real;
 }
@@ -535,10 +481,7 @@ double &d_anion::operator()(const char *dummy, int i)
 
     return getref(i);
 
-    if ( dummy[0] == dummy[1] )
-    {
-        i = 2;
-    }
+    if ( dummy[0] == dummy[1] ) { i = 2; }
 }
 
 double &d_anion::getref(int i)
@@ -547,18 +490,8 @@ double &d_anion::getref(int i)
 
     NiceAssert( i < maxi );
 
-    if ( is_im )
-    {
-	if ( ( i/(maxi/2) ) == 0 )
-	{
-            return (*value_inf).getref(i%(maxi/2));
-	}
-
-	else
-	{
-            return (*value_0).getref(i%(maxi/2));
-	}
-    }
+    if ( is_im ) { if ( ( i/(maxi/2) ) == 0 ) { return (*value_inf).getref(i%(maxi/2)); }
+                   else                       { return (*value_0).getref(i%(maxi/2));   } }
 
     return value_real;
 }
@@ -567,10 +500,7 @@ double d_anion::operator()(int i, double x)
 {
     int n = order();
 
-    while ( ( 1 << n ) <= i )
-    {
-        ++n;
-    }
+    while ( ( 1 << n ) <= i ) { ++n; }
 
     setorderge(n);
 
@@ -578,19 +508,8 @@ double d_anion::operator()(int i, double x)
 
     if ( is_im )
     {
-	if ( ( i/(maxi/2) ) == 0 )
-	{
-	    leftpart().setorderge(n-1);
-
-            return leftpart()(i%(maxi/2),x);
-	}
-
-	else
-	{
-	    rightpart().setorderge(n-1);
-
-            return rightpart()(i%(maxi/2),x);
-	}
+	if ( ( i/(maxi/2) ) == 0 ) { leftpart(). setorderge(n-1); return leftpart ()(i%(maxi/2),x); }
+	else                       { rightpart().setorderge(n-1); return rightpart()(i%(maxi/2),x); }
     }
 
     return ( value_real = x );
@@ -764,7 +683,6 @@ d_anion &leftmult(d_anion &left_op, const d_anion &right_op)
 	double temp = left_op.value_real;
 
 	left_op = right_op;
-
         left_op *= temp;
     }
 
@@ -776,26 +694,9 @@ d_anion &leftmult(d_anion &left_op, const d_anion &right_op)
     return left_op;
 }
 
-d_anion &rightmult(double left_op, d_anion &right_op)
-{
-    right_op = left_op*right_op;
-
-    return right_op;
-}
-
-d_anion &rightmult(const std::complex<double> &left_op, d_anion &right_op)
-{
-    right_op = left_op*right_op;
-
-    return right_op;
-}
-
-d_anion &rightmult(const d_anion &left_op, d_anion &right_op)
-{
-    right_op = left_op*right_op;
-
-    return right_op;
-}
+d_anion &rightmult(double                      left_op, d_anion &right_op) { right_op = left_op*right_op; return right_op; }
+d_anion &rightmult(const std::complex<double> &left_op, d_anion &right_op) { right_op = left_op*right_op; return right_op; }
+d_anion &rightmult(const d_anion              &left_op, d_anion &right_op) { right_op = left_op*right_op; return right_op; }
 
 
 // == equivalence
@@ -831,65 +732,20 @@ int operator==(const d_anion &left_op, const d_anion &right_op)
 
 // complex and fpu operations
 
-#define ANION_ZTOL              10*FLT_MIN
+#define ANION_ZTOL 10*FLT_MIN
 
 
-double abs1(const d_anion &a)
-{
-    return abs2(a);
-//    return norm1(a);
-}
-
-double abs2(const d_anion &a)
-{
-    return sqrt(norm2(a));
-}
-
-double absp(const d_anion &a, double)
-{
-    return abs2(a);
-//    return pow(normp(a,x),1/x);
-}
-
-double absinf(const d_anion &a)
-{
-    return abs2(a);
-//    if ( a.iscomplex() )
-//    {
-//	d_anion temp(a);
-//	double leftinf  = absinf(temp.leftpart());
-//        double rightinf = absinf(temp.rightpart());
-//
-//	return ( leftinf > rightinf ) ? leftinf : rightinf;
-//    }
-//
-//    return abs2(a.realpart());
-}
-
-double abs0(const d_anion &a)
-{
-    return abs2(a);
-//    if ( a.iscomplex() )
-//    {
-//	d_anion temp(a);
-//	double left0  = abs0(temp.leftpart());
-//        double right0 = abs0(temp.rightpart());
-//
-//	return ( left0 < right0 ) ? left0 : right0;
-//    }
-//
-//    return abs2(a.realpart());
-}
+double abs1  (const d_anion &a)         { return abs2(a);        }
+double abs2  (const d_anion &a)         { return sqrt(norm2(a)); }
+double absp  (const d_anion &a, double) { return abs2(a);        }
+double absinf(const d_anion &a)         { return abs2(a);        }
+double abs0  (const d_anion &a)         { return abs2(a);        }
 
 double arg(const d_anion &a)
 {
     double result = abs2(imagx(log(a)));
-    d_anion tempx(a);
 
-    if ( tempx(1) < 0 )
-    {
-        result *= -1;
-    }
+    if ( a(1) < 0 ) { result *= -1; }
 
     return result;
 }
@@ -900,57 +756,18 @@ d_anion argd(const d_anion &a, const d_anion &q_default)
 
     if ( a_arg == 0.0 ) // FIXME: suspect need a zero region, not a point
     {
-	if ( q_default == 0.0 )
-	{
-	    return 1_ianion;
-	}
-
-	else
-	{
-	    return q_default;
-	}
+	if ( q_default == 0.0 ) { return 1_ianion;  }
+	else                    { return q_default; }
     }
 
     return imagx(log(a))/a_arg;
 }
 
-d_anion argd(const d_anion &a)
-{
-    return argd(a,1_ianion);
-}
-
-d_anion Argd(const d_anion &a)
-{
-    return argd(a,1_iconjanion);
-}
-
-d_anion argx(const d_anion &a, const d_anion &q_default)
-{
-    return imagx(log(a,q_default));
-}
-
-d_anion argx(const d_anion &a)
-{
-    return argx(a,1_ianion);
-}
-
-d_anion Argx(const d_anion &a)
-{
-    return argx(a,1_iconjanion);
-}
-
-double norm1(const d_anion &a)
-{
-    return sqrt(norm2(a));
-//    if ( a.iscomplex() )
-//    {
-//        d_anion temp(a);
-//
-//	return norm1(temp.leftpart())+norm1(temp.rightpart());
-//    }
-//
-//    return abs2(a.realpart());
-}
+d_anion argd(const d_anion &a)                           { return argd(a,1_ianion);        }
+d_anion Argd(const d_anion &a)                           { return argd(a,1_iconjanion);    }
+d_anion argx(const d_anion &a, const d_anion &q_default) { return imagx(log(a,q_default)); }
+d_anion argx(const d_anion &a)                           { return argx(a,1_ianion);        }
+d_anion Argx(const d_anion &a)                           { return argx(a,1_iconjanion);    }
 
 double norm2(const d_anion &a)
 {
@@ -964,29 +781,15 @@ double norm2(const d_anion &a)
     return (a.realpart())*(a.realpart());
 }
 
-double normp(const d_anion &a, double x)
-{
-    return pow(sqrt(norm2(a)),x);
-//    if ( a.iscomplex() )
-//    {
-//        d_anion temp(a);
-//
-//	return normp(temp.leftpart(),x)+normp(temp.rightpart(),x);
-//    }
-//
-//    return pow(abs2(a.realpart()),x);
-}
+double norm1(const d_anion &a)           { return sqrt(norm2(a));        }
+double normp(const d_anion &a, double x) { return pow(sqrt(norm2(a)),x); }
 
 d_anion angle(const d_anion &a)
 {
     double absa = abs2(a);
 
-    if ( absa == 0.0 ) // FIXME: suspect need a zero region, not a point
-    {
-        d_anion resultzero(0.0);
-
-        return resultzero;
-    }
+    // FIXME: suspect need a zero region, not a point
+    if ( absa == 0.0 ) { return 0.0_anion; }
 
     return a/absa;
 }
@@ -995,28 +798,15 @@ d_anion vangle(const d_anion &a, const d_anion &defsign)
 {
     double absa = abs2(a);
 
-    if ( absa == 0.0 ) // FIXME: suspect need a zero region, not a point
-    {
-        return defsign;
-    }
+ // FIXME: suspect need a zero region, not a point
+    if ( absa == 0.0 ) { return defsign; }
 
     return a/absa;
 }
 
-d_anion polar(double x, double y, const d_anion &a)
-{
-    return x*exp(y*a);
-}
-
-d_anion polard(double x, double y, const d_anion &a)
-{
-    return x*exp(y*a);
-}
-
-d_anion polarx(double x, const d_anion &a)
-{
-    return x*exp(a);
-}
+d_anion polar (double x, double y, const d_anion &a) { return x*exp(y*a); }
+d_anion polard(double x, double y, const d_anion &a) { return x*exp(y*a); }
+d_anion polarx(double x,           const d_anion &a) { return x*exp(a);   }
 
 d_anion sgn(const d_anion &a)
 {
@@ -1030,20 +820,9 @@ d_anion sgn(const d_anion &a)
 
     else
     {
-        if ( result.realpart() == 0.0 )
-        {
-            result = 0.0;
-        }
-
-        else if ( result.realpart() < 0.0 )
-        {
-            result = -1.0;
-        }
-
-        else
-        {
-            result = 1.0;
-	}
+        if      ( result.realpart() == 0.0 ) { result = 0.0;  }
+        else if ( result.realpart() <  0.0 ) { result = -1.0; }
+        else                                 { result = 1.0;  }
     }
 
     return result;
@@ -1054,12 +833,12 @@ d_anion sgn(const d_anion &a)
 
 double real(const d_anion &a)
 {
-    if ( a.iscomplex() )
-    {
-        d_anion temp(a);
-
-	return real(temp.leftpart());
-    }
+//    if ( a.iscomplex() )
+//    {
+//        d_anion temp(a);
+//
+//	return real(temp.leftpart());
+//    }
 
     return a.realpart();
 }
@@ -1067,12 +846,8 @@ double real(const d_anion &a)
 double imag(const d_anion &a)
 {
     double result = abs2(imagx(a));
-    d_anion tempx(a);
 
-    if ( tempx(1) < 0 )
-    {
-        result *= -1;
-    }
+    if ( a(1) < 0 ) { result *= -1; }
 
     return result;
 }
@@ -1083,71 +858,27 @@ d_anion imagd(const d_anion &a, const d_anion &q_default)
 
     if ( a_imag == 0.0 ) // FIXME: suspect need a zero region, not a point
     {
-	if ( q_default == 0.0 )
-	{
-	    return 1_ianion;
-	}
-
-	else
-	{
-	    return q_default;
-	}
+	if ( q_default == 0.0 ) { return 1_ianion;  }
+	else                    { return q_default; }
     }
 
     return imagx(a)/a_imag;
 }
 
-d_anion imagd(const d_anion &a)
-{
-    return imagd(a,1_ianion);
-}
-
-d_anion Imagd(const d_anion &a)
-{
-    return imagd(a,1_iconjanion);
-}
-
-d_anion imagx(const d_anion &a)
-{
-    d_anion result(a);
-
-    result(0,0.0);
-
-    return result;
-}
-
-d_anion conj(const d_anion &a)
-{
-    d_anion result(a);
-
-    return setconj(result);
-}
-
-d_anion inv(const d_anion &a)
-{
-    return conj(a)/norm2(a);
-}
-
-
+d_anion imagd(const d_anion &a) {                                   return imagd(a,1_ianion);     }
+d_anion Imagd(const d_anion &a) {                                   return imagd(a,1_iconjanion); }
+d_anion imagx(const d_anion &a) { d_anion result(a); result(0,0.0); return result;                }
+d_anion conj (const d_anion &a) { d_anion result(a);                return setconj(result);       }
+d_anion inv  (const d_anion &a) {                                   return conj(a)/norm2(a);      }
 
 
 d_anion pow(long a, const d_anion &b, const d_anion &q_default)
 {
     if ( a == 0 )
     {
-	if ( b == 0.0 ) // FIXME: obvious numerical problems here
-	{
-            d_anion result(1.0);
-
-	    return result; // in line with the c99 standard, 0^0 = 1
-	}
-
-	else
-	{
-            d_anion result(0.0);
-
-	    return result; // 0^b = 0 for all nonzero b
-	}
+        // FIXME: obvious numerical problems here
+	if ( b == 0.0 ) { return 1.0_anion; } // in line with the c99 standard, 0^0 = 1
+	else            { return 0.0_anion; } // 0^b = 0 for all nonzero b
     }
 
     d_anion aa((double) a);
@@ -1157,21 +888,12 @@ d_anion pow(long a, const d_anion &b, const d_anion &q_default)
 
 d_anion pow(double a, const d_anion &b, const d_anion &q_default)
 {
-    if ( a == 0.0 ) // FIXME: obvious numerical problems here
+    // FIXME: obvious numerical problems here
+    if ( a == 0.0 )
     {
-	if ( b == 0.0 ) // FIXME: obvious numerical problems here
-	{
-            d_anion result(1.0);
-
-	    return result; // in line with the c99 standard, 0^0 = 1
-	}
-
-	else
-	{
-            d_anion result(0.0);
-
-	    return result; // 0^b = 0 for all nonzero b
-	}
+        // FIXME: obvious numerical problems here
+	if ( b == 0.0 ) { return 1.0_anion; } // in line with the c99 standard, 0^0 = 1
+	else            { return 0.0_anion; } // 0^b = 0 for all nonzero b
     }
 
     d_anion aa(a);
@@ -1179,454 +901,144 @@ d_anion pow(double a, const d_anion &b, const d_anion &q_default)
     return exp(log(aa,q_default)*b);
 }
 
-d_anion pow(const std::complex<double> &a, const d_anion &b, const d_anion &q_default)
-{
-    d_anion tempa(a);
-
-    return pow(tempa,b,q_default);
-}
-
-d_anion powl(const std::complex<double> &a, const d_anion &b, const d_anion &q_default)
-{
-    d_anion tempa(a);
-
-    return powl(tempa,b,q_default);
-}
-
-d_anion powr(const std::complex<double> &a, const d_anion &b, const d_anion &q_default)
-{
-    d_anion tempa(a);
-
-    return powr(tempa,b,q_default);
-}
+d_anion pow (const std::complex<double> &a, const d_anion &b, const d_anion &q_default) { d_anion tempa(a); return pow (tempa,b,q_default); }
+d_anion powl(const std::complex<double> &a, const d_anion &b, const d_anion &q_default) { d_anion tempa(a); return powl(tempa,b,q_default); }
+d_anion powr(const std::complex<double> &a, const d_anion &b, const d_anion &q_default) { d_anion tempa(a); return powr(tempa,b,q_default); }
 
 d_anion pow(const d_anion &a, long b, const d_anion &q_default)
 {
-    if ( a == 0.0 ) // FIXME: obvious numerical problems here
+    // FIXME: obvious numerical problems here
+    if ( a == 0.0 )
     {
-	if ( b == 0 )
-	{
-            d_anion result(1.0);
-
-	    return result; // in line with the c99 standard, 0^0 = 1
-	}
-
-	else
-	{
-            d_anion result(0.0);
-
-	    return result; // 0^b = 0 for all nonzero b
-	}
+	if ( b == 0 ) { return 1.0_anion; } // in line with the c99 standard, 0^0 = 1
+	else          { return 0.0_anion; } // 0^b = 0 for all nonzero b
     }
 
     d_anion result(1.0);
     long i;
 
-    if ( b > 0 )
-    {
-        for ( i = 1 ; i <= b ; ++i )
-        {
-            result *= a;
-        }
-    }
-
-    else if ( b < 0 )
-    {
-        result = pow(inv(a),-b,q_default);
-    }
+    if      ( b > 0 ) { for ( i = 1 ; i <= b ; ++i ) { result *= a; } }
+    else if ( b < 0 ) { result = pow(inv(a),-b,q_default);            }
 
     return result;
 }
 
 d_anion pow(const d_anion &a, double b, const d_anion &q_default)
 {
-    if ( a == 0.0 ) // FIXME: obvious numerical problems here
+    // FIXME: obvious numerical problems here
+    if ( a == 0.0 )
     {
-	if ( b == 0.0 ) // FIXME: obvious numerical problems here
-	{
-            d_anion result(1.0);
-
-	    return result; // in line with the c99 standard, 0^0 = 1
-	}
-
-	else
-	{
-            d_anion result(0.0);
-
-	    return result; // 0^b = 0 for all nonzero b
-	}
+        // FIXME: obvious numerical problems here
+	if ( b == 0.0 ) { return 1.0_anion; } // in line with the c99 standard, 0^0 = 1
+	else            { return 0.0_anion; } // 0^b = 0 for all nonzero b
     }
 
     return exp(log(a,q_default)*b);
 }
 
-d_anion pow(const d_anion &a, const std::complex<double> &b, const d_anion &q_default)
-{
-    d_anion tempb(b);
-
-    return pow(a,tempb,q_default);
-}
-
-d_anion powl(const d_anion &a, const std::complex<double> &b, const d_anion &q_default)
-{
-    d_anion tempb(b);
-
-    return powl(a,tempb,q_default);
-}
-
-d_anion powr(const d_anion &a, const std::complex<double> &b, const d_anion &q_default)
-{
-    d_anion tempb(b);
-
-    return powr(a,tempb,q_default);
-}
-
-d_anion pow(const d_anion &a, const d_anion &b, const d_anion &q_default)
-{
-    return powr(a,b,q_default);
-//    return (powl(a,b,q_default)+powr(a,b,q_default))/2.0;
-}
+d_anion pow (const d_anion &a, const std::complex<double> &b, const d_anion &q_default) { d_anion tempb(b); return pow (a,tempb,q_default); }
+d_anion powl(const d_anion &a, const std::complex<double> &b, const d_anion &q_default) { d_anion tempb(b); return powl(a,tempb,q_default); }
+d_anion powr(const d_anion &a, const std::complex<double> &b, const d_anion &q_default) { d_anion tempb(b); return powr(a,tempb,q_default); }
+d_anion pow (const d_anion &a, const d_anion              &b, const d_anion &q_default) { return powr(a,b,q_default); } // return (powl(a,b,q_default)+powr(a,b,q_default))/2.0;
 
 d_anion powl(const d_anion &a, const d_anion &b, const d_anion &q_default)
 {
-    if ( a == 0.0 ) // FIXME: obvious numerical problems here
+    // FIXME: obvious numerical problems here
+    if ( a == 0.0 )
     {
-	if ( b == 0.0 ) // FIXME: obvious numerical problems here
-	{
-            d_anion result(1.0);
-
-	    return result; // in line with the c99 standard, 0^0 = 1
-	}
-
-	else
-	{
-            d_anion result(0.0);
-
-	    return result; // 0^b = 0 for all nonzero b
-	}
+        // FIXME: obvious numerical problems here
+	if ( b == 0.0 ) { return 1.0_anion; } // in line with the c99 standard, 0^0 = 1
+	else            { return 0.0_anion; } // 0^b = 0 for all nonzero b
     }
 
     d_anion result(0.0);
 
-    if ( ( !(a.iscomplex()) ) && ( !(b.iscomplex()) ) )
-    {
-        result = pow(a.realpart(),b.realpart());
-    }
-
-    else if ( !(a.iscomplex()) )
-    {
-	result = pow(a.realpart(),b);
-    }
-
-    else if ( !(b.iscomplex()) )
-    {
-        result = pow(a,b.realpart());
-    }
-
-    else
-    {
-	result = exp(b*log(a,q_default));
-    }
+    if      ( ( !(a.iscomplex()) ) && ( !(b.iscomplex()) ) ) { result = pow(a.realpart(),b.realpart()); }
+    else if (   !(a.iscomplex())                           ) { result = pow(a.realpart(),b);            }
+    else if (                           !(b.iscomplex())   ) { result = pow(a,b.realpart());            }
+    else                                                     { result = exp(b*log(a,q_default));        }
 
     return result;
 }
 
 d_anion powr(const d_anion &a, const d_anion &b, const d_anion &q_default)
 {
-    if ( a == 0.0 ) // FIXME: obvious numerical problems here
+    // FIXME: obvious numerical problems here
+    if ( a == 0.0 )
     {
-	if ( b == 0.0 ) // FIXME: obvious numerical problems here
-	{
-            d_anion result(1.0);
-
-	    return result; // in line with the c99 standard, 0^0 = 1
-	}
-
-	else
-	{
-            d_anion result(0.0);
-
-	    return result; // 0^b = 0 for all nonzero b
-	}
+        // FIXME: obvious numerical problems here
+	if ( b == 0.0 ) { return 1.0_anion; } // in line with the c99 standard, 0^0 = 1
+	else            { return 0.0_anion; } // 0^b = 0 for all nonzero b
     }
 
     d_anion result(0.0);
 
-    if ( ( !(a.iscomplex()) ) && ( !(b.iscomplex()) ) )
-    {
-        result = pow(a.realpart(),b.realpart());
-    }
-
-    else if ( !(a.iscomplex()) )
-    {
-        result = pow(a.realpart(),b);
-    }
-
-    else if ( !(b.iscomplex()) )
-    {
-        result = pow(a,b.realpart());
-    }
-
-    else
-    {
-	result = exp(log(a,q_default)*b);
-    }
+    if      ( ( !(a.iscomplex()) ) && ( !(b.iscomplex()) ) ) { result = pow(a.realpart(),b.realpart()); }
+    else if (   !(a.iscomplex())                           ) { result = pow(a.realpart(),b);            }
+    else if (                           !(b.iscomplex())   ) { result = pow(a,b.realpart());            }
+    else                                                     { result = exp(log(a,q_default)*b);        }
 
     return result;
 }
 
-d_anion sqrt(const d_anion &a, const d_anion &q_default)
-{
-    return pow(a,0.5,q_default);
-}
-
-d_anion cbrt(const d_anion &a, const d_anion &q_default)
-{
-    return pow(a,1.0/3.0,q_default);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-d_anion Pow(long a, const d_anion &b)
-{
-    return pow(a,b,1_iconjanion);
-}
-
-d_anion Pow(double a, const d_anion &b)
-{
-    return pow(a,b,1_iconjanion);
-}
-
-d_anion Pow(const std::complex<double> &a, const d_anion &b)
-{
-    return pow(a,b,1_iconjanion);
-}
-
-d_anion Powl(const std::complex<double> &a, const d_anion &b)
-{
-    return powl(a,b,1_iconjanion);
-}
-
-d_anion Powr(const std::complex<double> &a, const d_anion &b)
-{
-    return powr(a,b,1_iconjanion);
-}
-
-d_anion Pow(const d_anion &a, long b)
-{
-    return pow(a,b,1_iconjanion);
-}
-
-d_anion Pow(const d_anion &a, double b)
-{
-    return pow(a,b,1_iconjanion);
-}
-
-d_anion Pow(const d_anion &a, const std::complex<double> &b)
-{
-    return pow(a,b,1_iconjanion);
-}
-
-d_anion Powl(const d_anion &a, const std::complex<double> &b)
-{
-    return powl(a,b,1_iconjanion);
-}
-
-d_anion Powr(const d_anion &a, const std::complex<double> &b)
-{
-    return powr(a,b,1_iconjanion);
-}
-
-d_anion Pow(const d_anion &a, const d_anion &b)
-{
-    return pow(a,b,1_iconjanion);
-}
-
-d_anion Powl(const d_anion &a, const d_anion &b)
-{
-    return powl(a,b,1_iconjanion);
-}
-
-d_anion Powr(const d_anion &a, const d_anion &b)
-{
-    return powr(a,b,1_iconjanion);
-}
-
-d_anion Sqrt(const d_anion &a)
-{
-    return sqrt(a,1_iconjanion);
-}
-
-d_anion Cbrt(const d_anion &a)
-{
-    return cbrt(a,1_iconjanion);
-}
-
-
-
-
-
-
-d_anion pow(long a, const d_anion &b)
-{
-    return pow(a,b,1_ianion);
-}
-
-d_anion pow(double a, const d_anion &b)
-{
-    return pow(a,b,1_ianion);
-}
-
-d_anion pow(const std::complex<double> &a, const d_anion &b)
-{
-    return pow(a,b,1_ianion);
-}
-
-d_anion powl(const std::complex<double> &a, const d_anion &b)
-{
-    return powl(a,b,1_ianion);
-}
-
-d_anion powr(const std::complex<double> &a, const d_anion &b)
-{
-    return powr(a,b,1_ianion);
-}
-
-d_anion pow(const d_anion &a, long b)
-{
-    return pow(a,b,1_ianion);
-}
-
-d_anion pow(const d_anion &a, double b)
-{
-    return pow(a,b,1_ianion);
-}
-
-d_anion pow(const d_anion &a, const std::complex<double> &b)
-{
-    return pow(a,b,1_ianion);
-}
-
-d_anion powl(const d_anion &a, const std::complex<double> &b)
-{
-    return powl(a,b,1_ianion);
-}
-
-d_anion powr(const d_anion &a, const std::complex<double> &b)
-{
-    return powr(a,b,1_ianion);
-}
-
-d_anion pow(const d_anion &a, const d_anion &b)
-{
-    return pow(a,b,1_ianion);
-}
-
-d_anion powl(const d_anion &a, const d_anion &b)
-{
-    return powl(a,b,1_ianion);
-}
-
-d_anion powr(const d_anion &a, const d_anion &b)
-{
-    return powr(a,b,1_ianion);
-}
-
-d_anion sqrt(const d_anion &a)
-{
-    return sqrt(a,1_ianion);
-}
-
-d_anion cbrt(const d_anion &a)
-{
-    return cbrt(a,1_ianion);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+d_anion sqrt(const d_anion &a, const d_anion &q_default) { return pow(a,0.5,q_default); }
+d_anion cbrt(const d_anion &a, const d_anion &q_default) { return pow(a,1.0/3.0,q_default); }
+
+d_anion Sqrt(const d_anion &a) { return sqrt(a,1_iconjanion); }
+d_anion Cbrt(const d_anion &a) { return cbrt(a,1_iconjanion); }
+
+d_anion sqrt(const d_anion &a) { return sqrt(a,1_ianion); }
+d_anion cbrt(const d_anion &a) { return cbrt(a,1_ianion); }
+
+d_anion Pow (long                        a, const d_anion              &b) { return pow (a,b,1_iconjanion); }
+d_anion Pow (double                      a, const d_anion              &b) { return pow (a,b,1_iconjanion); }
+d_anion Pow (const std::complex<double> &a, const d_anion              &b) { return pow (a,b,1_iconjanion); }
+d_anion Powl(const std::complex<double> &a, const d_anion              &b) { return powl(a,b,1_iconjanion); }
+d_anion Powr(const std::complex<double> &a, const d_anion              &b) { return powr(a,b,1_iconjanion); }
+d_anion Pow (const d_anion              &a, long                        b) { return pow (a,b,1_iconjanion); }
+d_anion Pow (const d_anion              &a, double                      b) { return pow (a,b,1_iconjanion); }
+d_anion Pow (const d_anion              &a, const std::complex<double> &b) { return pow (a,b,1_iconjanion); }
+d_anion Powl(const d_anion              &a, const std::complex<double> &b) { return powl(a,b,1_iconjanion); }
+d_anion Powr(const d_anion              &a, const std::complex<double> &b) { return powr(a,b,1_iconjanion); }
+d_anion Pow (const d_anion              &a, const d_anion              &b) { return pow (a,b,1_iconjanion); }
+d_anion Powl(const d_anion              &a, const d_anion              &b) { return powl(a,b,1_iconjanion); }
+d_anion Powr(const d_anion              &a, const d_anion              &b) { return powr(a,b,1_iconjanion); }
+
+d_anion pow (long                        a, const d_anion              &b) { return pow (a,b,1_ianion); }
+d_anion pow (double                      a, const d_anion              &b) { return pow (a,b,1_ianion); }
+d_anion pow (const std::complex<double> &a, const d_anion              &b) { return pow (a,b,1_ianion); }
+d_anion powl(const std::complex<double> &a, const d_anion              &b) { return powl(a,b,1_ianion); }
+d_anion powr(const std::complex<double> &a, const d_anion              &b) { return powr(a,b,1_ianion); }
+d_anion pow (const d_anion              &a, long                        b) { return pow (a,b,1_ianion); }
+d_anion pow (const d_anion              &a, double                      b) { return pow (a,b,1_ianion); }
+d_anion pow (const d_anion              &a, const std::complex<double> &b) { return pow (a,b,1_ianion); }
+d_anion powl(const d_anion              &a, const std::complex<double> &b) { return powl(a,b,1_ianion); }
+d_anion powr(const d_anion              &a, const std::complex<double> &b) { return powr(a,b,1_ianion); }
+d_anion pow (const d_anion              &a, const d_anion              &b) { return pow (a,b,1_ianion); }
+d_anion powl(const d_anion              &a, const d_anion              &b) { return powl(a,b,1_ianion); }
+d_anion powr(const d_anion              &a, const d_anion              &b) { return powr(a,b,1_ianion); }
 
 d_anion exp(const d_anion &a)
 {
-    if ( a == 0.0 ) // FIXME: obvious numerical problems here
-    {
-	d_anion result(1.0);
+    // FIXME: obvious numerical problems here
+    if ( a == 0.0 ) { return 1.0_anion; } // exp(0) = 1
 
-	return result; // exp(0) = 1
-    }
-
-    double R = real(a);
+    double  R = real(a);
     d_anion M = imagx(a);
     d_anion q = angle(M);
-    double I = abs2(M);
+    double  I = abs2(M);
 
     return (exp(R)*cos(I)) + (q*exp(R)*sin(I));
 }
 
-d_anion tenup(const d_anion &a)
-{
-    long bv = 10;
-
-    return pow(bv,a);
-}
+d_anion tenup(const d_anion &a) { long bv = 10; return pow(bv,a); }
 
 d_anion log(const d_anion &a, const d_anion &q_default)
 {
-    double R = real(a);
+    double  R = real(a);
     d_anion M = imagx(a);
     d_anion q = angle(M);
-    double I = abs2(M);
+    double  I = abs2(M);
 
     if ( ( abs2(q) < 0.1 ) && ( R < 0.0 ) ) // equivalent to q == 0, R < 0, but numerically better
     {
@@ -1636,300 +1048,66 @@ d_anion log(const d_anion &a, const d_anion &q_default)
 
 	qq_def = angle(q_default);
 
-	if ( abs2(qq_def) < 0.1 )
-	{
-	    d_anion temp(log(sqrt((R*R)+(I*I))),atan2(I,R));
-
-	    return temp;
-	}
-
-	else
-	{
-	    return log(sqrt((R*R)+(I*I))) + (qq_def*atan2(I,R));
-	}
+	if ( abs2(qq_def) < 0.1 ) { d_anion temp(log(sqrt((R*R)+(I*I))),atan2(I,R)); return temp; }
+	else                      { return log(sqrt((R*R)+(I*I))) + (qq_def*atan2(I,R));          }
     }
 
     return log(sqrt((R*R)+(I*I))) + (q*atan2(I,R));
 }
 
-d_anion log10(const d_anion &a, const d_anion &q_default)
-{
-    return log(a,q_default)/NUMBASE_LN10;
-}
-
-d_anion logb(long a, const d_anion &b, const d_anion &q_default)
-{
-    if ( a > 0 )
-    {
-        return log((double) a)*inv(log(b,q_default));
-    }
-
-    d_anion aa((double) a);
-
-    return log(aa,q_default)*inv(log(b,q_default));
-}
-
-d_anion logb(double a, const d_anion &b, const d_anion &q_default)
-{
-    if ( a > 0.0 )
-    {
-	return log(a)*inv(log(b,q_default));
-    }
-
-    d_anion aa(a);
-
-    return log(aa,q_default)*inv(log(b,q_default));
-}
-
-d_anion logb(const std::complex<double> &a, const d_anion &b, const d_anion &q_default)
-{
-    d_anion tempa(a);
-
-    return logb(tempa,b,q_default);
-}
-
-d_anion logbl(const std::complex<double> &a, const d_anion &b, const d_anion &q_default)
-{
-    d_anion tempa(a);
-
-    return logbl(tempa,b,q_default);
-}
-
-d_anion logbr(const std::complex<double> &a, const d_anion &b, const d_anion &q_default)
-{
-    d_anion tempa(a);
-
-    return logbr(tempa,b,q_default);
-}
-
-d_anion logb(const d_anion &a, long b, const d_anion &q_default)
-{
-    if ( b > 0 )
-    {
-        return log(a,q_default)/log((double) b);
-    }
-
-    d_anion bb((double) b);
-
-    return log(a,q_default)*inv(log(bb,q_default));
-}
-
-d_anion logb(const d_anion &a, double b, const d_anion &q_default)
-{
-    if ( b > 0 )
-    {
-        return log(a,q_default)/log(b);
-    }
-
-    d_anion bb(b);
-
-    return log(a,q_default)*inv(log(bb,q_default));
-}
-
-d_anion logb(const d_anion &a, const std::complex<double> &b, const d_anion &q_default)
-{
-    d_anion tempb(b);
-
-    return logb(a,tempb,q_default);
-}
-
-d_anion logbl(const d_anion &a, const std::complex<double>&b, const d_anion &q_default)
-{
-    d_anion tempb(b);
-
-    return logbl(a,tempb,q_default);
-}
-
-d_anion logbr(const d_anion &a, const std::complex<double> &b, const d_anion &q_default)
-{
-    d_anion tempb(b);
-
-    return logbr(a,tempb,q_default);
-}
-
-d_anion logb(const d_anion &a, const d_anion &b, const d_anion &q_default)
-{
-    return logbr(a,b,q_default);
-//    return (logbl(a,b,q_default)+logbr(a,b,q_default))/2.0;
-}
-
-d_anion logbl(const d_anion &a, const d_anion &b, const d_anion &q_default)
-{
-    return log(a,q_default)*inv(log(b,q_default));
-}
-
-d_anion logbr(const d_anion &a, const d_anion &b, const d_anion &q_default)
-{
-    return inv(log(b,q_default))*log(a,q_default);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-d_anion Log(const d_anion &a)
-{
-    return log(a,1_iconjanion);
-}
-
-d_anion Log10(const d_anion &a)
-{
-    return log10(a,1_iconjanion);
-}
-
-d_anion Logb(long a, const d_anion &b)
-{
-    return logb(a,b,1_iconjanion);
-}
-
-d_anion Logb(double a, const d_anion &b)
-{
-    return logb(a,b,1_iconjanion);
-}
-
-d_anion Logb(const std::complex<double> &a, const d_anion &b)
-{
-    return logb(a,b,1_iconjanion);
-}
-
-d_anion Logbl(const std::complex<double> &a, const d_anion &b)
-{
-    return logbl(a,b,1_iconjanion);
-}
-
-d_anion Logbr(const std::complex<double> &a, const d_anion &b)
-{
-    return logbr(a,b,1_iconjanion);
-}
-
-d_anion Logb(const d_anion &a, long b)
-{
-    return logb(a,b,1_iconjanion);
-}
-
-d_anion Logb(const d_anion &a, double b)
-{
-    return logb(a,b,1_iconjanion);
-}
-
-d_anion Logb(const d_anion &a, const std::complex<double> &b)
-{
-    return logb(a,b,1_iconjanion);
-}
-
-d_anion Logbl(const d_anion &a, const std::complex<double>&b)
-{
-    return logbl(a,b,1_iconjanion);
-}
-
-d_anion Logbr(const d_anion &a, const std::complex<double> &b)
-{
-    return logbr(a,b,1_iconjanion);
-}
-
-d_anion Logb(const d_anion &a, const d_anion &b)
-{
-    return logb(a,b,1_iconjanion);
-}
-
-d_anion Logbl(const d_anion &a, const d_anion &b)
-{
-    return logbl(a,b,1_iconjanion);
-}
-
-d_anion Logbr(const d_anion &a, const d_anion &b)
-{
-    return logbr(a,b,1_iconjanion);
-}
-
-
-
-d_anion log(const d_anion &a)
-{
-    return log(a,1_ianion);
-}
-
-d_anion log10(const d_anion &a)
-{
-    return log10(a,1_ianion);
-}
-
-d_anion logb(long a, const d_anion &b)
-{
-    return logb(a,b,1_ianion);
-}
-
-d_anion logb(double a, const d_anion &b)
-{
-    return logb(a,b,1_ianion);
-}
-
-d_anion logb(const std::complex<double> &a, const d_anion &b)
-{
-    return logb(a,b,1_ianion);
-}
-
-d_anion logbl(const std::complex<double> &a, const d_anion &b)
-{
-    return logbl(a,b,1_ianion);
-}
-
-d_anion logbr(const std::complex<double> &a, const d_anion &b)
-{
-    return logbr(a,b,1_ianion);
-}
-
-d_anion logb(const d_anion &a, long b)
-{
-    return logb(a,b,1_ianion);
-}
-
-d_anion logb(const d_anion &a, double b)
-{
-    return logb(a,b,1_ianion);
-}
-
-d_anion logb(const d_anion &a, const std::complex<double> &b)
-{
-    return logb(a,b,1_ianion);
-}
-
-d_anion logbl(const d_anion &a, const std::complex<double>&b)
-{
-    return logbl(a,b,1_ianion);
-}
-
-d_anion logbr(const d_anion &a, const std::complex<double> &b)
-{
-    return logbr(a,b,1_ianion);
-}
-
-d_anion logb(const d_anion &a, const d_anion &b)
-{
-    return logb(a,b,1_ianion);
-}
-
-d_anion logbl(const d_anion &a, const d_anion &b)
-{
-    return logbl(a,b,1_ianion);
-}
-
-d_anion logbr(const d_anion &a, const d_anion &b)
-{
-    return logbr(a,b,1_ianion);
-}
-
-
-
-
+d_anion log10(const d_anion &a, const d_anion &q_default) { return log(a,q_default)/NUMBASE_LN10; }
+
+d_anion logb(long   a, const d_anion &b, const d_anion &q_default) { if ( a > 0 ) { return log((double) a)*inv(log(b,q_default)); } d_anion aa((double) a); return log(aa,q_default)*inv(log(b,q_default)); }
+d_anion logb(double a, const d_anion &b, const d_anion &q_default) { if ( a > 0 ) { return log(a)*inv(log(b,q_default)); } d_anion aa(a); return log(aa,q_default)*inv(log(b,q_default)); }
+
+d_anion logb (const std::complex<double> &a, const d_anion &b, const d_anion &q_default) { d_anion tempa(a); return logb (tempa,b,q_default); }
+d_anion logbl(const std::complex<double> &a, const d_anion &b, const d_anion &q_default) { d_anion tempa(a); return logbl(tempa,b,q_default); }
+d_anion logbr(const std::complex<double> &a, const d_anion &b, const d_anion &q_default) { d_anion tempa(a); return logbr(tempa,b,q_default); }
+
+d_anion logb(const d_anion &a, long   b, const d_anion &q_default) { if ( b > 0 ) { return log(a,q_default)/log((double) b); } d_anion bb((double) b); return log(a,q_default)*inv(log(bb,q_default)); }
+d_anion logb(const d_anion &a, double b, const d_anion &q_default) { if ( b > 0 ) { return log(a,q_default)/log(b); } d_anion bb(b); return log(a,q_default)*inv(log(bb,q_default)); }
+
+d_anion logb (const d_anion &a, const std::complex<double> &b, const d_anion &q_default) { d_anion tempb(b); return logb (a,tempb,q_default); }
+d_anion logbl(const d_anion &a, const std::complex<double> &b, const d_anion &q_default) { d_anion tempb(b); return logbl(a,tempb,q_default); }
+d_anion logbr(const d_anion &a, const std::complex<double> &b, const d_anion &q_default) { d_anion tempb(b); return logbr(a,tempb,q_default); }
+
+d_anion logb (const d_anion &a, const d_anion &b, const d_anion &q_default) { return logbr(a,b,q_default); } // return (logbl(a,b,q_default)+logbr(a,b,q_default))/2.0;
+d_anion logbl(const d_anion &a, const d_anion &b, const d_anion &q_default) { return log(a,q_default)*inv(log(b,q_default)); }
+d_anion logbr(const d_anion &a, const d_anion &b, const d_anion &q_default) { return inv(log(b,q_default))*log(a,q_default); }
+
+d_anion Log  (const d_anion &a) { return log  (a,1_iconjanion); }
+d_anion Log10(const d_anion &a) { return log10(a,1_iconjanion); }
+
+d_anion Logb (long                        a, const d_anion              &b) { return logb (a,b,1_iconjanion); }
+d_anion Logb (double                      a, const d_anion              &b) { return logb (a,b,1_iconjanion); }
+d_anion Logb (const std::complex<double> &a, const d_anion              &b) { return logb (a,b,1_iconjanion); }
+d_anion Logbl(const std::complex<double> &a, const d_anion              &b) { return logbl(a,b,1_iconjanion); }
+d_anion Logbr(const std::complex<double> &a, const d_anion              &b) { return logbr(a,b,1_iconjanion); }
+d_anion Logb (const d_anion              &a, long                        b) { return logb (a,b,1_iconjanion); }
+d_anion Logb (const d_anion              &a, double                      b) { return logb (a,b,1_iconjanion); }
+d_anion Logb (const d_anion              &a, const std::complex<double> &b) { return logb (a,b,1_iconjanion); }
+d_anion Logbl(const d_anion              &a, const std::complex<double> &b) { return logbl(a,b,1_iconjanion); }
+d_anion Logbr(const d_anion              &a, const std::complex<double> &b) { return logbr(a,b,1_iconjanion); }
+d_anion Logb (const d_anion              &a, const d_anion              &b) { return logb (a,b,1_iconjanion); }
+d_anion Logbl(const d_anion              &a, const d_anion              &b) { return logbl(a,b,1_iconjanion); }
+d_anion Logbr(const d_anion              &a, const d_anion              &b) { return logbr(a,b,1_iconjanion); }
+
+d_anion log  (const d_anion &a) { return log  (a,1_ianion); }
+d_anion log10(const d_anion &a) { return log10(a,1_ianion); }
+
+d_anion logb (long                        a, const d_anion              &b) { return logb (a,b,1_ianion); }
+d_anion logb (double                      a, const d_anion              &b) { return logb (a,b,1_ianion); }
+d_anion logb (const std::complex<double> &a, const d_anion              &b) { return logb (a,b,1_ianion); }
+d_anion logbl(const std::complex<double> &a, const d_anion              &b) { return logbl(a,b,1_ianion); }
+d_anion logbr(const std::complex<double> &a, const d_anion              &b) { return logbr(a,b,1_ianion); }
+d_anion logb (const d_anion              &a, long                        b) { return logb (a,b,1_ianion); }
+d_anion logb (const d_anion              &a, double                      b) { return logb (a,b,1_ianion); }
+d_anion logb (const d_anion              &a, const std::complex<double> &b) { return logb (a,b,1_ianion); }
+d_anion logbl(const d_anion              &a, const std::complex<double> &b) { return logbl(a,b,1_ianion); }
+d_anion logbr(const d_anion              &a, const std::complex<double> &b) { return logbr(a,b,1_ianion); }
+d_anion logb (const d_anion              &a, const d_anion              &b) { return logb (a,b,1_ianion); }
+d_anion logbl(const d_anion              &a, const d_anion              &b) { return logbl(a,b,1_ianion); }
+d_anion logbr(const d_anion              &a, const d_anion              &b) { return logbr(a,b,1_ianion); }
 
 
 
@@ -1944,43 +1122,28 @@ d_anion logbr(const d_anion &a, const d_anion &b)
 
 d_anion sin(const d_anion &a)
 {
-    double R = real(a);
+    double  R = real(a);
     d_anion M = imagx(a);
     d_anion q = angle(M);
-    double I = abs2(M);
+    double  I = abs2(M);
 
     return (sin(R)*cosh(I))+(q*cos(R)*sinh(I));
 }
 
 d_anion cos(const d_anion &a)
 {
-    double R = real(a);
+    double  R = real(a);
     d_anion M = imagx(a);
     d_anion q = angle(M);
-    double I = abs2(M);
+    double  I = abs2(M);
 
     return (cos(R)*cosh(I))-(q*sin(R)*sinh(I));
 }
 
-d_anion tan(const d_anion &a)
-{
-    return sin(a)*inv(cos(a));
-}
-
-d_anion cosec(const d_anion &a)
-{
-    return inv(sin(a));
-}
-
-d_anion sec(const d_anion &a)
-{
-    return inv(cos(a));
-}
-
-d_anion cot(const d_anion &a)
-{
-    return cos(a)*inv(sin(a));
-}
+d_anion tan  (const d_anion &a) { return sin(a)*inv(cos(a)); }
+d_anion cosec(const d_anion &a) { return inv(sin(a));        }
+d_anion sec  (const d_anion &a) { return inv(cos(a));        }
+d_anion cot  (const d_anion &a) { return cos(a)*inv(sin(a)); }
 
 d_anion asin(const d_anion &a, const d_anion &q_default)
 {
@@ -1994,35 +1157,20 @@ d_anion asin(const d_anion &a, const d_anion &q_default)
 
     if ( abs2(q) < 0.1 ) // could use == 0, but this is equivalent
     {
-	if ( ( R <= 1.0 ) && ( R >= -1.0 ) )
-	{
-	    result = REAL_ASIN(R);
-	}
+	if ( ( R <= 1.0 ) && ( R >= -1.0 ) ) { result = REAL_ASIN(R); }
 
 	else
 	{
-	    d_anion qq_def;
-
-            qq_def = angle(q_default);
+	    d_anion qq_def = angle(q_default);
 
 	    if ( abs2(qq_def) < 0.1 )
 	    {
 		d_anion temp(0,1);
-
 		return asin(a,temp);
 	    }
 
-	    if ( R < 0.0 )
-	    {
-                result = -NUMBASE_PION2;
-                result += qq_def*(REAL_ACOSH(-R));
-	    }
-
-	    else
-	    {
-                result = NUMBASE_PION2;
-                result -= qq_def*(REAL_ACOSH(-R));
-	    }
+	    if ( R < 0.0 ) { result = -NUMBASE_PION2; result += qq_def*(REAL_ACOSH(-R)); }
+	    else           { result =  NUMBASE_PION2; result -= qq_def*(REAL_ACOSH(-R)); }
         }
     }
 
@@ -2034,26 +1182,12 @@ d_anion asin(const d_anion &a, const d_anion &q_default)
 
 	if ( abs2(q) < 0.1 ) // could use == 0, but this is equivalent
 	{
-	    if ( ( R <= 1.0 ) && ( R >= -1.0 ) )
-	    {
-		result = REAL_ASIN(R);
-	    }
+	    if ( ( R <= 1.0 ) && ( R >= -1.0 ) ) { result = REAL_ASIN(R); }
 
 	    else
 	    {
-		if ( R < 0.0 )
-		{
-                    d_anion temp(-NUMBASE_PION2,REAL_ACOSH(-R));
-
-		    result = temp;
-		}
-
-		else
-		{
-                    d_anion temp(NUMBASE_PION2,-REAL_ACOSH(R));
-
-		    result = temp;
-		}
+		if ( R < 0.0 ) { d_anion temp(-NUMBASE_PION2,REAL_ACOSH(-R)); result = temp; }
+		else           { d_anion temp( NUMBASE_PION2,-REAL_ACOSH(R)); result = temp; }
 	    }
 	}
 
@@ -2072,10 +1206,7 @@ d_anion asin(const d_anion &a, const d_anion &q_default)
 	    const double A_crossover = 1.5;
 	    const double B_crossover = 0.6417;
 
-	    if ( B <= B_crossover )
-	    {
-		rreal = REAL_ASIN(B);
-	    }
+	    if ( B <= B_crossover ) { rreal = REAL_ASIN(B); }
 
 	    else
 	    {
@@ -2099,37 +1230,16 @@ d_anion asin(const d_anion &a, const d_anion &q_default)
 	    {
 		double Am1;
 
-		if ( x < 1 )
-		{
-		    Am1 = 0.5 * ( y2 / ( r + ( x + 1 ) ) + y2 / ( s + ( 1 - x ) ) );
-		}
-
-		else
-		{
-		    Am1 = 0.5 * ( y2 / ( r + ( x + 1 ) ) + ( s + ( x - 1 ) ) );
-		}
+		if ( x < 1 ) { Am1 = 0.5 * ( y2 / ( r + ( x + 1 ) ) + y2 / ( s + ( 1 - x ) ) ); }
+		else         { Am1 = 0.5 * ( y2 / ( r + ( x + 1 ) ) +      ( s + ( x - 1 ) ) ); }
 
 		rimag = log( 1 + Am1 + sqrt( Am1 * ( A + 1 ) ) );
 	    }
 
-	    else
-	    {
-		rimag = log( A + sqrt( A * A - 1 ) );
-	    }
+	    else { rimag = log( A + sqrt( A * A - 1 ) ); }
 
-	    if ( R >= 0.0 )
-	    {
-		// NB: q takes care of the sign here.
-
-		result = rreal + (q*rimag);
-	    }
-
-	    else
-	    {
-		// NB: q takes care of the sign here
-
-		result = -rreal + (q*rimag);
-	    }
+	    if ( R >= 0.0 ) { result =  rreal + (q*rimag); } // NB: q takes care of the sign here.
+	    else            { result = -rreal + (q*rimag); } // NB: q takes care of the sign here
 	}
     }
 
@@ -2140,7 +1250,7 @@ d_anion acos(const d_anion &a, const d_anion &q_default)
 {
     // Abramowitz and Stegun
 
-    double R = real(a);
+    double  R = real(a);
     d_anion M = imagx(a);
     d_anion q = angle(M);
 
@@ -2148,10 +1258,7 @@ d_anion acos(const d_anion &a, const d_anion &q_default)
 
     if ( abs2(q) < 0.1 ) // could use == 0, but this is equivalent
     {
-	if ( ( R <= 1.0 ) && ( R >= -1.0 ) )
-	{
-	    result = REAL_ACOS(R);
-	}
+	if ( ( R <= 1.0 ) && ( R >= -1.0 ) ) { result = REAL_ACOS(R); }
 
 	else
 	{
@@ -2159,23 +1266,10 @@ d_anion acos(const d_anion &a, const d_anion &q_default)
 
             qq_def = angle(q_default);
 
-	    if ( abs2(qq_def) < 0.1 )
-	    {
-		d_anion temp(0,1);
+	    if ( abs2(qq_def) < 0.1 ) { d_anion temp(0,1); return acos(a,temp); }
 
-		return acos(a,temp);
-	    }
-
-	    if ( R < 0.0 )
-	    {
-		result = NUMBASE_PI;
-                result -= qq_def*(REAL_ACOSH(-R));
-	    }
-
-	    else
-	    {
-                result = qq_def*(REAL_ACOSH(R));
-	    }
+	    if ( R < 0.0 ) { result = NUMBASE_PI; result -= qq_def*(REAL_ACOSH(-R)); }
+	    else           { result = qq_def*(REAL_ACOSH(R)); }
         }
     }
 
@@ -2187,26 +1281,12 @@ d_anion acos(const d_anion &a, const d_anion &q_default)
 
 	if ( abs2(q) < 0.1 ) // could use == 0, but this is equivalent
 	{
-	    if ( ( R <= 1.0 ) && ( R >= -1.0 ) )
-	    {
-		result = REAL_ACOS(R);
-	    }
+	    if ( ( R <= 1.0 ) && ( R >= -1.0 ) ) { result = REAL_ACOS(R); }
 
 	    else
 	    {
-		if ( R < 0.0 )
-		{
-		    d_anion temp(NUMBASE_PI,-REAL_ACOSH(-R));
-
-		    result = temp;
-		}
-
-		else
-		{
-		    d_anion temp(0.0,REAL_ACOSH(R));
-
-		    result = temp;
-		}
+		if ( R < 0.0 ) { d_anion temp(NUMBASE_PI,-REAL_ACOSH(-R)); result = temp; }
+		else           { d_anion temp(0.0,REAL_ACOSH(R));          result = temp; }
 	    }
 	}
 
@@ -2225,10 +1305,7 @@ d_anion acos(const d_anion &a, const d_anion &q_default)
 	    const double A_crossover = 1.5;
 	    const double B_crossover = 0.6417;
 
-	    if ( B <= B_crossover )
-	    {
-		rreal = REAL_ACOS(B);
-	    }
+	    if ( B <= B_crossover ) { rreal = REAL_ACOS(B); }
 
 	    else
 	    {
@@ -2252,37 +1329,16 @@ d_anion acos(const d_anion &a, const d_anion &q_default)
 	    {
 		double Am1;
 
-		if ( x < 1 )
-		{
-		    Am1 = 0.5 * ( y2 / ( r + ( x + 1 ) ) + y2 / ( s + ( 1 - x ) ) );
-		}
-
-		else
-		{
-		    Am1 = 0.5 * ( y2 / ( r + ( x + 1 ) ) + ( s + ( x - 1 ) ) );
-		}
+		if ( x < 1 ) { Am1 = 0.5 * ( y2 / ( r + ( x + 1 ) ) + y2 / ( s + ( 1 - x ) ) ); }
+		else         { Am1 = 0.5 * ( y2 / ( r + ( x + 1 ) ) +      ( s + ( x - 1 ) ) ); }
 
 		rimag = log( 1 + Am1 + sqrt( Am1 * ( A + 1 ) ) );
 	    }
 
-	    else
-	    {
-		rimag = log( A + sqrt( A * A - 1 ) );
-	    }
+	    else { rimag = log( A + sqrt( A * A - 1 ) ); }
 
-	    if ( R >= 0.0 )
-	    {
-		// NB: q takes care of the sign here
-
-		result = rreal - (q*rimag);
-	    }
-
-	    else
-	    {
-		// NB: q takes care of the sign here
-
-		result = NUMBASE_PI - rreal - (q*rimag);
-	    }
+	    if ( R >= 0.0 ) { result = rreal - (q*rimag);              } // NB: q takes care of the sign here
+	    else            { result = NUMBASE_PI - rreal - (q*rimag); } // NB: q takes care of the sign here
 	}
     }
 
@@ -2314,10 +1370,7 @@ d_anion atan(const d_anion &a)
         // FIXME: the following cross-over should be optimized but 0.1 seems
         //        to work ok
 
-	if ( ( u < 0.1 ) && ( u > -0.1 ) )
-	{
-	    rimag = 0.25 * ( log( 1 + u ) - log( 1 - u ) );
-	}
+	if ( ( u < 0.1 ) && ( u > -0.1 ) ) { rimag = 0.25 * ( log( 1 + u ) - log( 1 - u ) ); }
 
 	else
 	{
@@ -2329,21 +1382,12 @@ d_anion atan(const d_anion &a)
 
 	if ( R == 0 )
 	{
-	    if ( I > 1 ) // Mabs > 0 by definition.
-	    {
-                rreal = NUMBASE_PION2;
-	    }
-
-	    else
-	    {
-		rreal = 0.0;
-	    }
+            // Mabs > 0 by definition.
+	    if ( I > 1 ) { rreal = NUMBASE_PION2; }
+	    else         { rreal = 0.0;           }
 	}
 
-	else
-	{
-            rreal = 0.5 * atan2(2*R,((1+r)*(1-r)));
-	}
+	else { rreal = 0.5 * atan2(2*R,((1+r)*(1-r))); }
 
         result = rreal + (q*rimag);
     }
@@ -2351,314 +1395,85 @@ d_anion atan(const d_anion &a)
     return result;
 }
 
-d_anion acosec(const d_anion &a, const d_anion &q_default)
-{
-    return asin(inv(a),q_default);
-}
-
-d_anion asec(const d_anion &a, const d_anion &q_default)
-{
-    return acos(inv(a),q_default);
-}
-
-d_anion acot(const d_anion &a)
-{
-    return atan(inv(a));
-}
-
-d_anion sinc(const d_anion &a)
-{
-    d_anion result;
-
-    if ( abs2(a) <= 1e-7 )
-    {
-	result = 1.0;
-    }
-
-    else
-    {
-	result = sin(a)*inv(a); // yes sin(a)*inv(a) = inv(a)*sin(a)
-    }
-
-    return result;
-}
-
-d_anion cosc(const d_anion &a)
-{
-    return cos(a)*inv(a);
-}
-
-d_anion tanc(const d_anion &a)
-{
-    d_anion result;
-
-    if ( abs2(a) <= 1e-7 )
-    {
-	result = 1.0;
-    }
-
-    else
-    {
-	result = tan(a)*inv(a);
-    }
-
-    return result;
-}
-
-d_anion vers(const d_anion &a)
-{
-    return 1-cos(a);
-}
-
-d_anion covers(const d_anion &a)
-{
-    return 1-sin(a);
-}
-
-d_anion hav(const d_anion &a)
-{
-    return vers(a)/2.0;
-}
-
-d_anion excosec(const d_anion &a)
-{
-    return cosec(a)-1;
-}
-
-d_anion exsec(const d_anion &a)
-{
-    return sec(a)-1;
-}
-
-d_anion castrg(const d_anion &a)
-{
-    return cos(a)+sin(a);
-}
-
-d_anion casctrg(const d_anion &a)
-{
-    return cos(a)-sin(a);
-}
-
-d_anion acastrg(const d_anion &a)
-{
-    return acos(a/1.41421356237309504880168872421)+0.78539816339744830966156608458;
-}
-
-d_anion acasctrg(const d_anion &a)
-{
-    return acos(a/1.41421356237309504880168872421)-0.78539816339744830966156608458;
-}
-
-d_anion Acastrg(const d_anion &a)
-{
-    return Acos(a/1.41421356237309504880168872421)+0.78539816339744830966156608458;
-}
-
-d_anion Acasctrg(const d_anion &a)
-{
-    return Acos(a/1.41421356237309504880168872421)-0.78539816339744830966156608458;
-}
-
-
-d_anion avers(const d_anion &a, const d_anion &q_default)
-{
-    return acos(a+1,q_default);
-}
-
-d_anion acovers(const d_anion &a, const d_anion &q_default)
-{
-    return asin(a+1,q_default);
-}
-
-d_anion ahav(const d_anion &a, const d_anion &q_default)
-{
-    return avers(2*a,q_default);
-}
-
-d_anion aexcosec(const d_anion &a, const d_anion &q_default)
-{
-    return acosec(a+1,q_default);
-}
-
-d_anion aexsec(const d_anion &a, const d_anion &q_default)
-{
-    return asec(a+1,q_default);
-}
-
-d_anion cashyp(const d_anion &a)
-{
-    return exp(a);
-}
-
-d_anion caschyp(const d_anion &a)
-{
-    return exp(-a);
-}
-
-d_anion acashyp(const d_anion &a)
-{
-    return log(a);
-}
-
-d_anion acaschyp(const d_anion &a)
-{
-    return -log(a);
-}
-
-d_anion Acashyp(const d_anion &a)
-{
-    return Log(a);
-}
-
-d_anion Acaschyp(const d_anion &a)
-{
-    return -Log(a);
-}
-
-
-
-d_anion Asin(const d_anion &a)
-{
-    return asin(a,1_iconjanion);
-}
-
-d_anion Acos(const d_anion &a)
-{
-    return acos(a,1_iconjanion);
-}
-
-d_anion Acosec(const d_anion &a)
-{
-    return acosec(a,1_iconjanion);
-}
-
-d_anion Asec(const d_anion &a)
-{
-    return asec(a,1_iconjanion);
-}
-
-d_anion Avers(const d_anion &a)
-{
-    return avers(a,1_iconjanion);
-}
-
-d_anion Acovers(const d_anion &a)
-{
-    return acovers(a,1_iconjanion);
-}
-
-d_anion Ahav(const d_anion &a)
-{
-    return ahav(a,1_iconjanion);
-}
-
-d_anion Aexcosec(const d_anion &a)
-{
-    return aexcosec(a,1_iconjanion);
-}
-
-d_anion Aexsec(const d_anion &a)
-{
-    return aexsec(a,1_iconjanion);
-}
-
-
-d_anion asin(const d_anion &a)
-{
-    return asin(a,1_ianion);
-}
-
-d_anion acos(const d_anion &a)
-{
-    return acos(a,1_ianion);
-}
-
-d_anion acosec(const d_anion &a)
-{
-    return acosec(a,1_ianion);
-}
-
-d_anion asec(const d_anion &a)
-{
-    return asec(a,1_ianion);
-}
-
-d_anion avers(const d_anion &a)
-{
-    return avers(a,1_ianion);
-}
-
-d_anion acovers(const d_anion &a)
-{
-    return acovers(a,1_ianion);
-}
-
-d_anion ahav(const d_anion &a)
-{
-    return ahav(a,1_ianion);
-}
-
-d_anion aexcosec(const d_anion &a)
-{
-    return aexcosec(a,1_ianion);
-}
-
-d_anion aexsec(const d_anion &a)
-{
-    return aexsec(a,1_ianion);
-}
-
-
-
-
-
-
-
-
-
-
+d_anion acosec(const d_anion &a, const d_anion &q_default) { return asin(inv(a),q_default); }
+d_anion asec  (const d_anion &a, const d_anion &q_default) { return acos(inv(a),q_default); }
+d_anion acot  (const d_anion &a                          ) { return atan(inv(a));           }
+
+d_anion sinc(const d_anion &a) { if ( abs2(a) <= 1e-7 ) { return 1.0_anion; } return  sin(a)*inv(a); } // yes sin(a)*inv(a) = inv(a)*sin(a)
+d_anion cosc(const d_anion &a) { return cos(a)*inv(a);                                               }
+d_anion tanc(const d_anion &a) { if ( abs2(a) <= 1e-7 ) { return 1.0_anion; }  return tan(a)*inv(a); }
+
+d_anion vers   (const d_anion &a) { return 1-cos(a);    }
+d_anion covers (const d_anion &a) { return 1-sin(a);    }
+d_anion hav    (const d_anion &a) { return vers(a)/2.0; }
+d_anion excosec(const d_anion &a) { return cosec(a)-1;  }
+d_anion exsec  (const d_anion &a) { return sec(a)-1;    }
+
+d_anion castrg  (const d_anion &a) { return cos(a)+sin(a);                                                           }
+d_anion casctrg (const d_anion &a) { return cos(a)-sin(a);                                                           }
+d_anion acastrg (const d_anion &a) { return acos(a/1.41421356237309504880168872421)+0.78539816339744830966156608458; }
+d_anion acasctrg(const d_anion &a) { return acos(a/1.41421356237309504880168872421)-0.78539816339744830966156608458; }
+d_anion Acastrg (const d_anion &a) { return Acos(a/1.41421356237309504880168872421)+0.78539816339744830966156608458; }
+d_anion Acasctrg(const d_anion &a) { return Acos(a/1.41421356237309504880168872421)-0.78539816339744830966156608458; }
+
+d_anion avers   (const d_anion &a, const d_anion &q_default) { return acos  (a+1,q_default); }
+d_anion acovers (const d_anion &a, const d_anion &q_default) { return asin  (a+1,q_default); }
+d_anion ahav    (const d_anion &a, const d_anion &q_default) { return avers (2*a,q_default); }
+d_anion aexcosec(const d_anion &a, const d_anion &q_default) { return acosec(a+1,q_default); }
+d_anion aexsec  (const d_anion &a, const d_anion &q_default) { return asec  (a+1,q_default); }
+
+d_anion cashyp  (const d_anion &a) { return exp(a);  }
+d_anion caschyp (const d_anion &a) { return exp(-a); }
+d_anion acashyp (const d_anion &a) { return log(a);  }
+d_anion acaschyp(const d_anion &a) { return -log(a); }
+d_anion Acashyp (const d_anion &a) { return Log(a);  }
+d_anion Acaschyp(const d_anion &a) { return -Log(a); }
+
+d_anion Asin    (const d_anion &a) { return asin    (a,1_iconjanion); }
+d_anion Acos    (const d_anion &a) { return acos    (a,1_iconjanion); }
+d_anion Acosec  (const d_anion &a) { return acosec  (a,1_iconjanion); }
+d_anion Asec    (const d_anion &a) { return asec    (a,1_iconjanion); }
+d_anion Avers   (const d_anion &a) { return avers   (a,1_iconjanion); }
+d_anion Acovers (const d_anion &a) { return acovers (a,1_iconjanion); }
+d_anion Ahav    (const d_anion &a) { return ahav    (a,1_iconjanion); }
+d_anion Aexcosec(const d_anion &a) { return aexcosec(a,1_iconjanion); }
+d_anion Aexsec  (const d_anion &a) { return aexsec  (a,1_iconjanion); }
+
+d_anion asin    (const d_anion &a) { return asin    (a,1_ianion); }
+d_anion acos    (const d_anion &a) { return acos    (a,1_ianion); }
+d_anion acosec  (const d_anion &a) { return acosec  (a,1_ianion); }
+d_anion asec    (const d_anion &a) { return asec    (a,1_ianion); }
+d_anion avers   (const d_anion &a) { return avers   (a,1_ianion); }
+d_anion acovers (const d_anion &a) { return acovers (a,1_ianion); }
+d_anion ahav    (const d_anion &a) { return ahav    (a,1_ianion); }
+d_anion aexcosec(const d_anion &a) { return aexcosec(a,1_ianion); }
+d_anion aexsec  (const d_anion &a) { return aexsec  (a,1_ianion); }
 
 
 d_anion sinh(const d_anion &a)
 {
-    double R = real(a);
+    double  R = real(a);
     d_anion M = imagx(a);
     d_anion q = angle(M);
-    double I = abs2(M);
+    double  I = abs2(M);
 
     return (sinh(R)*cos(I))+(q*cosh(R)*sin(I));
 }
 
 d_anion cosh(const d_anion &x)
 {
-    double R = real(x);
+    double  R = real(x);
     d_anion M = imagx(x);
     d_anion q = angle(M);
-    double I = abs2(M);
+    double  I = abs2(M);
 
     return (cosh(R)*cos(I))+(q*sinh(R)*sin(I));
 }
 
-d_anion tanh(const d_anion &a)
-{
-    return sinh(a)*inv(cosh(a));
-}
-
-d_anion cosech(const d_anion &a)
-{
-    return inv(sinh(a));
-}
-
-d_anion sech(const d_anion &a)
-{
-    return inv(cosh(a));
-}
-
-d_anion coth(const d_anion &a)
-{
-    return cosh(a)*inv(sinh(a));
-}
+d_anion tanh  (const d_anion &a) { return sinh(a)*inv(cosh(a)); }
+d_anion cosech(const d_anion &a) { return inv(sinh(a));         }
+d_anion sech  (const d_anion &a) { return inv(cosh(a));         }
+d_anion coth  (const d_anion &a) { return cosh(a)*inv(sinh(a)); }
 
 d_anion asinh(const d_anion &a)
 {
@@ -2689,16 +1504,9 @@ d_anion acosh(const d_anion &a, const d_anion &q_default)
 
 	else
 	{
-	    d_anion qq_def;
+	    d_anion qq_def(angle(q_default));
 
-            qq_def = angle(q_default);
-
-	    if ( abs2(qq_def) < 0.1 )
-	    {
-		d_anion temp(0,1);
-
-		return acosh(a,temp);
-	    }
+	    if ( abs2(qq_def) < 0.1 ) { return acosh(a,1.0_ianion); }
 
 	    return qq_def*acos(a);
 	}
@@ -2722,16 +1530,9 @@ d_anion atanh(const d_anion &a, const d_anion &q_default)
 
 	else
 	{
-	    d_anion qq_def;
+	    d_anion qq_def(angle(q_default));
 
-            qq_def = angle(q_default);
-
-	    if ( abs2(qq_def) < 0.1 )
-	    {
-		d_anion temp(0,1);
-
-		return atanh(a,temp);
-	    }
+	    if ( abs2(qq_def) < 0.1 ) { return atanh(a,1.0_ianion); }
 
 	    return qq_def*atan(conj(qq_def)*a);
 	}
@@ -2740,229 +1541,49 @@ d_anion atanh(const d_anion &a, const d_anion &q_default)
     return q*atan(conj(q)*a);
 }
 
-d_anion acosech(const d_anion &a)
-{
-    return asinh(inv(a));
-}
+d_anion acosech(const d_anion &a                          ) { return asinh(inv(a)); }
+d_anion asech  (const d_anion &a, const d_anion &q_default) { return acosh(inv(a),q_default); }
+d_anion acoth  (const d_anion &a, const d_anion &q_default) { return atanh(inv(a),q_default); }
 
-d_anion asech(const d_anion &a, const d_anion &q_default)
-{
-    return acosh(inv(a),q_default);
-}
+d_anion sinhc(const d_anion &a) { if ( abs2(a) <= 1e-7 ) { return 1.0_anion; } return sinh(a)*inv(a); }
+d_anion coshc(const d_anion &a) { return cosh(a)*inv(a); }
+d_anion tanhc(const d_anion &a) { if ( abs2(a) <= 1e-7 ) { return 1.0_anion; } return tanh(a)*inv(a); }
 
-d_anion acoth(const d_anion &a, const d_anion &q_default)
-{
-    return atanh(inv(a),q_default);
-}
+d_anion versh    (const d_anion &a                          ) { return 1-cosh(a);             }
+d_anion coversh  (const d_anion &a                          ) { return 1-sinh(a);             }
+d_anion havh     (const d_anion &a                          ) { return versh(a)/2.0;          }
+d_anion excosech (const d_anion &a                          ) { return cosech(a)-1;           }
+d_anion exsech   (const d_anion &a                          ) { return sech(a)-1;             }
+d_anion aversh   (const d_anion &a, const d_anion &q_default) { return acosh(a+1,q_default);  }
+d_anion acovrsh  (const d_anion &a                          ) { return asinh(a+1);            }
+d_anion ahavh    (const d_anion &a, const d_anion &q_default) { return aversh(2*a,q_default); }
+d_anion aexcosech(const d_anion &a                          ) { return acosech(a+1);          }
+d_anion aexsech  (const d_anion &a, const d_anion &q_default) { return asech(a+1,q_default);  }
 
-d_anion sinhc(const d_anion &a)
-{
-    d_anion result;
+d_anion Acosh  (const d_anion &a) { return acosh  (a,1_iconjanion); }
+d_anion Atanh  (const d_anion &a) { return atanh  (a,1_iconjanion); }
+d_anion Asech  (const d_anion &a) { return asech  (a,1_iconjanion); }
+d_anion Acoth  (const d_anion &a) { return acoth  (a,1_iconjanion); }
+d_anion Aversh (const d_anion &a) { return aversh (a,1_iconjanion); }
+d_anion Ahavh  (const d_anion &a) { return ahavh  (a,1_iconjanion); }
+d_anion Aexsech(const d_anion &a) { return aexsech(a,1_iconjanion); }
 
-    if ( abs2(a) <= 1e-7 )
-    {
-	result = 1.0;
-    }
+d_anion acosh  (const d_anion &a) { return acosh  (a,1_ianion); }
+d_anion atanh  (const d_anion &a) { return atanh  (a,1_ianion); }
+d_anion asech  (const d_anion &a) { return asech  (a,1_ianion); }
+d_anion acoth  (const d_anion &a) { return acoth  (a,1_ianion); }
+d_anion aversh (const d_anion &a) { return aversh (a,1_ianion); }
+d_anion ahavh  (const d_anion &a) { return ahavh  (a,1_ianion); }
+d_anion aexsech(const d_anion &a) { return aexsech(a,1_ianion); }
 
-    else
-    {
-	result = sinh(a)*inv(a);
-    }
-
-    return result;
-}
-
-d_anion coshc(const d_anion &a)
-{
-    return cosh(a)*inv(a);
-}
-
-d_anion tanhc(const d_anion &a)
-{
-    d_anion result;
-
-    if ( abs2(a) <= 1e-7 )
-    {
-	result = 1.0;
-    }
-
-    else
-    {
-	result = tanh(a)*inv(a);
-    }
-
-    return result;
-}
-
-d_anion versh(const d_anion &a)
-{
-    return 1-cosh(a);
-}
-
-d_anion coversh(const d_anion &a)
-{
-    return 1-sinh(a);
-}
-
-d_anion havh(const d_anion &a)
-{
-    return versh(a)/2.0;
-}
-
-d_anion excosech(const d_anion &a)
-{
-    return cosech(a)-1;
-}
-
-d_anion exsech(const d_anion &a)
-{
-    return sech(a)-1;
-}
-
-d_anion aversh(const d_anion &a, const d_anion &q_default)
-{
-    return acosh(a+1,q_default);
-}
-
-d_anion acovrsh(const d_anion &a)
-{
-    return asinh(a+1);
-}
-
-d_anion ahavh(const d_anion &a, const d_anion &q_default)
-{
-    return aversh(2*a,q_default);
-}
-
-d_anion aexcosech(const d_anion &a)
-{
-    return acosech(a+1);
-}
-
-d_anion aexsech(const d_anion &a, const d_anion &q_default)
-{
-    return asech(a+1,q_default);
-}
-
-
-
-
-d_anion Acosh(const d_anion &a)
-{
-    return acosh(a,1_iconjanion);
-}
-
-d_anion Atanh(const d_anion &a)
-{
-    return atanh(a,1_iconjanion);
-}
-
-d_anion Asech(const d_anion &a)
-{
-    return asech(a,1_iconjanion);
-}
-
-d_anion Acoth(const d_anion &a)
-{
-    return acoth(a,1_iconjanion);
-}
-
-d_anion Aversh(const d_anion &a)
-{
-    return aversh(a,1_iconjanion);
-}
-
-d_anion Ahavh(const d_anion &a)
-{
-    return ahavh(a,1_iconjanion);
-}
-
-d_anion Aexsech(const d_anion &a)
-{
-    return aexsech(a,1_iconjanion);
-}
-
-
-
-
-d_anion acosh(const d_anion &a)
-{
-    return acosh(a,1_ianion);
-}
-
-d_anion atanh(const d_anion &a)
-{
-    return atanh(a,1_ianion);
-}
-
-d_anion asech(const d_anion &a)
-{
-    return asech(a,1_ianion);
-}
-
-d_anion acoth(const d_anion &a)
-{
-    return acoth(a,1_ianion);
-}
-
-d_anion aversh(const d_anion &a)
-{
-    return aversh(a,1_ianion);
-}
-
-d_anion ahavh(const d_anion &a)
-{
-    return ahavh(a,1_ianion);
-}
-
-d_anion aexsech(const d_anion &a)
-{
-    return aexsech(a,1_ianion);
-}
-
-
-
-
-
-d_anion sigm(const d_anion &a)
-{
-    return inv(1+exp(a));
-}
-
-d_anion gd(const d_anion &a)
-{
-    return 2.0*atan(tanh(a/2.0));
-}
-
-d_anion asigm(const d_anion &a, const d_anion &q_default)
-{
-    return log(inv(a)-1.0,q_default);
-}
-
-d_anion agd(const d_anion &a, const d_anion &q_default)
-{
-    return 2*atanh(tan(a/2.0),q_default);
-}
-
-d_anion Asigm(const d_anion &a)
-{
-    return asigm(a,1_iconjanion);
-}
-
-d_anion Agd(const d_anion &a)
-{
-    return agd(a,1_iconjanion);
-}
-
-d_anion asigm(const d_anion &a)
-{
-    return asigm(a,1_ianion);
-}
-
-d_anion agd(const d_anion &a)
-{
-    return agd(a,1_ianion);
-}
+d_anion sigm (const d_anion &a                          ) { return inv(1+exp(a));                 }
+d_anion gd   (const d_anion &a                          ) { return 2.0*atan(tanh(a/2.0));         }
+d_anion asigm(const d_anion &a, const d_anion &q_default) { return log(inv(a)-1.0,q_default);     }
+d_anion agd  (const d_anion &a, const d_anion &q_default) { return 2*atanh(tan(a/2.0),q_default); }
+d_anion Asigm(const d_anion &a                          ) { return asigm(a,1_iconjanion);         }
+d_anion Agd  (const d_anion &a                          ) { return agd  (a,1_iconjanion);         }
+d_anion asigm(const d_anion &a                          ) { return asigm(a,1_ianion);             }
+d_anion agd  (const d_anion &a                          ) { return agd  (a,1_ianion);             }
 
 
 

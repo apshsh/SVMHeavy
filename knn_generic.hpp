@@ -81,7 +81,7 @@ public:
 
     virtual const Vector<int>     &d         (void) const override { return dd;     }
     virtual const Vector<int>     &alphaState(void) const override { return onevec; }
-    virtual const Vector<gentype> &alphaVal  (void) const override { NiceThrow("alphaVal has no meaning here"); static const Vector<gentype> dummy; return dummy; }
+    virtual const Vector<gentype> &alphaVal  (void) const override { NiceThrow("alphaVal has no meaning here"); const static Vector<gentype> dummy; return dummy; }
 
     virtual double alphaVal(int i) const override { (void) i; NiceThrow("alpha has no meaning here"); return 0.0; }
 
@@ -219,12 +219,12 @@ protected:
 private:
 
     int kay;
-    protected:
+protected:
     Vector<int> dd;
     Vector<int> onevec;
     mutable Vector<double> kdistscr;
     mutable Vector<int> iiscr;
-    private:
+private:
 
     // Calculate distance of xx to all points, then sort from smallest to
     // largest, putting distances (unsorted) in kdist and indices (sorted) in

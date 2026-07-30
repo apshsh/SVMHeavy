@@ -19,9 +19,6 @@
 
 
 #include "dynarray.hpp"
-//#ifdef ENABLE_THREADS
-//#include <mutex>
-//#endif
 
 #define MAXOLDCONTENT 1000000
 
@@ -189,7 +186,7 @@ void DynArray<int>::locresize(int size, int suggestedallocsize, const int *fillv
 //#ifdef ENABLE_THREADS
 //        if ( suggestedallocsize == -2 )
 //        {
-//            static std::mutex eyelock;
+//            statiic std::mutex eyelock;
 //            eyelock.lock();
 //
 //            content   = newcontent;
@@ -224,6 +221,106 @@ void DynArray<int>::locresize(int size, int suggestedallocsize, const int *fillv
     else
     {
         dsize = size;
+    }
+}
+
+
+template <>
+void DynArray<int>::locresizecntintarray(int size)
+{
+    static std::mutex resizelock; // need to lock as this is shared by all threads
+
+    {
+        const std::lock_guard<std::mutex> lock(resizelock);
+
+        bool locarrayhold = array_hold();
+
+        NiceAssert( size >= 0 );
+
+        int stepsizedown   = (int) (((double) allocsize)/DOWNSIZEFRAC);
+        int stepsizeup     = (int) (ALLOCAHEADFRAC*size);
+        int stepsizeupclip = ( stepsizeup > MINSIZE ) ? stepsizeup : MINSIZE;
+
+        if ( !dyncontent && size )
+        {
+            // JIT allocation occurs here
+
+            dsize     = size;
+            allocsize = size;
+
+            MEMNEWARRAY(dyncontent,int,allocsize+1);
+
+            setzero(DEREFMEMARRAY(dyncontent,0));
+
+            #ifndef IGNOREMEM
+            memcount((allocsize*sizeof(int)),+1);
+            #endif
+
+            for ( int i = 0 ; i < allocsize ; ++i )
+            {
+                DEREFMEMARRAY(dyncontent,i+1) = i;
+            }
+        }
+
+        else if ( ( size > allocsize                     ) ||
+                  (  array_norm()                     &&
+                    !locarrayhold                     &&
+                    ( size           < stepsizedown ) &&
+                    ( stepsizeupclip < stepsizedown )    ) ||
+                  (  array_tight()                    &&
+                    !locarrayhold                     &&
+                    ( size           < allocsize    )    )    )
+        {
+            // Resize array
+
+            int *newcontent = nullptr;
+
+            int newdsize      = dsize;
+            int newallocsize  = allocsize;
+            bool newholdalloc = false;
+
+            #ifndef IGNOREMEM
+            int oldallocsize = allocsize;
+            #endif
+
+            int modallocsize;
+
+            modallocsize = array_tight() ? size : stepsizeupclip;
+            newallocsize = modallocsize;
+
+            newdsize = size;
+
+            NiceAssert( newallocsize >= newdsize );
+            NiceAssert( newallocsize >= 0        );
+            NiceAssert( newdsize     >= 0        );
+
+            MEMNEWARRAY(newcontent,int,newallocsize+1);
+
+            setzero(DEREFMEMARRAY(newcontent,0));
+
+            #ifndef IGNOREMEM
+            memcount((newallocsize*sizeof(int)),+1);
+            #endif
+
+            for ( int i = 0 ; i < newallocsize ; ++i )
+            {
+                DEREFMEMARRAY(newcontent,i+1) = i;
+            }
+
+            dyncontent = newcontent;
+            dsize      = newdsize;
+            allocsize  = newallocsize;
+            holdalloc  = newholdalloc;
+
+            #ifndef IGNOREMEM
+            memcount((oldallocsize*sizeof(int)),-1);
+            #endif
+        }
+
+        else
+        {
+            dsize = size;
+        }
     }
 }
 

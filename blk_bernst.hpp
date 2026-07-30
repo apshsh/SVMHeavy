@@ -100,9 +100,9 @@ public:
     // This is really only used in one place - see globalopt.h
 
     virtual const Vector<gentype>        &y (void) const override;
-    virtual const Vector<double>         &yR(void) const override { static thread_local Vector<double>         dummy; NiceThrow("yR not available in blk_bernst"); return dummy; }
-    virtual const Vector<d_anion>        &yA(void) const override { static thread_local Vector<d_anion>        dummy; NiceThrow("yA not available in blk_bernst"); return dummy; }
-    virtual const Vector<Vector<double>> &yV(void) const override { static thread_local Vector<Vector<double>> dummy; NiceThrow("yV not available in blk_bernst"); return dummy; }
+    virtual const Vector<double>         &yR(void) const override { thread_local Vector<double>         dummy; NiceThrow("yR not available in blk_bernst"); return dummy; }
+    virtual const Vector<d_anion>        &yA(void) const override { thread_local Vector<d_anion>        dummy; NiceThrow("yA not available in blk_bernst"); return dummy; }
+    virtual const Vector<Vector<double>> &yV(void) const override { thread_local Vector<Vector<double>> dummy; NiceThrow("yV not available in blk_bernst"); return dummy; }
 
 private:
 

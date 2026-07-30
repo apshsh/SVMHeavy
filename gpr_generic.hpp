@@ -107,7 +107,7 @@ public:
     virtual const Vector<int>            &d          (void) const override { return xd;           }
     virtual const Vector<double>         &Cweight    (void) const override { return dCweight;     }
     virtual const Vector<double>         &sigmaweight(void) const override { return dsigmaweight; }
-    virtual const Vector<double>         &epsweight  (void) const override { static thread_local Vector<double> xxepsweight; xxepsweight.resize(N()) = 1.0; return xxepsweight;   }
+    virtual const Vector<double>         &epsweight  (void) const override { thread_local Vector<double> xxepsweight; xxepsweight.resize(N()) = 1.0; return xxepsweight;   }
 
     virtual const gentype        &y (int i) const override { return ( i >= 0 ) ? y ()(i) : getQQconst().y (i); }
     virtual       double          yR(int i) const override { return ( i >= 0 ) ? yR()(i) : getQQconst().yR(i); }
@@ -214,7 +214,7 @@ public:
     // Likelihood
 
     virtual double loglikelihood(void) const override { return getQQconst().loglikelihood(); }
-    virtual double maxinfogain  (void) const override { return getQQconst().maxinfogain  (); }
+    virtual double infogain     (void) const override { return getQQconst().infogain     (); }
     virtual double RKHSnorm     (void) const override { return getQQconst().RKHSnorm     (); }
     virtual double RKHSabs      (void) const override { return getQQconst().RKHSabs      (); }
 

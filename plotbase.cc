@@ -21,22 +21,25 @@
 
 //#define DOCROP
 
-//#ifdef ENABLE_THREADS
-//#define PARSYSCALL false
-//#endif
-//#ifndef ENABLE_THREADS
 #define PARSYSCALL false
-//#endif
 
 // Get preset dash-type strings
 const char *dashtypes(int j);
 
 
 
-int domultiplot2d(double xmin, double xmax, double omin, double omax,
-                  const std::string &fname, const std::string &dname, int outformat, const std::string &title,
-                  const Vector<std::string> &dnamelist, const Vector<int> &repind, const Vector<int> &objind, const Vector<std::string> &plotlabels,
-                  int maxobj, int incvar, int plotlogy)
+int domultiplot2d(double xmin, double xmax,
+                  double omin, double omax,
+                  const std::string &fname,
+                  const std::string &dname,
+                  int outformat,
+                  const std::string &title,
+                  const Vector<std::string> &dnamelist,
+                  const Vector<int> &repind,
+                  const Vector<int> &objind,
+                  const Vector<std::string> &plotlabels,
+                  int maxobj, int incvar, int plotlogy,
+                  int xgrid, int ygrid)
 {
     int numdatfiles = dnamelist.size(); // total number of lines to draw
     int q;
@@ -110,7 +113,11 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
         dnameplotfile << "set ytics nomirror font \",8\"\n";
         dnameplotfile << "set mxtics 5\n";
         dnameplotfile << "set mytics 5\n";
-        dnameplotfile << "set grid mxtics mytics\n";
+        if (  xgrid &&  ygrid ) { dnameplotfile << "set grid   mxtics           mytics\n"; }
+        if (  xgrid && !ygrid ) { dnameplotfile << "set grid   mxtics         nomytics noytics\n"; }
+        if ( !xgrid &&  ygrid ) { dnameplotfile << "set grid nomxtics noxtics   mytics\n"; }
+        if ( !xgrid && !ygrid ) { dnameplotfile << "set grid nomxtics noxtics nomytics noytics\n"; }
+        //dnameplotfile << "set grid mxtics mytics\n";
         dnameplotfile << "set samples 500\n";
         dnameplotfile << "set style fill transparent solid 0.30 noborder\n";
     }
@@ -378,7 +385,12 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
 
 
 
-int doplot(double xmin, double xmax, double omin, double omax, const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar, int doline, int numdat, int plotlogy)
+int doplot(double xmin, double xmax,
+           double omin, double omax,
+           const std::string &fname,
+           const std::string &dname,
+           int outformat, int incdata, int incvar, int doline, int numdat, int plotlogy,
+           int xgrid, int ygrid)
 {
     std::string dnamepos = dname+"_pos";
     std::string dnameneg = dname+"_neg";
@@ -442,7 +454,11 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
         dnameplotfile << "set ytics nomirror font \",8\"\n";
         dnameplotfile << "set mxtics 5\n";
         dnameplotfile << "set mytics 5\n";
-        dnameplotfile << "set grid mxtics mytics\n";
+        if (  xgrid &&  ygrid ) { dnameplotfile << "set grid   mxtics           mytics\n"; }
+        if (  xgrid && !ygrid ) { dnameplotfile << "set grid   mxtics         nomytics noytics\n"; }
+        if ( !xgrid &&  ygrid ) { dnameplotfile << "set grid nomxtics noxtics   mytics\n"; }
+        if ( !xgrid && !ygrid ) { dnameplotfile << "set grid nomxtics noxtics nomytics noytics\n"; }
+        //dnameplotfile << "set grid mxtics mytics\n";
         dnameplotfile << "set samples 500\n";
         dnameplotfile << "set style fill transparent solid 0.30 noborder\n";
         //dnameplotfile << "set style fill solid 0.4 noborder\n";
@@ -666,20 +682,11 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
     {
         if ( PARSYSCALL )
         {
-//#ifndef ENABLE_THREADS
             std::string doplotcomm = "bash ./"+dnamesh+" &";
 
 #ifndef USE_MEX
             res = svm_system(doplotcomm.c_str());
 #endif
-//#endif
-//#ifdef ENABLE_THREADS
-//            std::string *doplotcomm = new std::string("bash ./"+dnamesh);
-//
-//#ifndef USE_MEX
-//            std::thread(svm_system,(*doplotcomm).c_str());
-//#endif
-//#endif
         }
 
         else
@@ -911,20 +918,11 @@ int dosurf(double xmin, double xmax, double ymin, double ymax, double omin, doub
     {
         if ( PARSYSCALL )
         {
-//#ifndef ENABLE_THREADS
             std::string doplotcomm = "bash ./"+dnamesh+" &";
 
 #ifndef USE_MEX
             res = svm_system(doplotcomm.c_str());
 #endif
-//#endif
-//#ifdef ENABLE_THREADS
-//            std::string *doplotcomm = new std::string("bash ./"+dnamesh);
-//
-//#ifndef USE_MEX
-//            std::thread(svm_system,(*doplotcomm).c_str());
-//#endif
-//#endif
         }
 
         else
@@ -1094,20 +1092,11 @@ int dosurfvar(double xmin, double xmax, double ymin, double ymax, double omin, d
 
     if ( PARSYSCALL )
     {
-//#ifndef ENABLE_THREADS
         std::string doplotcomm = "bash ./"+dnamesh+" &";
 
 #ifndef USE_MEX
         res = svm_system(doplotcomm.c_str());
 #endif
-//#endif
-//#ifdef ENABLE_THREADS
-//        std::string *doplotcomm = new std::string("bash ./"+dnamesh);
-//
-//#ifndef USE_MEX
-//        std::thread(svm_system,(*doplotcomm).c_str());
-//#endif
-//#endif
     }
 
     else
@@ -1144,8 +1133,12 @@ int dosurfvar(double xmin, double xmax, double ymin, double ymax, double omin, d
 
 
 
-int doscatterplot2d(double xmin, double xmax, double ymin, double ymax,
-                    const std::string &fname, const std::string &dname, int outformat)
+int doscatterplot2d(double xmin, double xmax,
+                    double ymin, double ymax,
+                    const std::string &fname,
+                    const std::string &dname,
+                    int outformat,
+                    int xgrid, int ygrid)
 {
     std::string dnameplot = dname+".plot";
 
@@ -1188,7 +1181,11 @@ int doscatterplot2d(double xmin, double xmax, double ymin, double ymax,
     dnameplotfile << "#set ytics nomirror font \",8\"\n";
     dnameplotfile << "set mxtics 5\n";
     dnameplotfile << "set mytics 5\n";
-    dnameplotfile << "set grid mxtics mytics\n";
+    if (  xgrid &&  ygrid ) { dnameplotfile << "set grid   mxtics           mytics\n"; }
+    if (  xgrid && !ygrid ) { dnameplotfile << "set grid   mxtics         nomytics noytics\n"; }
+    if ( !xgrid &&  ygrid ) { dnameplotfile << "set grid nomxtics noxtics   mytics\n"; }
+    if ( !xgrid && !ygrid ) { dnameplotfile << "set grid nomxtics noxtics nomytics noytics\n"; }
+    //dnameplotfile << "set grid mxtics mytics\n";
     dnameplotfile << "#set samples 500\n";
     dnameplotfile << "set style circle radius 0.01\n";
     dnameplotfile << "#set style fill transparent solid 0.30 noborder\n";
@@ -1233,20 +1230,11 @@ int doscatterplot2d(double xmin, double xmax, double ymin, double ymax,
 
     if ( PARSYSCALL )
     {
-//#ifndef ENABLE_THREADS
         std::string doplotcomm = "bash ./"+dnamesh+" &";
 
 #ifndef USE_MEX
         res = svm_system(doplotcomm.c_str());
 #endif
-//#endif
-//#ifdef ENABLE_THREADS
-//        std::string *doplotcomm = new std::string("bash ./"+dnamesh);
-//
-//#ifndef USE_MEX
-//        std::thread(svm_system,(*doplotcomm).c_str());
-//#endif
-//#endif
     }
 
     else

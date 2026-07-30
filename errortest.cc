@@ -58,25 +58,25 @@ double calcnegloglikelihood(const ML_Base &baseML, int suppressfb)
     return -res;
 }
 
-double calcmaxinfogain(const ML_Base &baseML, int suppressfb)
+double calcinfogain(const ML_Base &baseML, int suppressfb)
 {
     (void) suppressfb;
 
-    double res = baseML.maxinfogain();
+    double res = baseML.infogain();
 
 //    if ( isSVM(baseML) )
 //    {
-//        res = (dynamic_cast<const SVM_Generic &>(baseML)).quasimaxinfogain();
+//        res = (dynamic_cast<const SVM_Generic &>(baseML)).quasiinfogain();
 //    }
 //
 //    else if ( isGPR(baseML) )
 //    {
-//        res = (dynamic_cast<const GPR_Generic &>(baseML)).maxinfogain();
+//        res = (dynamic_cast<const GPR_Generic &>(baseML)).infogain();
 //    }
 //
 //    else if ( isLSV(baseML) )
 //    {
-//        res = (dynamic_cast<const LSV_Generic &>(baseML)).lsvmaxinfogain();
+//        res = (dynamic_cast<const LSV_Generic &>(baseML)).lsvinfogain();
 //    }
 //
 //    else
@@ -263,7 +263,7 @@ class foldargs
              Vector<gentype> &kgvarres, Vector<double> &loctmpcnt, Matrix<double> &loctmpcfm,
              double &loctmpres, int &locNnonz, const Vector<int> &locblockidvect, int Nclasses,
              const Vector<int> &locisenabled, const Vector<gentype> &locy, int startpoint, int calcgvarres,
-             const svm_pthread_id &xmainid)
+             int xmainid)
     : xlocML(locML),
       xtrainglobcond(trainglobcond),
       xkresh(kresh),
@@ -299,7 +299,7 @@ class foldargs
     const Vector<gentype> &xlocy;
     int xstartpoint;
     int xcalcgvarres;
-    const svm_pthread_id &mainid;
+    int mainid;
     int foldres;
 };
 
@@ -312,7 +312,6 @@ void qswap(foldargs *&a, foldargs *&b)
 {
     foldargs *c(a); a = b; b = c;
 }
-
 
 //inline int *&setident (int *&a);
 //inline int *&setzero  (int *&a);
@@ -352,10 +351,6 @@ void *doatest(void *args_ptr);
 double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres, Vector<double> &cnt, Matrix<double> &cfm, Vector<Vector<gentype>> &resh, Vector<Vector<gentype>> &resg, 
                  Vector<Vector<gentype>> &gvarres, int numreps, int startpoint, int calcgvarres, int suppressfb, int useThreads)
 {
-
-#ifndef ENABLE_THREADS
-    useThreads = 0;
-#endif
 
     if ( !baseML.isSolGlob() )
     {
@@ -515,11 +510,11 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
 
             Vector<ML_Base *> vlocML(m);
             Vector<foldargs *> vxargs(m);
-            Vector<svm_pthread_t *> vprepthread(m);
-            Vector<svm_pthread_t *> vfoldthread(m);
-            Vector<svm_pthread_t *> vtestthread(m);
+            Vector<std::thread *> vprepthread(m);
+            Vector<std::thread *> vfoldthread(m);
+            Vector<std::thread *> vtestthread(m);
 
-            svm_pthread_id thisthread = svm_pthread_self();
+            int thisthread = getThreadID();
 
             vlocML = locML;
 
@@ -622,10 +617,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
 
                     if ( i )
                     {
-                        MEMNEW(vprepthread("&",i),svm_pthread_t);
-
-                        int tfail = svm_pthread_create(vprepthread("&",i),doaprep,(void *) vxargs("&",i));
-                        if ( tfail ) { return valvnan(); }
+                        MEMNEW(vprepthread("&",i),std::thread(doaprep,(void *) vxargs("&",i)));
                     }
                 }
 
@@ -635,8 +627,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
                 {
                     if ( i )
                     {
-                        int tfail = svm_pthread_join(*vprepthread("&",i),nullptr);
-                        if ( tfail ) { return valvnan(); }
+                        (*vprepthread("&",i)).join();
                     }
 	        }
 
@@ -695,10 +686,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
 
                     if ( i )
                     {
-                        MEMNEW(vfoldthread("&",i),svm_pthread_t);
-
-                        int tfail = svm_pthread_create(vfoldthread("&",i),doafold,(void *) vxargs("&",i));
-                        if ( tfail ) { return valvnan(); }
+                        MEMNEW(vfoldthread("&",i),std::thread(doafold,(void *) vxargs("&",i)));
                     }
                 }
 
@@ -709,8 +697,8 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
                 {
                     if ( i )
                     {
-                        int tfail = svm_pthread_join(*vfoldthread("&",i),nullptr);
-                        if ( tfail || vxargs(i)->foldres ) { return valvnan(); }
+                        (*vfoldthread("&",i)).join();
+                        if ( vxargs(i)->foldres ) { return valvnan(); }
                     }
 	        }
 
@@ -754,10 +742,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
 
                     if ( i )
                     {
-                        MEMNEW(vtestthread("&",i),svm_pthread_t);
-
-                        int tfail = svm_pthread_create(vtestthread("&",i),doatest,(void *) vxargs("&",i));
-                        if ( tfail ) { return valvnan(); }
+                        MEMNEW(vtestthread("&",i),std::thread(doatest,(void *) vxargs("&",i)));
                     }
                 }
 
@@ -768,8 +753,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
                 {
                     if ( i )
                     {
-                        int tfail = svm_pthread_join(*vtestthread("&",i),nullptr);
-                        if ( tfail ) { return valvnan(); }
+                        (*vtestthread("&",i)).join();
                     }
 	        }
 

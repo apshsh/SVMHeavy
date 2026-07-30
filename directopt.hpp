@@ -98,6 +98,16 @@ public:
 
     DIRectOptions(const DIRectOptions &src) : GlobalOptions(src)
     {
+        optname = "opt_DIRect";
+
+        maxits            = 1000; //1000; //400; //200;
+        maxevals          = 10000; //5000; //2000; //1000; - actual maxevals is maxevals*dim
+        eps               = 1e-4;
+        //algorithm         = DIRECT_ORIGINAL;
+        algorithm         = DIRECT_GABLONSKY; // always use this so the "hidden constraint" feature is accessible!
+        traintimeoverride = 0;
+        gridsource        = nullptr;
+
         *this = src;
     }
 

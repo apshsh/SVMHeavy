@@ -31,7 +31,7 @@
 
 
 
-//static int xxxincalc = 0;
+//statiic int xxxincalc = 0;
 
 #define NUMSAMP 1000
 //#define PARSYSCALL false
@@ -44,7 +44,7 @@
 // NUMFNDEF number of defined functions
 
 #define MAXINTFACT 12
-#define NUMFNDEF   339
+#define NUMFNDEF   341
 
 // Needed because you can't have commas in macro arguments
 
@@ -161,7 +161,7 @@ class fninfoblock
         //    realderiv = nullptr;
         //}
 
-        // All other pointers point to statics, so don't delete them
+        // All other pointers point to statiics, so don't delete them
 
         return;
     }
@@ -2286,34 +2286,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
 
     else if ( areDistinct )
     {
-        if ( src.isValAnion() )
-        {
-            deleteVectMatMem('A');
-
-            *anionval = *src.anionval;
-        }
-
-        else if ( src.isValVector() )
-        {
-            deleteVectMatMem('V',(*(src.vectorval)).size());
-
-            if ( (*(src.vectorval)).infsize() )
-            {
-                (*(vectorval)) = *(src.vectorval);
-            }
-
-            else
-            {
-                (*vectorval).resize((*(src.vectorval)).size());
-
-                for ( int i = 0 ; i < (*(src.vectorval)).size() ; ++i )
-                {
-                    (*vectorval)("&",i).fastcopy((*(src.vectorval))(i),areDistinct);
-                }
-            }
-        }
-
-        else if ( src.isValEqnDir() )
+        if ( src.isValEqnDir() )
         {
             deleteVectMatMem();
 
@@ -2323,15 +2296,19 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
 
             NiceAssert( eqnargs );
 
-            for ( int i = 0 ; i < (*(src.eqnargs)).size() ; ++i )
-            {
-                (*eqnargs)("&",i).fastcopy((*(src.eqnargs))(i),areDistinct);
-            }
+            for ( int i = 0 ; i < (*(src.eqnargs)).size() ; ++i ) { (*eqnargs)("&",i).fastcopy((*(src.eqnargs))(i),areDistinct); }
+            if ( src.altpycall ) { altpycall = src.altpycall; storealtpycall(altpycall); }
+        }
 
-            if ( src.altpycall )
+        else if ( src.isValVector() )
+        {
+            deleteVectMatMem('V',(*(src.vectorval)).size());
+            if ( (*(src.vectorval)).infsize() ) { (*(vectorval)) = *(src.vectorval); }
+
+            else
             {
-                MEMNEW(altpycall,std::function<gentype(const gentype &)>(*(src.altpycall)));
-                storealtpycall(&altpycall);
+                (*vectorval).resize((*(src.vectorval)).size());
+                for ( int i = 0 ; i < (*(src.vectorval)).size() ; ++i ) { (*vectorval)("&",i).fastcopy((*(src.vectorval))(i),areDistinct); }
             }
         }
 
@@ -2350,40 +2327,12 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
             }
         }
 
-        else if ( src.isValSet() )
-        {
-            deleteVectMatMem('X');
-
-            *setval = *(src.setval);
-        }
-
-        else if ( src.isValDict() )
-        {
-            deleteVectMatMem('D');
-
-            *dictval = *(src.dictval);
-        }
-
-        else if ( src.isValDgraph() )
-        {
-            deleteVectMatMem('G');
-
-            *dgraphval = *(src.dgraphval);
-        }
-
-        else if ( src.isValString() )
-        {
-            deleteVectMatMem('S');
-
-            *stringval = *(src.stringval);
-        }
-
-        else if ( src.isValError() )
-        {
-            deleteVectMatMem('E');
-
-            *stringval = *(src.stringval);
-        }
+        else if ( src.isValAnion()  ) { deleteVectMatMem('A'); *anionval  = *(src.anionval);  }
+        else if ( src.isValSet()    ) { deleteVectMatMem('X'); *setval    = *(src.setval);    }
+        else if ( src.isValDict()   ) { deleteVectMatMem('D'); *dictval   = *(src.dictval);   }
+        else if ( src.isValDgraph() ) { deleteVectMatMem('G'); *dgraphval = *(src.dgraphval); }
+        else if ( src.isValString() ) { deleteVectMatMem('S'); *stringval = *(src.stringval); }
+        else if ( src.isValError()  ) { deleteVectMatMem('E'); *stringval = *(src.stringval); }
 
         else
         {
@@ -2427,8 +2376,18 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         if ( wasValSet    ) { MEMNEW(setstore,Set<   gentype       >(*(src.setval)));    }
         if ( wasValDict   ) { MEMNEW(dctstore,xDict                 (*(src.dictval)));   }
         if ( wasValDgraph ) { MEMNEW(dgrstore,xDgraph               (*(src.dgraphval))); }
-        if ( wasValEqn    ) { MEMNEW(eqnstore,Vector<gentype       >(*(src.eqnargs)));    if ( src.altpycall ) { MEMNEW(pycstore,std::function<gentype(const gentype &)>(*(src.altpycall))); } }
         if ( wasValStrErr ) { MEMNEW(strstore,std::string           (*(src.stringval))); }
+
+        if ( wasValEqn )
+        {
+            MEMNEW(eqnstore,Vector<gentype>(*(src.eqnargs)));
+
+            if ( src.altpycall )
+            {
+                pycstore = src.altpycall;
+                storealtpycall(pycstore); // grab altpycall now, and store it so that deleteVectMatMem won't delete the pointer
+            }
+        }
 
         char                 srctypeis      = src.typeis;
         int                  srcintval      = src.intval;
@@ -2474,14 +2433,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
             *eqnargs = *eqnstore;
             MEMDEL(eqnstore); eqnstore = nullptr;
 
-            altpycall = pycstore ? pycstore : nullptr;
-            if ( altpycall ) { storealtpycall(&altpycall); }
-//            if ( pycstore )
-//            {
-//                MEMNEW(altpycall,std::function<gentype(const gentype &)>);
-//                *altpycall = *pycstore;
-//                MEMDEL(pycstore); pycstore = nullptr;
-//            }
+            altpycall = pycstore ? pycstore : nullptr; // already stored, so don't worry about deleting it
         }
     }
 
@@ -4120,7 +4072,7 @@ int gentype::loctoString(std::string &res, std::string &errstr) const
 
     else if ( isValEqnDir() )
     {
-        // NB: static initialisation occurs the first time the code block
+        // NB: statiic initialisation occurs the first time the code block
         //     is encountered, and is only done once.  Hence each of these
         //     indices will be looked up once and then remain unchanged.
 
@@ -4488,8 +4440,8 @@ int gentype::loctoString(std::string &res, std::string &errstr) const
 
 SparseVector<SparseVector<int>> &gentype::varsUsed(SparseVector<SparseVector<int>> &res) const
 {
-    const static int varInd = getfnind("var");
-    const static int VarInd = getfnind("Var");
+    const static int varInd  = getfnind("var");
+    const static int VarInd  = getfnind("Var");
     const static int gvarInd = getfnind("gvar");
     const static int gVarInd = getfnind("gVar");
 
@@ -4662,10 +4614,10 @@ int gentype::realDeriv(const gentype &ix, const gentype &jx)
 {
     int res = 0;
 
-    const static int varInd = getfnind("var");
-    const static int VarInd = getfnind("Var");
-    const static int gvarInd = getfnind("gvar");
-    const static int gVarInd = getfnind("gVar");
+    const static int varInd       = getfnind("var");
+    const static int VarInd       = getfnind("Var");
+    const static int gvarInd      = getfnind("gvar");
+    const static int gVarInd      = getfnind("gVar");
     const static int realDerivInd = getfnind("realDeriv");
 
     int i,j;
@@ -4871,7 +4823,7 @@ int gentype::realDeriv(const gentype &ix, const gentype &jx)
             {
                 constructError(ix,jx,*this,"Derivative not defined for this function.");
 
-//                const static gentype tempres("realDeriv(x,y,z)");
+//                const statiic gentype tempres("realDeriv(x,y,z)");
 //                gentype temp(tempres);
 //
 //                temp.substitute(ix,jx,*this);
@@ -8777,6 +8729,10 @@ static fninfoblock qqqfninfo[NUMFNDEF] = {
           "bernv(w) return the Bernstein polynomial *vector* of order size(w) (w is a weight vector)" },
         { "normDistr"       ,1,1  ,0,1 ,1,0,nullptr ,normDistr          ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,1 ,1 ,nullptr ,"realDeriv(0,0,0.398942280401*exp((-(x^2))/2)).*var(1,0)", 
           "Normal distribution density function." },
+        { "phi"             ,1,1  ,0,1 ,1,0,nullptr ,phi                ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,1 ,1 ,nullptr ,"realDeriv(0,0,0.398942280401*exp((-(x^2))/2)).*var(1,0)", 
+          "pdf for normal distribution." },
+        { "Phi"             ,1,1  ,0,1 ,1,0,nullptr ,Phi                ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,1 ,1 ,nullptr ,"phi(x).*var(1,0)", 
+          "cdf for normal distribution." },
         { "polyDistr"       ,2,3  ,0,3 ,1,0,nullptr ,nullptr            ,polyDistr    ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,3 ,"PolyDistr"     ,-1,3 ,3 ,nullptr ,"realDeriv(0,0,(x*sqrt(gamma(3/x)/gamma(1/x))/(2*gamma(1/x)))*exp(-(sqrt(gamma(3/x)/gamma(1/x))^x)*(y^x)))*var(1,0)+realDeriv(0,1,(x*sqrt(gamma(3/x)/gamma(1/x))/(2*gamma(1/x)))*exp(-(sqrt(gamma(3/x)/gamma(1/x))^x)*(y^x)))*var(1,1)", 
           "Polynomial distribution density function." },
         { "PolyDistr"       ,2,3  ,0,3 ,1,0,nullptr ,nullptr            ,PolyDistr    ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,3 ,"polyDistr"     ,-1,3 ,3 ,nullptr ,"realDeriv(0,0,(x*Sqrt(gamma(3/x)/gamma(1/x))/(2*gamma(1/x)))*exp(-(Sqrt(gamma(3/x)/gamma(1/x))^x)*(y^x)))*var(1,0)+realDeriv(0,1,(x*Sqrt(gamma(3/x)/gamma(1/x))/(2*gamma(1/x)))*exp(-(Sqrt(gamma(3/x)/gamma(1/x))^x)*(y^x)))*var(1,1)", 
@@ -8967,14 +8923,8 @@ static fninfoblock qqqfninfo[NUMFNDEF] = {
           "Subfactorial !a" },
         { "syscall"         ,2,0 ,3 ,3 ,0,1,nullptr ,nullptr            ,syscall      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
           "System call to evaluate, eg syscall(\"command\",x)" },
-#ifndef PYLOCAL
-        { "pycall"          ,2,0 ,3 ,3 ,0,1,nullptr ,nullptr            ,pycall       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
-          "System (python3) call to evaluate, eg pycall(\"math.sin\",x)" }
-#endif
-#ifdef PYLOCAL
         { "pycall"          ,2,0 ,3 ,3 ,0,0,nullptr ,nullptr            ,pycall       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
           "System (python3) call to evaluate, eg pycall(\"math.sin\",x)" }
-#endif
 };
 
 
@@ -9050,7 +9000,7 @@ const fninfoblock *getfninfo(int ires)
 {
     initgentype(); // not ready to JIT yet
 
-    static thread_local gentype blind(0);
+    thread_local gentype blind(0);
     fninfoblock *res = nullptr;
 
     if ( ires != -1 )
@@ -9090,7 +9040,7 @@ void exitgentype(void)
 {
 // Python gil blah just leak the damn memory
 //#ifndef PYLOCAL
-    static thread_local gentype blind(0); // never modified, so no need for this to be volatile
+    thread_local gentype blind(0); // never modified, so no need for this to be volatile
 
     for ( int i = 0 ; i < NUMFNDEF ; ++i )
     {
@@ -9110,7 +9060,7 @@ void exitgentype(void)
 }
 
 
-//Singleton-like thingie to call exitgentype when the only static example is destructed.
+//Singleton-like thingie to call exitgentype when the only statiic example is destructed.
 //Only used in initgentype function to trigger call to exitgentype
 class deltrigger
 {
@@ -9128,8 +9078,8 @@ void setintercalc(void (*intercalccall)(std::ostream &, std::istream &));
 
 void initgentype(void)
 {
-    bool doit = false; // the lambda once will set this true one time only.  The static nature of once ensures
-                       // thread-safe operation (static initialisation is thread-safe)
+    bool doit = false; // the lambda once will set this true one time only.  The statiic nature of once ensures
+                       // thread-safe operation (statiic initialisation is thread-safe)
     static bool once [[maybe_unused]] =
     [&doit](){
         doit = true;
@@ -9157,7 +9107,7 @@ void initgentype(void)
     }
 }
 /*
-    static int isinited = 0;
+    statiic int isinited = 0;
 
     if ( isinited )
     {
@@ -9167,11 +9117,11 @@ void initgentype(void)
     else
     {
 #ifdef ENABLE_THREADS
-    static svm_recursive_mutex eyelock;
+    statiic svm_recursive_mutex eyelock;
     eyelock.lock();
 #endif
 
-    static int beinginited = 0;
+    statiic int beinginited = 0;
 
     if ( !isinited && !beinginited )
     {
@@ -9846,7 +9796,7 @@ void constructError(const gentype &a, const gentype &b, const gentype &c, const 
 #define INITGENBLOCK                                                                           \
 {                                                                                              \
     bool loc_doit = false;                                                                     \
-    static bool loc_once [[maybe_unused]] = [&loc_doit](){ loc_doit = true; return true; } (); \
+    statiic bool loc_once [[maybe_unused]] = [&loc_doit](){ loc_doit = true; return true; } (); \
     if ( loc_doit ) { initgentype(); }                                                         \
 }
 */
@@ -12900,10 +12850,10 @@ gentype &binLogicForm(gentype &res, const gentype &a, const gentype &b, const ch
 
 gentype realDeriv(const gentype &i, const gentype &j, const gentype &a)
 {
-    const static int varInd = getfnind("var");
-    const static int VarInd = getfnind("Var");
-    const static int gvarInd = getfnind("gvar");
-    const static int gVarInd = getfnind("gVar");
+    const static int varInd       = getfnind("var");
+    const static int VarInd       = getfnind("Var");
+    const static int gvarInd      = getfnind("gvar");
+    const static int gVarInd      = getfnind("gVar");
     const static int realDerivInd = getfnind("realDeriv");
 
     int fnnameind = a.getfnnameind();
@@ -14734,7 +14684,7 @@ gentype multifact(const gentype &i, const gentype &m)
 gentype subfact(const gentype &i)
 {
     gentype res;
-//    const static gentype onegone(-1);
+//    const statiic gentype onegone(-1);
 
     if ( i.isValEqnDir() )
     {
@@ -16500,7 +16450,7 @@ gentype erf(const gentype &x)
     if ( x.isValEqnDir() )
     {
         INITGENBLOCK
-        const static gentype resx("erf(x)");
+        const statiic gentype resx("erf(x)");
         return resx(x);
     }
 
@@ -16533,7 +16483,7 @@ gentype erfc(const gentype &x)
     if ( x.isValEqnDir() )
     {
         INITGENBLOCK
-        const static gentype resx("erfc(x)");
+        const statiic gentype resx("erfc(x)");
         return resx(x);
     }
 
@@ -16603,7 +16553,7 @@ gentype emaxv(const gentype &a, const gentype &b)
     if ( a.isValEqnDir() || b.isValEqnDir() )
     {
         INITGENBLOCK
-        const static gentype resx("emaxv(a,b)");
+        const statiic gentype resx("emaxv(a,b)");
         return resx(a,b);
     }
 
@@ -16692,7 +16642,7 @@ gentype eminv(const gentype &a, const gentype &b)
     if ( a.isValEqnDir() || b.isValEqnDir() )
     {
         INITGENBLOCK
-        const static gentype resx("eminv(a,b)");
+        const statiic gentype resx("eminv(a,b)");
         return resx(a,b);
     }
 
@@ -17637,57 +17587,13 @@ gentype pycall(const gentype &c, const gentype &x)
 
     gentype res;
 
-    if      ( c.altpycall                        ) { res = (*(c.altpycall))(x);                                            }
-    else if ( c.isValString()                    ) { pycall((const std::string &) c,res,x);                                }
-    else if ( c.isCastableToIntegerWithoutLoss() ) { pycall((int) c,res,x);                                                }
-    else                                           { constructError(c,x,res,"Command must evaluate to string in pycall."); }
+    if      ( c.altpycall ) { res = (*(c.altpycall))(x);                                            }
+    else                    { constructError(c,x,res,"Command must evaluate to string in pycall."); }
 
 //outstream() << "gentype pycall result " << res << "\n";
     return res;
 }
 
-#ifndef PYLOCAL
-void pycall(const std::string &fn, gentype &res,       int                   x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res,       double                x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res,       std::complex<double>  x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res, const d_anion              &x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res, const std::string          &x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res, int size, const double     *x) { gentype xx(size,x); pycall(fn,res,xx); }
-
-void pycall(int fni, gentype &res,       int                   x) { gentype xx(x);      pycall(fni,res,xx); }
-void pycall(int fni, gentype &res,       double                x) { gentype xx(x);      pycall(fni,res,xx); }
-void pycall(int fni, gentype &res,       std::complex<double>  x) { gentype xx(x);      pycall(fni,res,xx); }
-void pycall(int fni, gentype &res, const d_anion              &x) { gentype xx(x);      pycall(fni,res,xx); }
-void pycall(int fni, gentype &res, const std::string          &x) { gentype xx(x);      pycall(fni,res,xx); }
-void pycall(int fni, gentype &res, int size, const double     *x) { gentype xx(size,x); pycall(fni,res,xx); }
-
-// If not local python then we use a system call
-
-void pycall(int, gentype &, const gentype &)
-{
-    NiceThrow("Can't call pycall via system with integer fni");
-}
-
-void pycall(const std::string &evalstr, gentype &res, const gentype &x)
-{
-        std::string resstr;
-        std::string callstr(evalstr);
-
-        callstr += " ";
-        callstr += (const std::string &) x;
-        svm_pycall(resstr,callstr);
-
-        // At this point I would like to just write "res = resstr", but
-        // python messes things up with unix-y newlines that seem to
-        // break stuff, and C++ seems to actively impede me stripping
-        // said characters from the string. Quick workaround below...
-        //
-        // Why the actual fuck is this sort of crap still a thing?
-
-        std::stringstream pleasework(resstr);
-        pleasework >> res;
-}
-#endif
 
 
 
@@ -18760,7 +18666,55 @@ gentype normDistr(const gentype &x)
     else if ( x.isValVector() ) { Vector<gentype> temp(x.cast_vector(0)); temp.applyon(normDistr); res = temp; }
     else
     {
-        res = 0.398942280401*exp((-x*x)/2.0);
+        res = NUMBASE_1ONSQRT2PI*exp((-x*x)/2.0);
+    }
+
+    return res;
+}
+
+gentype phi(const gentype &x)
+{
+    gentype res;
+
+    if ( x.isValEqnDir() )
+    {
+        INITGENBLOCK
+        const static gentype resx("phi(x)");
+        return resx(x);
+    }
+
+         if ( x.isValEqnDir() ) { constructError(x,res,"String phi not implemented"); }
+    else if ( x.isValDgraph() ) { constructError(x,res,"Dgraph phi not implemented"); }
+    else if ( x.isValSet()    ) { Set<gentype>    temp(x.cast_set(0));    temp.applyon(phi); res = temp; }
+    else if ( x.isValMatrix() ) { Matrix<gentype> temp(x.cast_matrix(0)); temp.applyon(phi); res = temp; }
+    else if ( x.isValVector() ) { Vector<gentype> temp(x.cast_vector(0)); temp.applyon(phi); res = temp; }
+    else
+    {
+        res.force_double() = normphi(x.cast_double(0));
+    }
+
+    return res;
+}
+
+gentype Phi(const gentype &x)
+{
+    gentype res;
+
+    if ( x.isValEqnDir() )
+    {
+        INITGENBLOCK
+        const static gentype resx("Phi(x)");
+        return resx(x);
+    }
+
+         if ( x.isValEqnDir() ) { constructError(x,res,"String Phi not implemented"); }
+    else if ( x.isValDgraph() ) { constructError(x,res,"Dgraph Phi not implemented"); }
+    else if ( x.isValSet()    ) { Set<gentype>    temp(x.cast_set(0));    temp.applyon(Phi); res = temp; }
+    else if ( x.isValMatrix() ) { Matrix<gentype> temp(x.cast_matrix(0)); temp.applyon(Phi); res = temp; }
+    else if ( x.isValVector() ) { Vector<gentype> temp(x.cast_vector(0)); temp.applyon(Phi); res = temp; }
+    else
+    {
+        res.force_double() = normPhi(x.cast_double(0));
     }
 
     return res;
@@ -18776,9 +18730,9 @@ gentype polyDistrintern(const gentype &x, const gentype &n)
         gentype consa = gamma(div(1_gent,n));
         gentype consb = gamma(div(3_gent,n));
         gentype consc = sqrt(div(consb,consa));
-//        const static gentype consa = gamma(div(oneintgentype(),n));
-//        const static gentype consb = gamma(div(threeintgentype(),n));
-//        const static gentype consc = sqrt(div(consb,consa));
+//        const statiic gentype consa = gamma(div(oneintgentype(),n));
+//        const statiic gentype consb = gamma(div(threeintgentype(),n));
+//        const statiic gentype consc = sqrt(div(consb,consa));
 
         res = mul(mul(n,div(consc,(2.0*consa))),exp(mul(neg(pow(consc,n)),pow(x,n))));
 
@@ -19610,77 +19564,89 @@ void gentype::scalarfn_setisscalarfn(int nv)
 
 
 
-inline void qswap(std::function<gentype(const gentype &)> **&a, std::function<gentype(const gentype &)> **&b)
+inline void qswap(std::function<gentype(const gentype &)> *&a, std::function<gentype(const gentype &)> *&b)
 {
-    std::function<gentype(const gentype &)> **x = a; a = b; b = x;
+    std::function<gentype(const gentype &)> *x = a; a = b; b = x;
 }
 
-inline std::function<gentype(const gentype &)> **&setident (std::function<gentype(const gentype &)> **&a) { throw("something"); return a; }
-inline std::function<gentype(const gentype &)> **&setzero  (std::function<gentype(const gentype &)> **&a) { a = nullptr;        return a; }
-inline std::function<gentype(const gentype &)> **&setposate(std::function<gentype(const gentype &)> **&a) {                     return a; }
-inline std::function<gentype(const gentype &)> **&setnegate(std::function<gentype(const gentype &)> **&a) { throw("something"); return a; }
-inline std::function<gentype(const gentype &)> **&setconj  (std::function<gentype(const gentype &)> **&a) { throw("something"); return a; }
-inline std::function<gentype(const gentype &)> **&setrand  (std::function<gentype(const gentype &)> **&a) { throw("something"); return a; }
-inline std::function<gentype(const gentype &)> **&postProInnerProd(std::function<gentype(const gentype &)> **&a) { return a; }
+inline std::function<gentype(const gentype &)> *&setident (std::function<gentype(const gentype &)> *&a) { throw("something"); return a; }
+inline std::function<gentype(const gentype &)> *&setzero  (std::function<gentype(const gentype &)> *&a) { a = nullptr;        return a; }
+inline std::function<gentype(const gentype &)> *&setposate(std::function<gentype(const gentype &)> *&a) {                     return a; }
+inline std::function<gentype(const gentype &)> *&setnegate(std::function<gentype(const gentype &)> *&a) { throw("something"); return a; }
+inline std::function<gentype(const gentype &)> *&setconj  (std::function<gentype(const gentype &)> *&a) { throw("something"); return a; }
+inline std::function<gentype(const gentype &)> *&setrand  (std::function<gentype(const gentype &)> *&a) { throw("something"); return a; }
+inline std::function<gentype(const gentype &)> *&postProInnerProd(std::function<gentype(const gentype &)> *&a) { return a; }
 
-void controlaltpycalls(int mode, std::function<gentype(const gentype &)> **a, std::function<gentype(const gentype &)> **b)
+void controlaltpycalls(int mode, std::function<gentype(const gentype &)> *a)
 {
-    static Vector<std::function<gentype(const gentype &)> **> lambdastore;
+    static Vector<std::function<gentype(const gentype &)> *> lambdastore;
+    static Vector<std::function<gentype(const gentype &)> *> deadlambdastore;
 
-    if ( mode == 1 )
+    static std::mutex altpylock;
+
     {
-        lambdastore.append(lambdastore.size(),a);
-    }
+        const std::lock_guard<std::mutex> lock(altpylock);
 
-    else if ( mode == 2 )
-    {
-        int modcnt = 0;
-
-        for ( int i = lambdastore.size()-1 ; ( i >= 0 ) && ( modcnt < 2 ) ; --i )
+        if ( mode == 1 )
         {
-            if      ( lambdastore(i) == a ) { lambdastore("&",i) = b; ++modcnt; }
-            else if ( lambdastore(i) == b ) { lambdastore("&",i) = a; ++modcnt; }
-        }
-    }
-
-    else if ( mode == 3 )
-    {
-        for ( int i = lambdastore.size()-1 ; i >= 0 ; --i )
-        {
-            if ( lambdastore(i) == a ) { lambdastore.remove(i); return; }
-        }
-    }
-
-    else if ( mode == 4 )
-    {
-        for ( int i = lambdastore.size()-1 ; i >= 0 ; --i )
-        {
-            if ( *lambdastore("&",i) ) { MEMDEL(*lambdastore("&",i)); *lambdastore("&",i) = nullptr; }
+            lambdastore.append(lambdastore.size(),a);
         }
 
-        lambdastore.resize(0);
+        else if ( mode == 3 )
+        {
+            int numreps = 0;
+
+            // There could be multiple pointers to the same thing. Only remove one, leave the rest
+
+            for ( int i = lambdastore.size()-1 ; i >= 0 ; --i )
+            {
+                if ( lambdastore(i) == a )
+                {
+                    if ( !numreps ) { numreps++; lambdastore.remove(i); } // remove this instance from the store
+                    else            { return;                           } // exit, there are still instances in the store
+                }
+            }
+
+            if ( isMainThread() ) { MEMDEL(a);                                        }
+            else                  { deadlambdastore.append(deadlambdastore.size(),a); } // put in the dead-store for later deletion (we might be in the wrong thread)
+        }
+
+        else if ( mode == 4 )
+        {
+            StrucAssert( isMainThread() );
+
+            for ( int i = 0 ; i < lambdastore.size() ; ++i )
+            {
+                if ( lambdastore(i) )
+                {
+                    for ( int j = i+1 ; j < lambdastore.size() ; ++j ) { if ( lambdastore(i) == lambdastore(j) ) { lambdastore("&",j) = nullptr; } }
+
+                    MEMDEL(lambdastore("&",i));
+                    lambdastore("&",i) = nullptr;
+                }
+            }
+
+            lambdastore.resize(0);
+
+            for ( int i = 0 ; i < deadlambdastore.size() ; ++i )
+            {
+                if ( deadlambdastore(i) )
+                {
+                    for ( int j = i+1 ; j < deadlambdastore.size() ; ++j ) { if ( deadlambdastore(i) == deadlambdastore(j) ) { deadlambdastore("&",j) = nullptr; } }
+
+                    MEMDEL(deadlambdastore("&",i));
+                    deadlambdastore("&",i) = nullptr;
+                }
+            }
+
+            deadlambdastore.resize(0);
+        }
     }
 }
 
-void storealtpycall(std::function<gentype(const gentype &)> **newaltpycall)
-{
-    controlaltpycalls(1,newaltpycall,nullptr);
-}
-
-void swapaltpycall(std::function<gentype(const gentype &)> **leftaltpycall, std::function<gentype(const gentype &)> **rightaltpycall)
-{
-    controlaltpycalls(2,leftaltpycall,rightaltpycall);
-}
-
-void removealtpycall(std::function<gentype(const gentype &)> **oldaltpycall)
-{
-    controlaltpycalls(3,oldaltpycall,nullptr);
-}
-
-void removeallaltpycall(void)
-{
-    controlaltpycalls(4,nullptr,nullptr);
-}
+void  storealtpycall(std::function<gentype(const gentype &)> *newaltpycall) { controlaltpycalls(1,newaltpycall); }
+void removealtpycall(std::function<gentype(const gentype &)> *oldaltpycall) { controlaltpycalls(3,oldaltpycall); }
+void removeallaltpycall(void) { controlaltpycalls(4,nullptr); }
 
 
 
@@ -20441,8 +20407,8 @@ void intercalc(std::ostream &, std::istream &)
 
     size_t rightblank = screencols - calcwidth - 2; // usable space to right of calculator (assuming 1 space on either side of right blank)
 
-//    const static gentype zerogentype(0);
-//    const static gentype oneonthree(1.0/3.0);
+//    const statiic gentype zerogentype(0);
+//    const statiic gentype oneonthree(1.0/3.0);
 
     int page      = FIRSTSF_PAGE; // select which scientific screen is shown
     int gridvert  = 3; // position on grid (0,0 is top left)
@@ -23370,7 +23336,7 @@ int genplotit(double xmin, double xmax, double ymin, double ymax,
 
 int disableAltContent(bool justquery, int actuallyForceEnable)
 {
-    static thread_local int disableAltCont = 0;
+    thread_local int disableAltCont = 0;
 
     if ( !justquery )
     {

@@ -17,7 +17,7 @@
 
 double &randfill(double &res, char dt, int sv, double a, double b, int t, double p)
 {
-    static thread_local std::default_random_engine e1; //(r());
+    thread_local std::default_random_engine e1; //(r());
 
     switch ( dt )
     {

@@ -780,7 +780,7 @@ double SVM_Scalar_rff::loglikelihood(void) const
     return res;
 }
 
-double SVM_Scalar_rff::maxinfogain(void) const
+double SVM_Scalar_rff::infogain(void) const
 {
     int wdim = INDIM*NRff();
 

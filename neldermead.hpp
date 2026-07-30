@@ -37,7 +37,7 @@
 //inline std::ostream &directstream(void)
 //{
 ////    return std::cerr;
-//    static NullOStream devnullstream;
+//    statiic NullOStream devnullstream;
 //
 //    return devnullstream;
 ////    return errstream();

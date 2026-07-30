@@ -17,9 +17,6 @@
 #include <string.h>
 #include <string>
 #include <cmath>
-//#ifdef ENABLE_THREADS
-//#include <mutex>
-//#endif
 #include "mercer.hpp"
 #include "vector.hpp"
 #include "sparsevector.hpp"
@@ -399,7 +396,7 @@ public:
     virtual int isUnderlyingVector(void) const { return 0; }
     virtual int isUnderlyingAnions(void) const { return 0; }
 
-    virtual const Vector<int> &ClassLabels       (void)             const { const static thread_local Vector<int> temp; return temp;         }
+    virtual const Vector<int> &ClassLabels       (void)             const { const thread_local Vector<int> temp;        return temp;         }
     virtual       int          getInternalClass  (const gentype &)  const {                                             return 0;            }
     virtual       int          numInternalClasses(void)             const {                                             return numClasses(); }
     virtual       int          isenabled         (int i)            const { if ( y()(i).isNomConst ) { return 0; }      return d()(i);       }
@@ -461,7 +458,7 @@ public:
     virtual const Vector<double>                &Cweightfuzz(void) const { return xCweightfuzz;                             }
     virtual const Vector<double>                &sigmaweight(void) const;
     virtual const Vector<double>                &epsweight  (void) const { return xepsweight;                               }
-    virtual const Vector<gentype>               &alphaVal   (void) const { NiceThrow("alphaVal has no meaning here"); static const Vector<gentype> dummy; return dummy; }
+    virtual const Vector<gentype>               &alphaVal   (void) const { NiceThrow("alphaVal has no meaning here"); const static Vector<gentype> dummy; return dummy; }
     virtual const Vector<int>                   &alphaState (void) const { return xalphaState;                              }
 
     virtual const SparseVector<gentype> &x       (int i)              const override {                                                      return xgetloc(i);  }
@@ -1185,10 +1182,10 @@ public:
     // NB: - loglikelihood is not guaranteed to be defined or "actual" log
     //       likelihood.  For example in gpr models this is the log likelihood,
     //       but in svm models this is a "quasi" log likelihood
-    //     - ditto maxinfogain (maximum information gain)
+    //     - ditto infogain (information gain)
 
     virtual double loglikelihood(void) const { return valvnan(); }
-    virtual double maxinfogain  (void) const { return valvnan(); }
+    virtual double infogain     (void) const { return valvnan(); }
     virtual double RKHSnorm     (void) const { return valvnan(); }
     virtual double RKHSabs      (void) const { return valvnan(); }
 
@@ -1365,10 +1362,10 @@ public:
     //
     // (u=-1 for overall, u>=0 gives only dimension for relevant minor/up type - see sparsevector)
 
-    virtual const Vector<int>         &indKey         (int u = -1) const { if ( indexKey.isindpresent(u+1)      ) { return indexKey(u+1);      } const static thread_local Vector<int>          dummy; return dummy; }
-    virtual const Vector<int>         &indKeyCount    (int u = -1) const { if ( indexKeyCount.isindpresent(u+1) ) { return indexKeyCount(u+1); } const static thread_local Vector<int>          dummy; return dummy; }
-    virtual const Vector<int>         &dattypeKey     (int u = -1) const { if ( typeKey.isindpresent(u+1)       ) { return typeKey(u+1);       } const static thread_local Vector<int>          dummy; return dummy; }
-    virtual const Vector<Vector<int>> &dattypeKeyBreak(int u = -1) const { if ( typeKeyBreak.isindpresent(u+1)  ) { return typeKeyBreak(u+1);  } const static thread_local Vector<Vector<int>> dummy; return dummy; }
+    virtual const Vector<int>         &indKey         (int u = -1) const { if ( indexKey.isindpresent(u+1)      ) { return indexKey(u+1);      } const thread_local Vector<int>          dummy; return dummy; }
+    virtual const Vector<int>         &indKeyCount    (int u = -1) const { if ( indexKeyCount.isindpresent(u+1) ) { return indexKeyCount(u+1); } const thread_local Vector<int>          dummy; return dummy; }
+    virtual const Vector<int>         &dattypeKey     (int u = -1) const { if ( typeKey.isindpresent(u+1)       ) { return typeKey(u+1);       } const thread_local Vector<int>          dummy; return dummy; }
+    virtual const Vector<Vector<int>> &dattypeKeyBreak(int u = -1) const { if ( typeKeyBreak.isindpresent(u+1)  ) { return typeKeyBreak(u+1);  } const thread_local Vector<Vector<int>> dummy; return dummy; }
 
     // Other functions
     //
@@ -1622,15 +1619,8 @@ public:
             ineartup = nullptr;
             ifartup  = nullptr;
 
-            if ( ilr && (xib.f4(0)).isValVector() )
-            {
-                ineartup = &xib.f4(0);
-            }
-
-            if ( irr && (xib.f4(1)).isValVector() )
-            {
-                ifartup = &xib.f4(1);
-            }
+            if ( ilr && (xib.f4(0)).isValVector() ) { ineartup = &xib.f4(0); }
+            if ( irr && (xib.f4(1)).isValVector() ) { ifartup  = &xib.f4(1); }
 
             // il:    (leftside of rank) index
             // ir:    (rightside of rank) index
@@ -1722,8 +1712,6 @@ public:
 
         if ( allocxuntangifneeded && !idiagr && ( ineartup && ifartup ) )
         {
-            int q;
-
             // Process indirections
 
             MEMNEW(xuntang,     SparseVector<gentype>(xib));
@@ -1740,23 +1728,14 @@ public:
             int iains = iain.size();
             int iaifs = iaif.size();
 
-            for ( q = 0 ; q < iains ; ++q )
-            {
-                (*xuntang).overwriten(x((int) iain(q)),q);
-            }
-
-            for ( q = 0 ; q < iaifs ; ++q )
-            {
-                (*xuntang).overwritef1(x((int) iaif(q)),q);
-            }
+            for ( int q = 0 ; q < iains ; ++q ) { (*xuntang).overwriten (x((int) iain(q)),q); }
+            for ( int q = 0 ; q < iaifs ; ++q ) { (*xuntang).overwritef1(x((int) iaif(q)),q); }
 
             getKernel().getvecInfo((*xzinfountang),(*xuntang));
         }
 
         else if ( allocxuntangifneeded && !idiagr && ( ineartup && irr ) )
         {
-            int q;
-
             // Process indirections
 
             MEMNEW(xuntang     ,SparseVector<gentype>(xib));
@@ -1771,18 +1750,13 @@ public:
 
             int iains = iain.size();
 
-            for ( q = 0 ; q < iains ; ++q )
-            {
-                (*xuntang).overwriten(x((int) iain(q)),q);
-            }
+            for ( int q = 0 ; q < iains ; ++q ) { (*xuntang).overwriten(x((int) iain(q)),q); }
 
             getKernel().getvecInfo((*xzinfountang),(*xuntang));
         }
 
         else if ( allocxuntangifneeded && !idiagr && ( ilr && ifartup ) )
         {
-            int q;
-
             // Process indirections
 
             MEMNEW(xuntang     ,SparseVector<gentype>(xib));
@@ -1797,10 +1771,7 @@ public:
 
             int iaifs = iaif.size();
 
-            for ( q = 0 ; q < iaifs ; ++q )
-            {
-                (*xuntang).overwritef1(x((int) iaif(q)),q);
-            }
+            for ( int q = 0 ; q < iaifs ; ++q ) { (*xuntang).overwritef1(x((int) iaif(q)),q); }
 
             getKernel().getvecInfo((*xzinfountang),(*xuntang));
         }
@@ -1841,9 +1812,7 @@ public:
             sumind.resize(sumindraw.size());
             sumweight.resize(sumweightraw.size());
 
-            int ii;
-
-            for ( ii = 0 ; ii < sumind.size() ; ii++ )
+            for ( int ii = 0 ; ii < sumind.size() ; ii++ )
             {
                 sumind.sv(ii,(int) sumindraw(ii));
                 sumweight.sv(ii,(double) sumweightraw(ii));
@@ -1872,7 +1841,7 @@ public:
             const gentype *qineartup = nullptr;
             const gentype *qifartup = nullptr;
 
-            for ( ii = 0 ; ii < sumind.size() ; ii++ )
+            for ( int ii = 0 ; ii < sumind.size() ; ii++ )
             {
                 methodkey |= detangle_x(qxuntang,qxzinfountang,qxnear,qxfar,qxfarfar,qxfarfarfar,qxnearinfo,qxfarinfo,
                    qinear,qifar,qineartup,qifartup,qilr,qirr,qigr,qigrR,qiokr,qiok,qrankL,qrankR,qgmuL,qgmuR,sumind(ii),qidiagr,&(x()(sumind(ii))),nullptr,
@@ -1909,24 +1878,13 @@ private:
 
         if ( ( xa.nupsize() > 1 ) || ( xa.f1upsize() > 1 ) || xa.isf1offindpresent() || xa.isf2offindpresent() || xa.isf4offindpresent() )
         {
-            int i,s;
             int dim = 0;
 
-            s = xa.nupsize();
+            int snup  = xa.nupsize();
+            int sf1up = xa.f1upsize();
 
-            for ( i = 0 ; i < s ; ++i )
-            {
-                dim = xa.nupsize(i);
-                xdm = ( dim > xdm ) ? dim : xdm;
-            }
-
-            s = xa.f1upsize();
-
-            for ( i = 0 ; i < s ; ++i )
-            {
-                dim = xa.f1upsize(i);
-                xdm = ( dim > xdm ) ? dim : xdm;
-            }
+            for ( int i = 0 ; i < snup  ; ++i ) { dim = xa.nupsize (i); xdm = ( dim > xdm ) ? dim : xdm; }
+            for ( int i = 0 ; i < sf1up ; ++i ) { dim = xa.f1upsize(i); xdm = ( dim > xdm ) ? dim : xdm; }
         }
 
         else if ( xa.nindsize() )
@@ -2142,9 +2100,6 @@ private:
 
     static thread_local SparseVector<int> xvernumber;
     static thread_local SparseVector<int> gvernumber;
-//#ifdef ENABLE_THREADS
-//    static std::mutex mleyelock;
-//#endif
 
     // indPrune: 0 by default, 1 to indicate that x should be "filled out"
     //           with nulls so that each training vector has the same
@@ -2184,7 +2139,7 @@ private:
 
     const ML_Base *altxsrc;
 
-    ML_Base **that;
+//    ML_Base **that;
 
     // Fixes x pointer vector
 
@@ -2554,22 +2509,9 @@ private:
 
     virtual const SparseVector<gentype> &xgetloc(int i) const
     {
-        if ( ( i >= 0 ) && altxsrc )
-        {
-            return (*altxsrc).x(i);
-        }
-
-        else if ( i >= 0 )
-        {
-            return allxdatagent(i);
-        }
-
-        else if ( i == -1 )
-        {
-            // Testing vector
-
-            return *wildxgenta;
-        }
+        if      ( ( i >= 0  ) && altxsrc ) { return (*altxsrc).x(i); }
+        else if (   i >= 0               ) { return allxdatagent(i); }
+        else if (   i == -1              ) { return *wildxgenta;     } // Testing vector
 
 //        else if ( i == -2 )
 //        {
@@ -2578,26 +2520,9 @@ private:
 //            return W();
 //        }
 
-        else if ( i == -3 )
-        {
-            // Testing vector
-
-            return *wildxgentb;
-        }
-
-        else if ( i == -4 )
-        {
-            // Testing vector
-
-            return *wildxgentc;
-        }
-
-        else if ( i == -5 )
-        {
-            // Testing vector
-
-            return *wildxgentd;
-        }
+        else if (   i == -3              ) { return *wildxgentb;     } // Testing vector
+        else if (   i == -4              ) { return *wildxgentc;     } // Testing vector
+        else if (   i == -5              ) { return *wildxgentd;     } // Testing vector
 
         else if ( ( i <= -100 ) && !((-i)%100) )
         {
@@ -2634,40 +2559,18 @@ private:
 
     virtual int locxtang(int i) const
     {
-        if ( ( i >= 0 ) && altxsrc )
-        {
-            return (*altxsrc).xtang(i);
-        }
-
-        else if ( i >= 0 )
-        {
-            return xtang()(i);
-        }
-
-        else if ( i == -1 )
-        {
-            return wildxtanga;
-        }
+        if      ( ( i >= 0  ) && altxsrc ) { return (*altxsrc).xtang(i); }
+        else if (   i >= 0               ) { return xtang()(i);          }
+        else if (   i == -1              ) { return wildxtanga;          }
 
 //        else if ( i == -2 )
 //        {
 //            return getWtang();
 //        }
 
-        else if ( i == -3 )
-        {
-            return wildxtangb;
-        }
-
-        else if ( i == -4 )
-        {
-            return wildxtangc;
-        }
-
-        else if ( i == -5 )
-        {
-            return wildxtangd;
-        }
+        else if (   i == -3              ) { return wildxtangb;          }
+        else if (   i == -4              ) { return wildxtangc;          }
+        else if (   i == -5              ) { return wildxtangd;          }
 
         else if ( ( i <= -100 ) && !((-i)%100) )
         {
@@ -2702,40 +2605,18 @@ private:
 
     virtual const vecInfo &locxinfo(int i) const
     {
-        if ( ( i >= 0 ) && altxsrc )
-        {
-            return (*altxsrc).xinfo(i);
-        }
-
-        else if ( i >= 0 )
-        {
-            return traininfo(i);
-        }
-
-        else if ( i == -1 )
-        {
-            return *wildxinfoa;
-        }
+        if      ( ( i >= 0  ) && altxsrc ) { return (*altxsrc).xinfo(i); }
+        else if (   i >= 0               ) { return traininfo(i);        }
+        else if (   i == -1              ) { return *wildxinfoa;         }
 
 //        else if ( i == -2 )
 //        {
 //            return getWinfo();
 //        }
 
-        else if ( i == -3 )
-        {
-            return *wildxinfob;
-        }
-
-        else if ( i == -4 )
-        {
-            return *wildxinfoc;
-        }
-
-        else if ( i == -5 )
-        {
-            return *wildxinfod;
-        }
+        else if (   i == -3              ) { return *wildxinfob;         }
+        else if (   i == -4              ) { return *wildxinfoc;         }
+        else if (   i == -5              ) { return *wildxinfod;         }
 
         else if ( ( i <= -100 ) && !((-i)%100) )
         {
@@ -2782,7 +2663,6 @@ private:
     int isxreal(int i) const
     {
         int res = 1;
-        int j,k;
 
         const SparseVector<gentype> &xx = x(i);
 
@@ -2791,9 +2671,9 @@ private:
 
         if ( ( xx.altcontent == nullptr ) && ( xx.altcontentsp == nullptr ) && xx.indsize() )
         {
-            for ( j = 0 ; j < xx.indsize() ; ++j )
+            for ( int j = 0 ; j < xx.indsize() ; ++j )
             {
-                k = gettypeind(xx.direcref(j));
+                int k = gettypeind(xx.direcref(j));
 
                 if ( !( ( k >= 2 ) && ( k <= 4 ) ) )
                 {
@@ -2816,20 +2696,9 @@ private:
     {
         if ( fulltest )
         {
-            if ( dattypeKey().size() == 0 )
-            {
-                trainingDataReal = 1;
-            }
-
-            else if ( ( dattypeKey() <= 4 ) && ( dattypeKey() >= 2 ) )
-            {
-                trainingDataReal = 1;
-            }
-
-            else
-            {
-                trainingDataReal = 0;
-            }
+            if      ( dattypeKey().size() == 0                       ) { trainingDataReal = 1; }
+            else if ( ( dattypeKey() <= 4 ) && ( dattypeKey() >= 2 ) ) { trainingDataReal = 1; }
+            else                                                       { trainingDataReal = 0; }
         }
 
         if ( !assumeReal && ( !assumeUnreal && trainingDataReal && wildxaReal && wildxbReal && wildxcReal && wildxdReal && wildxxReal ) )
@@ -2979,62 +2848,60 @@ inline void ML_Base::qswapinternal(ML_Base &bb)
 
     kernPrecursor::qswapinternal(b);
 
-    qswap(kernel         ,b.kernel         );
-    qswap(UUoutkernel    ,b.UUoutkernel    );
-    qswap(RFFkernel      ,b.RFFkernel      );
-    qswap(allxdatagent   ,b.allxdatagent   );
-//FIXME    qswap(allxdatagentp  ,b.allxdatagentp  );
-    qswap(ytargdata      ,b.ytargdata      );
-    qswap(ytargdataR     ,b.ytargdataR     );
-    qswap(ytargdataA     ,b.ytargdataA     );
-    qswap(ytargdataV     ,b.ytargdataV     );
-    qswap(ytargdatap     ,b.ytargdatap     );
-    qswap(ytargdatapR    ,b.ytargdatapR    );
-    qswap(ytargdatapA    ,b.ytargdatapA    );
-    qswap(ytargdatapV    ,b.ytargdatapV    );
-    qswap(alltraintarg   ,b.alltraintarg   );
-    qswap(alltraintargp  ,b.alltraintargp  );
-    qswap(alltraintargR  ,b.alltraintargR  );
-    qswap(alltraintargA  ,b.alltraintargA  );
-    qswap(alltraintargV  ,b.alltraintargV  );
-    qswap(alltraintargpR ,b.alltraintargpR );
-    qswap(alltraintargpA ,b.alltraintargpA );
-    qswap(alltraintargpV ,b.alltraintargpV );
-    qswap(x_d            ,b.x_d            );
-    qswap(xdzero         ,b.xdzero         );
-    qswap(locsigma       ,b.locsigma       );
-    qswap(loclr          ,b.loclr          );
-    qswap(loclrb         ,b.loclrb         );
-    qswap(loclrc         ,b.loclrc         );
-    qswap(loclrd         ,b.loclrd         );
-    qswap(xCweight       ,b.xCweight       );
-    qswap(xCweightfuzz   ,b.xCweightfuzz   );
-    qswap(xepsweight     ,b.xepsweight     );
-    qswap(traininfo      ,b.traininfo      );
-    qswap(traintang      ,b.traintang      );
-//FIXME    qswap(traininfop     ,b.traininfop     );
-    qswap(xalphaState    ,b.xalphaState    );
-    qswap(indexKey       ,b.indexKey       );
-    qswap(indexKeyCount  ,b.indexKeyCount  );
-    qswap(typeKey        ,b.typeKey        );
-    qswap(typeKeyBreak   ,b.typeKeyBreak   );
-    qswap(isIndPrune     ,b.isIndPrune     );
-    qswap(xassumedconsist,b.xassumedconsist);
-    qswap(xconsist       ,b.xconsist       );
-    qswap(globalzerotol  ,b.globalzerotol  );
-    qswap(isBasisUserUU  ,b.isBasisUserUU  );
-    qswap(defbasisUU     ,b.defbasisUU     );
-    qswap(locbasisUU     ,b.locbasisUU     );
-    qswap(isBasisUserVV  ,b.isBasisUserVV  );
-    qswap(defbasisVV     ,b.defbasisVV     );
-    qswap(locbasisVV     ,b.locbasisVV     );
-    qswap(xpreallocsize  ,b.xpreallocsize  );
-    qswap(K2mat          ,b.K2mat          );
-
-    qswap(xmuprior   ,b.xmuprior);
-    qswap(xmuprior_gt,b.xmuprior_gt);
-    qswap(xmuprior_ml,b.xmuprior_ml);
-
+    qswap(kernel          ,b.kernel          );
+    qswap(UUoutkernel     ,b.UUoutkernel     );
+    qswap(RFFkernel       ,b.RFFkernel       );
+    qswap(allxdatagent    ,b.allxdatagent    );
+//FIXME    qswap(allxdatagentp   ,b.allxdatagentp   );
+    qswap(ytargdata       ,b.ytargdata       );
+    qswap(ytargdataR      ,b.ytargdataR      );
+    qswap(ytargdataA      ,b.ytargdataA      );
+    qswap(ytargdataV      ,b.ytargdataV      );
+    qswap(ytargdatap      ,b.ytargdatap      );
+    qswap(ytargdatapR     ,b.ytargdatapR     );
+    qswap(ytargdatapA     ,b.ytargdatapA     );
+    qswap(ytargdatapV     ,b.ytargdatapV     );
+    qswap(alltraintarg    ,b.alltraintarg    );
+    qswap(alltraintargp   ,b.alltraintargp   );
+    qswap(alltraintargR   ,b.alltraintargR   );
+    qswap(alltraintargA   ,b.alltraintargA   );
+    qswap(alltraintargV   ,b.alltraintargV   );
+    qswap(alltraintargpR  ,b.alltraintargpR  );
+    qswap(alltraintargpA  ,b.alltraintargpA  );
+    qswap(alltraintargpV  ,b.alltraintargpV  );
+    qswap(x_d             ,b.x_d             );
+    qswap(xdzero          ,b.xdzero          );
+    qswap(locsigma        ,b.locsigma        );
+    qswap(loclr           ,b.loclr           );
+    qswap(loclrb          ,b.loclrb          );
+    qswap(loclrc          ,b.loclrc          );
+    qswap(loclrd          ,b.loclrd          );
+    qswap(xCweight        ,b.xCweight        );
+    qswap(xCweightfuzz    ,b.xCweightfuzz    );
+    qswap(xepsweight      ,b.xepsweight      );
+    qswap(traininfo       ,b.traininfo       );
+    qswap(traintang       ,b.traintang       );
+//FIXME    qswap(traininfop      ,b.traininfop      );
+    qswap(xalphaState     ,b.xalphaState     );
+    qswap(indexKey        ,b.indexKey        );
+    qswap(indexKeyCount   ,b.indexKeyCount   );
+    qswap(typeKey         ,b.typeKey         );
+    qswap(typeKeyBreak    ,b.typeKeyBreak    );
+    qswap(isIndPrune      ,b.isIndPrune      );
+    qswap(xassumedconsist ,b.xassumedconsist );
+    qswap(xconsist        ,b.xconsist        );
+    qswap(globalzerotol   ,b.globalzerotol   );
+    qswap(isBasisUserUU   ,b.isBasisUserUU   );
+    qswap(defbasisUU      ,b.defbasisUU      );
+    qswap(locbasisUU      ,b.locbasisUU      );
+    qswap(isBasisUserVV   ,b.isBasisUserVV   );
+    qswap(defbasisVV      ,b.defbasisVV      );
+    qswap(locbasisVV      ,b.locbasisVV      );
+    qswap(xpreallocsize   ,b.xpreallocsize   );
+    qswap(K2mat           ,b.K2mat           );
+    qswap(xmuprior        ,b.xmuprior        );
+    qswap(xmuprior_gt     ,b.xmuprior_gt     );
+    qswap(xmuprior_ml     ,b.xmuprior_ml     );
     qswap(assumeReal      ,b.assumeReal      );
     qswap(trainingDataReal,b.trainingDataReal);
     qswap(wildxaReal      ,b.wildxaReal      );
@@ -3042,6 +2909,15 @@ inline void ML_Base::qswapinternal(ML_Base &bb)
     qswap(wildxcReal      ,b.wildxcReal      );
     qswap(wildxdReal      ,b.wildxdReal      );
     qswap(wildxxReal      ,b.wildxxReal      );
+    qswap(wildxdim        ,b.wildxdim        );
+    qswap(wildxdima       ,b.wildxdima       );
+    qswap(wildxdimb       ,b.wildxdimb       );
+    qswap(wildxdimc       ,b.wildxdimc       );
+    qswap(wildxdimd       ,b.wildxdimd       );
+    qswap(wildxtanga      ,b.wildxtanga      );
+    qswap(wildxtangb      ,b.wildxtangb      );
+    qswap(wildxtangc      ,b.wildxtangc      );
+    qswap(wildxtangd      ,b.wildxtangd      );
 
     //incxvernum();
     //b.incxvernum();
@@ -3156,6 +3032,15 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
     wildxcReal       = src.wildxcReal;
     wildxdReal       = src.wildxdReal;
     wildxxReal       = src.wildxxReal;
+    wildxdim         = src.wildxdim;
+    wildxdima        = src.wildxdima;
+    wildxdimb        = src.wildxdimb;
+    wildxdimc        = src.wildxdimc;
+    wildxdimd        = src.wildxdimd;
+    wildxtanga       = src.wildxtanga;
+    wildxtangb       = src.wildxtangb;
+    wildxtangc       = src.wildxtangc;
+    wildxtangd       = src.wildxtangd;
 
     if ( !onlySemiCopy || ( ( -1 == onlySemiCopy ) && !altxsrc ) )
     {

@@ -42,6 +42,20 @@
 #endif
 
 
+std::string space2under(const std::string &src)
+{
+    std::string res(src);
+
+    for ( unsigned int i = 0 ; i < res.length() ; i++ )
+    {
+        if ( std::isspace(res[i]) )
+        {
+            res[i] = '_';
+        }
+    }
+
+    return res;
+}
 
 
 
@@ -123,12 +137,7 @@ const std::string &getUniqueFile(std::string &res, const std::string &pre, const
 systemfn svm_setsystemfn(systemfn xfn)
 {
     static systemfn fn = system;
-
-    if ( xfn )
-    {
-        fn = xfn;
-    }
-
+    if ( xfn ) { fn = xfn; }
     return fn;
 }
 
@@ -142,52 +151,17 @@ int svm_system(const char *command)
     }
 #endif
 
-    int ires = 0;
-
-#ifdef ENABLE_THREADS
     static std::mutex eyelock;
-    eyelock.lock();
-    ires = svm_setsystemfn()(command);
-    eyelock.unlock();
-#endif
-
-#ifndef ENABLE_THREADS
-    ires = svm_setsystemfn()(command);
-#endif
-
-    return ires;
+    const std::lock_guard<std::mutex> lock(eyelock);
+    return svm_setsystemfn()(command);
 }
 
 // Call executable.  If runbg then attempt to leave it running in the background
 
 int svm_execall(const std::string &command, bool runbg)
 {
-    std::string fullcommand = "";
-
-    fullcommand += command;
-
-    if ( runbg )
-    {
-        fullcommand += " &";
-    }
-
-    return svm_system(fullcommand.c_str());
-}
-
-// Call python script.  If runbg then attempt to leave it running in the background
-
-int svm_pycall(const std::string &command, bool runbg)
-{
-    std::string fullcommand = "python3 ";
-
-    fullcommand += command;
-
-    if ( runbg )
-    {
-        fullcommand += " &";
-    }
-
-errstream() << "full call " << fullcommand << "\n";
+    std::string fullcommand(command);
+    if ( runbg ) { fullcommand += " &"; }
     return svm_system(fullcommand.c_str());
 }
 
@@ -228,61 +202,6 @@ int svm_execall(std::string &res, const std::string &evalstr)
         else
         {
             res = "E:\"system call ";
-            res += fullcommand;
-            res += " failed to create result file pyres.txt\"";
-        }
-    }
-
-    return ires;
-}
-
-// Call python script.  If runbg then attempt to leave it running in the background
-
-int svm_pycall(std::string &res, const std::string &command)
-{
-    // Replace ; with : (python treats ; as a "special" character, so we must avoid it)
-
-    std::string evalstr(command);
-
-    for ( int i = 0 ; i < (int) evalstr.size() ; i++ )
-    {
-        if ( evalstr[i] == ';' )
-        {
-            evalstr[i] = ':';
-        }
-    }
-
-    std::string fullcommand = "python3 ";
-
-    fullcommand += evalstr;
-
-    int ires = svm_system(fullcommand.c_str());
-
-    if ( ires )
-    {
-        res = "E:\"system (python) call ";
-        res += fullcommand;
-        res += " returned errorcode ";
-        res += std::to_string(ires);
-        res += "\"";
-    }
-
-    else
-    {
-        std::ifstream resfile("pyres.txt");
-
-        if ( resfile.is_open() )
-        {
-            std::stringstream buffer;
-            buffer << resfile.rdbuf();
-            res = buffer.str();
-
-            resfile.close();
-        }
-
-        else
-        {
-            res = "E:\"system (python) call ";
             res += fullcommand;
             res += " failed to create result file pyres.txt\"";
         }
@@ -416,29 +335,15 @@ size_t nullPrint(std::ostream &dest, const char *src, size_t offset)
 
 std::ostream &blankPrint(std::ostream &dest, size_t len)
 {
-    {
-        for ( size_t i = 0 ; i < len ; ++i )
-        {
-            dest << ' ';
-        }
-
-        for ( size_t i = 0 ; i < len ; ++i )
-        {
-            dest << "\b";
-        }
-    }
+    for ( size_t i = 0 ; i < len ; ++i ) { dest << ' '; }
+    for ( size_t i = 0 ; i < len ; ++i ) { dest << "\b"; }
 
     return dest;
 }
 
 std::ostream &repPrint(std::ostream &dest, const char c, size_t n)
 {
-    {
-        for ( size_t i = 0 ; i < n ; ++i )
-        {
-            dest << c;
-        }
-    }
+    for ( size_t i = 0 ; i < n ; ++i ) { dest << c; }
 
     return dest;
 }
@@ -591,6 +496,7 @@ std::ostream &errstream(LoggingOstreamErr *newstream, int i)
     assert( i >= 0 );
     assert( i <= 127 );
 
+/*
     if ( !isMainThread() )
     {
         // Avoid locking due to file i/o on non-main thread
@@ -601,42 +507,21 @@ std::ostream &errstream(LoggingOstreamErr *newstream, int i)
 #endif
 
 #ifdef HEADLESS
-static thread_local std::ostream cnull(0); return cnull;
+thread_local std::ostream cnull(0); return cnull;
 #endif
     }
+*/
 
-    //volatile static LoggingOstreamErr *altdest[128] = { nullptr };
     static LoggingOstreamErr *altdest[128] = { nullptr };
 
-    if ( newstream )
-    {
-        altdest[i] = newstream;
-    }
-
-    if ( altdest[i] == nullptr )
-    {
-#ifndef HEADLESS
-        return std::cerr;
-#endif
-#ifdef HEADLESS
-static thread_local std::ostream cnull(0); return cnull;
-#endif
-    }
+    if ( newstream             ) { altdest[i] = newstream; }
+    if ( altdest[i] == nullptr ) { return std::cerr;       }
 
     return static_cast<std::ostream &>((*(altdest[i])));
 }
 
-std::ostream &errstream(int i)
-{
-    return errstream(nullptr,i);
-}
-
-void seterrstream(LoggingOstreamErr *altdest, int i)
-{
-    errstream(altdest,i);
-
-    return;
-}
+std::ostream &errstream(                      int i) { return errstream(nullptr,i); }
+void seterrstream(LoggingOstreamErr *altdest, int i) {        errstream(altdest,i); }
 
 std::ostream &outstream(LoggingOstreamOut *newstream, int i);
 std::ostream &outstream(LoggingOstreamOut *newstream, int i)
@@ -644,6 +529,7 @@ std::ostream &outstream(LoggingOstreamOut *newstream, int i)
     assert( i >= 0 );
     assert( i <= 127 );
 
+/*
     if ( !isMainThread() )
     {
         // Avoid locking due to file i/o on non-main thread
@@ -652,141 +538,18 @@ std::ostream &outstream(LoggingOstreamOut *newstream, int i)
         return std::cout;
 #endif
 #ifdef HEADLESS
-static thread_local std::ostream cnull(0); return cnull;
+thread_local std::ostream cnull(0); return cnull;
 #endif
     }
+*/
 
-    //volatile static LoggingOstreamOut *altdest[128] = { nullptr };
     static LoggingOstreamOut *altdest[128] = { nullptr };
 
-    if ( newstream )
-    {
-        altdest[i] = newstream;
-    }
-
-    if ( altdest[i] == nullptr )
-    {
-#ifndef HEADLESS
-        return std::cout;
-#endif
-#ifdef HEADLESS
-static thread_local std::ostream cnull(0); return cnull;
-#endif
-    }
+    if ( newstream             ) { altdest[i] = newstream; }
+    if ( altdest[i] == nullptr ) { return std::cout;       }
 
     return static_cast<std::ostream &>((*(altdest[i])));
 }
-
-
-std::ostream &outstream(int i)
-{
-    return outstream(nullptr,i);
-}
-
-void setoutstream(LoggingOstreamOut *altdest, int i)
-{
-    outstream(altdest,i);
-
-    return;
-}
-
-
-
-bool LoggingOstreamErr::suppressStreamCout = false;
-bool LoggingOstreamOut::suppressStreamCout = false;
-
-bool LoggingOstreamErr::suppressStreamFile = false;
-bool LoggingOstreamOut::suppressStreamFile = false;
-
-void suppresserrstreamcout(void)
-{
-    LoggingOstreamErr::suppressStreamCout = true;
-
-    return;
-}
-
-void suppresserrstreamfile(void)
-{
-    LoggingOstreamErr::suppressStreamFile = true;
-
-    return;
-}
-
-void unsuppresserrstreamcout(void)
-{
-    LoggingOstreamErr::suppressStreamCout = false;
-
-    return;
-}
-
-void unsuppresserrstreamfile(void)
-{
-    LoggingOstreamErr::suppressStreamFile = false;
-
-    return;
-}
-
-void suppressoutstreamcout(void)
-{
-    LoggingOstreamOut::suppressStreamCout = true;
-
-    return;
-}
-
-void suppressoutstreamfile(void)
-{
-    LoggingOstreamOut::suppressStreamFile = true;
-
-    return;
-}
-
-void unsuppressoutstreamcout(void)
-{
-    LoggingOstreamOut::suppressStreamCout = false;
-
-    return;
-}
-
-void unsuppressoutstreamfile(void)
-{
-    LoggingOstreamOut::suppressStreamFile = false;
-
-    return;
-}
-
-void suppressallstreamcout(void)
-{
-    LoggingOstreamErr::suppressStreamCout = true;
-    LoggingOstreamOut::suppressStreamCout = true;
-
-    return;
-}
-
-void suppressallstreamfile(void)
-{
-    LoggingOstreamErr::suppressStreamFile = true;
-    LoggingOstreamOut::suppressStreamFile = true;
-
-    return;
-}
-
-void unsuppressallstreamcout(void)
-{
-    LoggingOstreamErr::suppressStreamCout = false;
-    LoggingOstreamOut::suppressStreamCout = false;
-
-    return;
-}
-
-void unsuppressallstreamfile(void)
-{
-    LoggingOstreamErr::suppressStreamFile = false;
-    LoggingOstreamOut::suppressStreamFile = false;
-
-    return;
-}
-
-
 
 std::istream &instream(LoggingIstream *newstream, int i);
 std::istream &instream(LoggingIstream *newstream, int i)
@@ -794,37 +557,13 @@ std::istream &instream(LoggingIstream *newstream, int i)
     assert( i >= 0 );
     assert( i <= 127 );
 
-    //volatile static LoggingIstream *altsrc[128] = { nullptr };
     static LoggingIstream *altsrc[128] = { nullptr };
 
-    if ( newstream )
-    {
-        altsrc[i] = newstream;
-    }
-
-    if ( altsrc[i] == nullptr )
-    {
-        return std::cin;
-    }
+    if ( newstream            ) { altsrc[i] = newstream; }
+    if ( altsrc[i] == nullptr ) { return std::cin;       }
 
     return static_cast<std::istream &>((*(altsrc[i])));
 }
-
-std::istream &instream(int i)
-{
-    return instream(nullptr,i);
-}
-
-void setinstream(LoggingIstream *altsrc, int i)
-{
-    instream(altsrc,i);
-
-    return;
-}
-
-
-
-
 
 std::istream &promptstream(LoggingIstream *newstream, LoggingOstreamOut *newpstream, const std::string *prompt, int i, std::ostream **outres);
 std::istream &promptstream(LoggingIstream *newstream, LoggingOstreamOut *newpstream, const std::string *prompt, int i, std::ostream **outres)
@@ -832,74 +571,55 @@ std::istream &promptstream(LoggingIstream *newstream, LoggingOstreamOut *newpstr
     assert( i >= 0 );
     assert( i <= 127 );
 
-    //volatile static LoggingIstream *altsrc[128] = { nullptr };
-    static LoggingIstream *altsrc[128] = { nullptr };
+    static LoggingIstream    *altsrc[128] = { nullptr };
     static LoggingOstreamOut *altdest[128] = { nullptr };
 
-    if ( newstream )
-    {
-        altsrc[i] = newstream;
-    }
-
-    if ( newpstream )
-    {
-        altdest[i] = newpstream;
-    }
+    if ( newstream  ) { altsrc[i]  = newstream;  }
+    if ( newpstream ) { altdest[i] = newpstream; }
 
     std::istream *inres;
 
-    if ( altsrc[i] == nullptr )
-    {
-        inres = &std::cin;
-    }
+    if ( altsrc[i]  == nullptr ) { inres   = &std::cin;                                     }
+    if ( altsrc[i]  != nullptr ) { inres   = &static_cast<std::istream &>((*(altsrc[i])));  }
+    if ( altdest[i] == nullptr ) { *outres = &std::cout;                                    }
+    if ( altdest[i] != nullptr ) { *outres = &static_cast<std::ostream &>((*(altdest[i]))); }
 
-    if ( altsrc[i] != nullptr )
-    {
-        inres = &static_cast<std::istream &>((*(altsrc[i])));
-    }
-
-    if ( altdest[i] == nullptr )
-    {
-        *outres = &std::cout;
-    }
-
-    if ( altdest[i] != nullptr )
-    {
-        *outres = &static_cast<std::ostream &>((*(altdest[i])));
-    }
-
-    if ( prompt )
-    {
-        **outres << *prompt;
-    }
+    if ( prompt ) { **outres << *prompt; }
 
     return *inres;
 }
 
-std::istream &promptstream(const std::string &prompt, int i)
-{
-    std::ostream *promptout[1] = {nullptr};
+std::ostream &outstream(                      int i) { return outstream(nullptr,i); }
+void setoutstream(LoggingOstreamOut *altdest, int i) {        outstream(altdest,i); }
 
-    return promptstream(nullptr,nullptr,&prompt,i,promptout);
-}
+std::istream &instream(                  int i) { return instream(nullptr,i); }
+void setinstream(LoggingIstream *altsrc, int i) { instream(altsrc,i);         }
 
-std::ostream &promptoutstream(int i)
-{
-    std::ostream *promptout[1] = {nullptr};
+std::istream &promptstream   (const std::string &prompt, int i) { std::ostream *promptout[1] = {nullptr}; return promptstream(nullptr,nullptr,&prompt,i,promptout); }
+std::ostream &promptoutstream(                           int i) { std::ostream *promptout[1] = {nullptr}; promptstream(nullptr,nullptr,nullptr,i,promptout); return **promptout; }
 
-    promptstream(nullptr,nullptr,nullptr,i,promptout);
+bool LoggingOstreamErr::suppressStreamCout = false;
+bool LoggingOstreamOut::suppressStreamCout = false;
 
-    return **promptout;
-}
+bool LoggingOstreamErr::suppressStreamFile = false;
+bool LoggingOstreamOut::suppressStreamFile = false;
 
-void setpromptstream(LoggingIstream *altsrc, LoggingOstreamOut *altdest, int i)
-{
-    std::ostream *promptout[1] = {nullptr};
+void   suppresserrstreamcout(void) { LoggingOstreamErr::suppressStreamCout = true;  }
+void   suppresserrstreamfile(void) { LoggingOstreamErr::suppressStreamFile = true;  }
+void unsuppresserrstreamcout(void) { LoggingOstreamErr::suppressStreamCout = false; }
+void unsuppresserrstreamfile(void) { LoggingOstreamErr::suppressStreamFile = false; }
 
-    promptstream(altsrc,altdest,nullptr,i,promptout);
+void   suppressoutstreamcout(void) { LoggingOstreamOut::suppressStreamCout = true;  }
+void   suppressoutstreamfile(void) { LoggingOstreamOut::suppressStreamFile = true;  }
+void unsuppressoutstreamcout(void) { LoggingOstreamOut::suppressStreamCout = false; }
+void unsuppressoutstreamfile(void) { LoggingOstreamOut::suppressStreamFile = false; }
 
-    return;
-}
+void   suppressallstreamcout(void) { LoggingOstreamErr::suppressStreamCout = true;  LoggingOstreamOut::suppressStreamCout = true;  }
+void   suppressallstreamfile(void) { LoggingOstreamErr::suppressStreamFile = true;  LoggingOstreamOut::suppressStreamFile = true;  }
+void unsuppressallstreamcout(void) { LoggingOstreamErr::suppressStreamCout = false; LoggingOstreamOut::suppressStreamCout = false; }
+void unsuppressallstreamfile(void) { LoggingOstreamErr::suppressStreamFile = false; LoggingOstreamOut::suppressStreamFile = false; }
+
+void setpromptstream(LoggingIstream *altsrc, LoggingOstreamOut *altdest, int i) { std::ostream *promptout[1] = {nullptr}; promptstream(altsrc,altdest,nullptr,i,promptout); }
 
 
 
@@ -909,14 +629,8 @@ void setpromptstream(LoggingIstream *altsrc, LoggingOstreamOut *altdest, int i)
 std::istream &operator>>(std::istream &input, wait_dummy &)
 {
     char scanner = 'z';
-
-    while ( scanner != ':' )
-    {
-        input >> scanner;
-    }
-
+    while ( scanner != ':' ) { input >> scanner; }
     input.ignore(1);
-
     return input;
 }
 
@@ -2061,7 +1775,7 @@ FIXME - has a key been pressed
 //////    //tcsetattr(0, TCSANOW, &oldtm); /* reset to old terminal style */
 //    if ( buf != '\0' )
 //    {
-//        static int keycnt = 0;
+//        statiic int keycnt = 0;
 //
 //        if ( keycnt++ > FLUSHINTERVAL )
 //        {
@@ -2390,8 +2104,6 @@ int interactmenu(int &goupone, int &dostep, const char *stateDescr, double **use
             else if ( temp == "quit"       ) { exit(1);  }
             else if ( temp == "q"          ) { exit(1);  }
             else if ( temp == "sys"        ) { std::getline(instream(),linebuff); int res = svm_system(linebuff.c_str());        outstream() << "Return value = " << res << "\n"; }
-            else if ( temp == "py"         ) { std::getline(instream(),linebuff); int res = svm_pycall(linebuff.c_str(),false);  outstream() << "Return value = " << res << "\n"; }
-            else if ( temp == "pyb"        ) { std::getline(instream(),linebuff); int res = svm_pycall(linebuff.c_str(),true);   outstream() << "Return value = " << res << "\n"; }
             else if ( temp == "exe"        ) { std::getline(instream(),linebuff); int res = svm_execall(linebuff.c_str(),false); outstream() << "Return value = " << res << "\n"; }
             else if ( temp == "exeb"       ) { std::getline(instream(),linebuff); int res = svm_execall(linebuff.c_str(),true);  outstream() << "Return value = " << res << "\n"; }
 #endif

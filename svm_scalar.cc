@@ -316,7 +316,19 @@ void evalKSVM_Scalar(double &res, int i, int j, const gentype **pxyprod, const v
                 jx = ( jx >= iskip ) ? jx+1 : jx;
             }
 
-            res = realOwner->K2(ix,jx,pxyprod);
+            if ( ( ix >= 0 ) && ( jx >= 0 ) && ( !pxyprod || !pxyprod[0] ) && !realOwner->getKernel().isIndex() && !realOwner->getKernel().isScaled() )
+            {
+                gentype xyvalis(realOwner->xy()(ix,jx));
+
+                const gentype *altpxyprod[2] = { &xyvalis, ( pxyprod ? pxyprod[1] : nullptr ) };
+
+                res = realOwner->K2(ix,jx,altpxyprod);
+            }
+
+            else
+            {
+                res = realOwner->K2(ix,jx,pxyprod);
+            }
 
             NiceAssert( !testisvnan(res) );
             //NiceAssert( !testisinf(res) );
@@ -356,9 +368,37 @@ void evalKSVM_Scalar_fast(double &res, int i, int j, const gentype **pxyprod, co
 
     NiceAssert( realOwner );
 
-    if      ( i != j )                { res = realOwner->K2(i,j,pxyprod); }
-    else if ( realOwner->useLweight ) { res = realOwner->kerndiagval(i) + (((realOwner->diagoff)(i))/(((realOwner->Lweightval)(i))*((realOwner->Lweightval)(j)))); }
-    else                              { res = realOwner->kerndiagval(i) + ((realOwner->diagoff)(i)); }
+    if ( i != j )
+    {
+        if ( ( i >= 0 ) && ( j >= 0 ) && ( !pxyprod || !pxyprod[0] ) && !realOwner->getKernel().isIndex() && !realOwner->getKernel().isScaled() )
+        {
+            gentype xyvalis(realOwner->xy()(i,j));
+
+            const gentype *altpxyprod[2] = { &xyvalis, ( pxyprod ? pxyprod[1] : nullptr ) };
+
+            res = realOwner->K2(i,j,altpxyprod);
+        }
+
+        else
+        {
+            res = realOwner->K2(i,j,pxyprod);
+        }
+    }
+
+    else
+    {
+        res = (realOwner->kerndiagval)(i);
+    }
+
+    if ( realOwner->useLweight )
+    {
+        res = realOwner->kerndiagval(i) + (((realOwner->diagoff)(i))/(((realOwner->Lweightval)(i))*((realOwner->Lweightval)(j))));
+    }
+
+    else
+    {
+        res = realOwner->kerndiagval(i) + ((realOwner->diagoff)(i));
+    }
 
     NiceAssert( !testisvnan(res) );
     //NiceAssert( !testisinf(res) );
@@ -463,10 +503,10 @@ SVM_Scalar::SVM_Scalar() : SVM_Generic()
     isStateOpt           = 1;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
-    (quasiloglike)     = 0.0;
-    (quasimaxinfogain) = 0.0;
+    (quasiloglike)  = 0.0;
+    (quasiinfogain) = 0.0;
 
     emm              = DEFAULT_EMM;
     CNval            = DEFAULT_C;
@@ -487,7 +527,7 @@ SVM_Scalar::SVM_Scalar() : SVM_Generic()
     xCclass   = 1.0;
     xepsclass = 1.0;
 
-    const static thread_local gentype defaultcostfnfuzztval(DEFAULT_COSTFNFUZZT);
+    const thread_local gentype defaultcostfnfuzztval(DEFAULT_COSTFNFUZZT);
 
     maxiterfuzztval = DEFAULT_MAXITERFUZZT;
     usefuzztval     = 0;
@@ -668,7 +708,7 @@ int SVM_Scalar::setAlphaR(const Vector<double> &newAlpha)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     int z = 0;
@@ -693,7 +733,7 @@ int SVM_Scalar::setAlphaRF(const Vector<double> &newAlpha, bool dofast)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     int z = 0;
@@ -720,7 +760,7 @@ int SVM_Scalar::setBiasR(double newBias)
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     if ( !SVM_Scalar::isFixedBias() )
     {
@@ -760,7 +800,7 @@ int SVM_Scalar::scale(double a)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	// Constrain all alphas to zero (use setd to cheat here)
 
@@ -779,7 +819,7 @@ int SVM_Scalar::scale(double a)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	// Free alphas at bounds.
 
@@ -808,7 +848,7 @@ int SVM_Scalar::reset(void)
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     return 1;
 }
@@ -820,7 +860,7 @@ void SVM_Scalar::setGp(Matrix<double> *extGp, Matrix<double> *extGpsigma, Matrix
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     if ( Gplocal )
@@ -893,7 +933,7 @@ int SVM_Scalar::setLinearCost(void)
 	    isStateOpt = 0;
 
             isQuasiLogLikeCalced = 0;
-            isMaxInfGainCalced   = 0;
+            isInfGainCalced      = 0;
 	}
 
 	costType = 0;
@@ -910,7 +950,7 @@ int SVM_Scalar::setLinearCost(void)
 	    isStateOpt = 0;
 
             isQuasiLogLikeCalced = 0;
-            isMaxInfGainCalced   = 0;
+            isInfGainCalced      = 0;
 	}
 
 	costType = 0;
@@ -934,7 +974,7 @@ int SVM_Scalar::setQuadraticCost(void)
 	    isStateOpt = 0;
 
             isQuasiLogLikeCalced = 0;
-            isMaxInfGainCalced   = 0;
+            isInfGainCalced      = 0;
 	}
 
 	costType = 1;
@@ -961,7 +1001,7 @@ int SVM_Scalar::setQuadraticCost(void)
 	    isStateOpt = 0;
 
             isQuasiLogLikeCalced = 0;
-            isMaxInfGainCalced   = 0;
+            isInfGainCalced      = 0;
 	}
 
         costType = 1;
@@ -985,7 +1025,7 @@ int SVM_Scalar::set1NormCost(void)
 	    isStateOpt = 0;
 
             isQuasiLogLikeCalced = 0;
-            isMaxInfGainCalced   = 0;
+            isInfGainCalced      = 0;
 	}
 
         costType = 2;
@@ -1007,7 +1047,7 @@ int SVM_Scalar::set1NormCost(void)
 	    isStateOpt = 0;
 
             isQuasiLogLikeCalced = 0;
-            isMaxInfGainCalced   = 0;
+            isInfGainCalced      = 0;
 	}
 
         costType = 2;
@@ -1030,7 +1070,7 @@ int SVM_Scalar::setVarBias(void)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	int wasfixedbias = SVM_Scalar::isFixedBias();
 
@@ -1072,7 +1112,7 @@ int SVM_Scalar::setFixedBias(double newbias)
 {
     isStateOpt           = 0;
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     bfixval = newbias;
 
@@ -1117,7 +1157,7 @@ int SVM_Scalar::setNoMonotonicConstraints(void)
         isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         makeConvex = 0;
 
@@ -1136,7 +1176,7 @@ int SVM_Scalar::setForcedMonotonicIncreasing(void)
         isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         makeConvex = 1;
 
@@ -1155,7 +1195,7 @@ int SVM_Scalar::setForcedMonotonicDecreasing(void)
         isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         makeConvex = 2;
 
@@ -1175,7 +1215,7 @@ int SVM_Scalar::setPosBias(void)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	int wasfixedbias = SVM_Scalar::isFixedBias();
         double newbias = biasR();
@@ -1223,7 +1263,7 @@ int SVM_Scalar::setNegBias(void)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	int wasfixedbias = SVM_Scalar::isFixedBias();
         double newbias = biasR();
@@ -1273,7 +1313,7 @@ int SVM_Scalar::setVarBias(int q)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         biasType = 0;
 
@@ -1312,7 +1352,7 @@ int SVM_Scalar::setPosBias(int q)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         biasType = 1;
 
@@ -1351,7 +1391,7 @@ int SVM_Scalar::setNegBias(int q)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         biasType = 2;
 
@@ -1386,7 +1426,7 @@ int SVM_Scalar::setFixedTube(void)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	tubeshrink = 0;
 
@@ -1406,7 +1446,7 @@ int SVM_Scalar::setShrinkTube(void)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	tubeshrink = 1;
 
@@ -1489,7 +1529,7 @@ int SVM_Scalar::setLinBiasForce(double newval)
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     linbiasforceval = newval;
 
@@ -1511,7 +1551,7 @@ int SVM_Scalar::setQuadBiasForce(double newval)
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     quadbiasforceval = newval;
 
@@ -1534,7 +1574,7 @@ int SVM_Scalar::setOpttol(double xopttol)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     opttolval = xopttol;
@@ -1579,7 +1619,7 @@ int SVM_Scalar::setdinternal(int i, int d)
         isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	--(Nnc("&",trainclass(i)+1));
         ++(Nnc("&",d+1));
@@ -1632,7 +1672,7 @@ int SVM_Scalar::sety(int i, double zn)
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     Vector<double> gpnew(gp);
 
@@ -1675,7 +1715,7 @@ int SVM_Scalar::setCweight(int i, double xC)
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     Cweightval("&",i) = xC;
 
@@ -1705,7 +1745,7 @@ int SVM_Scalar::setLweight(int i, double xL)
             isStateOpt = 0;
 
             isQuasiLogLikeCalced = 0;
-            isMaxInfGainCalced   = 0;
+            isInfGainCalced      = 0;
 
             if ( Q.factbad(Gn,GPNorGPNEXT(Gpn,GpnExt)) ) { return setLweight(Lweightval); } // trigger full refactorisation from scratch
 
@@ -1748,7 +1788,7 @@ int SVM_Scalar::setCweightfuzz(int i, double xC)
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     Cweightfuzzval("&",i) = xC;
 
@@ -1778,7 +1818,7 @@ int SVM_Scalar::setepsweight(int i, double xxepsweight)
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     epsweightval("&",i) = xxepsweight;
 
@@ -1830,7 +1870,7 @@ int SVM_Scalar::sety(const Vector<int> &j, const Vector<double> &zn)
 
         isStateOpt           = 0;
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         Vector<double> gpnew(gp);
 
@@ -1865,7 +1905,7 @@ int SVM_Scalar::setCweight(const Vector<int> &j, const Vector<double> &xxCweight
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         if ( SVM_Scalar::isLinearCost() )
         {
@@ -1898,7 +1938,7 @@ int SVM_Scalar::setLweight(const Vector<int> &j, const Vector<double> &xLweight)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         //for ( int i = 0 ; i < SVM_Scalar::N() ; ++i )
 	//{
@@ -1958,7 +1998,7 @@ int SVM_Scalar::sety(const Vector<double> &zn)
 
     isStateOpt           = 0;
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     Vector<double> gpnew(gp);
 
@@ -1999,7 +2039,7 @@ int SVM_Scalar::setCweight(const Vector<double> &xxCweight)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         if ( SVM_Scalar::isLinearCost() )
         {
@@ -2031,7 +2071,7 @@ int SVM_Scalar::setLweight(const Vector<double> &xLweight)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         //for ( int i = 0 ; i < SVM_Scalar::N() ; ++i )
 	//{
@@ -2061,7 +2101,7 @@ int SVM_Scalar::setCweightfuzz(const Vector<double> &xxCweight)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         if ( SVM_Scalar::isLinearCost() )
         {
@@ -2095,7 +2135,7 @@ int SVM_Scalar::setCweightfuzz(const Vector<int> &i, const Vector<double> &xxCwe
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         if ( SVM_Scalar::isLinearCost() )
         {
@@ -2145,7 +2185,7 @@ int SVM_Scalar::setC(double xC)
     {
 	isStateOpt           = 0;
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     if ( SVM_Scalar::isLinearCost() )
@@ -2193,7 +2233,7 @@ int SVM_Scalar::setCclass(int d, double xC)
     {
 	isStateOpt           = 0;
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     xCclass("&",d+1) = xC;
@@ -2228,7 +2268,7 @@ int SVM_Scalar::seteps(double xeps)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     SVM_Scalar::setalleps(xeps,xepsclass);
@@ -2270,7 +2310,7 @@ int SVM_Scalar::setepsclass(int d, double xeps)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     Vector<double> qepsclass(xepsclass);
@@ -2345,7 +2385,7 @@ int SVM_Scalar::scaleCweight(double scalefactor)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     Cweightval *= scalefactor;
@@ -2377,7 +2417,7 @@ int SVM_Scalar::scaleCweightfuzz(double scalefactor)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     Cweightfuzzval *= scalefactor;
@@ -2407,7 +2447,7 @@ int SVM_Scalar::scaleepsweight(double scalefactor)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     epsweightval *= scalefactor;
@@ -2445,7 +2485,7 @@ int SVM_Scalar::setzerotol(double zt)
 {
     isStateOpt           = 0;
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     Q.setzt(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),zt);
 
@@ -2513,7 +2553,7 @@ int SVM_Scalar::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 
         if ( fixxycache ) { xycache.setSymmetry(1); }
 
-        kerncache.setSymmetry(getKernel().getSymmetry());
+        kerncache .setSymmetry(getKernel().getSymmetry());
         sigmacache.setSymmetry(1);
 
         res |= 1;
@@ -2521,22 +2561,17 @@ int SVM_Scalar::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { kerndiagval("&",i) = K2(i,i); } // recalculate full diagonal regardless
 
-        if ( fixxycache ) { xycache.clear(); }
+        if ( fixxycache ) { for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) {    xycache.recalc(i,1); } } // setting conservedata without d will cause full recalculation if in cache.
+                            for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) {  kerncache.recalc(i,1); }   // setting conservedata without d will cause full recalculation if in cache.
+                            for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { sigmacache.recalc(i,1); }   // setting conservedata withoug d will cause full recalculation if in cache
 
-        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) {  kerncache.recalc(i,1); } // setting conservedata without d will cause full recalculation if in cache.
-        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { sigmacache.recalc(i,1); } // setting conservedata withoug d will cause full recalculation if in cache
+        if ( prim() ) { gp = bfixval; gp -= traintarg; gp += ypR(); }
 
-        if ( prim() )
-        {
-            gp = bfixval;
-            gp -= traintarg;
-            gp += ypR();
-        }
-
+        Q.dupdateAllGC = 0; // suppress gradient cache for d=0
         Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 
         res |= SVM_Scalar::fixautosettings(1,0);
@@ -2548,7 +2583,7 @@ int SVM_Scalar::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 
         if ( fixxycache ) { xycache.setSymmetry(1); }
 
-        kerncache.setSymmetry(getKernel().getSymmetry());
+        kerncache .setSymmetry(getKernel().getSymmetry());
         sigmacache.setSymmetry(1);
 
         res |= 1;
@@ -2556,22 +2591,17 @@ int SVM_Scalar::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { if ( SVM_Scalar::d()(i) ) { kerndiagval("&",i) = K2(i,i); } }
 
-        if ( fixxycache ) { xycache.clear(); }
+        if ( fixxycache ) { for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { if ( SVM_Scalar::d()(i) ) {    xycache.recalc(i,1,&d()); } } } // setting conservedata without d will cause full recalculation if in cache.
+                            for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { if ( SVM_Scalar::d()(i) ) {  kerncache.recalc(i,1,&d()); } }   // note we set conservedata here and pass d, which will invalidate d=0 part of this row if cached
+                            for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { if ( SVM_Scalar::d()(i) ) { sigmacache.recalc(i,1,&d()); } }   // note we set conservedata here and pass d, which will invalidate d=0 part of this row if cached
 
-        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { if ( SVM_Scalar::d()(i) ) {  kerncache.recalc(i,1,&d()); } } // note we set conservedata here and pass d, which will invalidate d=0 part of this row if cached
-        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { if ( SVM_Scalar::d()(i) ) { sigmacache.recalc(i,1,&d()); } } // note we set conservedata here and pass d, which will invalidate d=0 part of this row if cached
+        if ( prim() ) { gp = bfixval; gp -= traintarg; gp += ypR(); }
 
-        if ( prim() )
-        {
-            gp = bfixval;
-            gp -= traintarg;
-            gp += ypR();
-        }
-
+        Q.dupdateAllGC = 1; // unsuppress gradient cache for d=0
         Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 
         res |= SVM_Scalar::fixautosettings(1,0);
@@ -2584,7 +2614,7 @@ fallbackMethod:
 
         if ( fixxycache ) { xycache.setSymmetry(1); }
 
-        kerncache.setSymmetry(getKernel().getSymmetry());
+        kerncache .setSymmetry(getKernel().getSymmetry());
         sigmacache.setSymmetry(1);
 
         res |= 1;
@@ -2592,22 +2622,17 @@ fallbackMethod:
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { kerndiagval("&",i) = K2(i,i); }
 
-        if ( fixxycache ) { xycache.clear(); }
+        if ( fixxycache ) {    xycache.clear(); }
+                             kerncache.clear();
+                            sigmacache.clear();
 
-         kerncache.clear();
-        sigmacache.clear();
+        if ( prim() ) { gp = bfixval; gp -= traintarg; gp += ypR(); }
 
-        if ( prim() )
-        {
-            gp = bfixval;
-            gp -= traintarg;
-            gp += ypR();
-        }
-
+        Q.dupdateAllGC = 1; // unsuppress gradient cache for d=0
         Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 
         res |= SVM_Scalar::fixautosettings(1,0);
@@ -2627,7 +2652,7 @@ updateInfo = 1;
             isStateOpt = 0;
 
             isQuasiLogLikeCalced = 0;
-            isMaxInfGainCalced   = 0;
+            isInfGainCalced      = 0;
 
             // NB: - removing a row/column from the Cholesky factorisation
             //       does not require reference to Gp() in 99% of cases -
@@ -2661,23 +2686,16 @@ updateInfo = 1;
 
         res = SVM_Generic::resetKernel(modind,onlyChangeRowI);
 
-        if ( fixxycache )
-        {
-            xycache.setSymmetry(1);
-        }
+        if ( fixxycache ) { xycache.setSymmetry(1); }
 
         kerncache.setSymmetry(getKernel().getSymmetry());
         sigmacache.setSymmetry(1);
 
         kerndiagval("&",onlyChangeRowI) = K2(onlyChangeRowI,onlyChangeRowI);
 
-        if ( fixxycache )
-        {
-            xycache.recalc(onlyChangeRowI);
-        }
-
-        kerncache.recalc(onlyChangeRowI);
-        sigmacache.recalc(onlyChangeRowI);
+        if ( fixxycache ) {    xycache.recalc(onlyChangeRowI); }
+                             kerncache.recalc(onlyChangeRowI);
+                            sigmacache.recalc(onlyChangeRowI);
 
         SVM_Scalar::setdinternal(onlyChangeRowI,dstval);
 
@@ -2745,15 +2763,15 @@ int SVM_Scalar::setKernel(const MercerKernel &xkernel, int modind, int onlyChang
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
 	{
             kerndiagval("&",i) = K2(i,i);
 	}
 
-        xycache.clear();
-        kerncache.clear();
+           xycache.clear();
+         kerncache.clear();
         sigmacache.clear();
 
         Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
@@ -2770,7 +2788,7 @@ int SVM_Scalar::setKernel(const MercerKernel &xkernel, int modind, int onlyChang
             isStateOpt = 0;
 
             isQuasiLogLikeCalced = 0;
-            isMaxInfGainCalced   = 0;
+            isInfGainCalced      = 0;
         }
 
         int dstval = SVM_Scalar::d()(onlyChangeRowI);
@@ -2813,14 +2831,10 @@ void SVM_Scalar::fillCache(int Ns, int Ne)
 
     if ( Ns <= Ne )
     {
-        int i;
         retVector<double> tmpva;
         retVector<double> tmpvb;
 
-        for ( i = Ns ; i <= Ne ; ++i )
-        {
-            (*Gpval)(i,tmpva,tmpvb);
-        }
+        for ( int i = Ns ; i <= Ne ; ++i ) { (*Gpval)(i,tmpva,tmpvb); }
     }
 
     return;
@@ -2842,7 +2856,7 @@ int SVM_Scalar::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
     }
 
     --(Nnc("&",trainclass(i)+1));
@@ -2942,7 +2956,7 @@ int SVM_Scalar::addTrainingVector(int i, double zi, const SparseVector<gentype> 
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     ++(Nnc("&",d+1));
 
@@ -2976,7 +2990,7 @@ int SVM_Scalar::qaddTrainingVector(int i, double zi, SparseVector<gentype> &x, d
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     ++(Nnc("&",d+1));
 
@@ -3010,7 +3024,7 @@ int SVM_Scalar::addTrainingVector(int i, const gentype &zi, const SparseVector<g
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     ++(Nnc("&",d+1));
 
@@ -3047,7 +3061,7 @@ int SVM_Scalar::qaddTrainingVector(int i, const gentype &zi, SparseVector<gentyp
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     ++(Nnc("&",d+1));
 
@@ -3098,7 +3112,7 @@ int SVM_Scalar::addTrainingVector(int i, const Vector<double> &zi, const Vector<
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     for ( int j = 0 ; j < Nadd ; ++j )
     {
@@ -3159,7 +3173,7 @@ int SVM_Scalar::qaddTrainingVector(int i, const Vector<double> &zi, Vector<Spars
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     for ( int j = 0 ; j < zi.size() ; ++j )
     {
@@ -3218,7 +3232,7 @@ int SVM_Scalar::addTrainingVector(int i, const Vector<gentype> &zi, const Vector
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     for ( int j = 0 ; j < Nadd ; ++j )
     {
@@ -3286,7 +3300,7 @@ int SVM_Scalar::qaddTrainingVector(int i, const Vector<gentype> &zi, Vector<Spar
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     for ( int j = 0 ; j < zi.size() ; ++j )
     {
@@ -3455,11 +3469,11 @@ double SVM_Scalar::loglikelihood(void) const
     return quasiloglike;
 }
 
-double SVM_Scalar::maxinfogain(void) const
+double SVM_Scalar::infogain(void) const
 {
-    if ( !isMaxInfGainCalced )
+    if ( !isInfGainCalced )
     {
-        isMaxInfGainCalced = 1;
+        isInfGainCalced = 1;
 
         // Note that sigma here is sigma^2 in Srinivas
         //
@@ -3480,7 +3494,7 @@ double SVM_Scalar::maxinfogain(void) const
         // ->( L.Ktrue.L + D ) ( inv(L).alphatrue ) = (L.ytrue)
         // ->( L.Ktrue.L + D ) alpha = y
 
-        (quasimaxinfogain)  = Q.fact_logdet()/2.0;
+        (quasiinfogain)  = Q.fact_logdet()/2.0;
 
         if ( useLweight )
         {
@@ -3490,10 +3504,10 @@ double SVM_Scalar::maxinfogain(void) const
             }
         }
 
-        (quasimaxinfogain) -= (NS()*log(sigma()))/2.0;
+        (quasiinfogain) -= (NS()*log(sigma()))/2.0;
     }
 
-    return (quasimaxinfogain);
+    return (quasiinfogain);
 }
 
 double SVM_Scalar::RKHSnorm(void) const
@@ -5851,7 +5865,7 @@ void SVM_Scalar::recalcCRDR(int ival)
     {
 	isStateOpt           = 0;
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	int i,imin,imax;
 
@@ -5899,7 +5913,7 @@ void SVM_Scalar::recalcLUB(int ival)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	int i,imin,imax;
 
@@ -5997,7 +6011,7 @@ void SVM_Scalar::recalcdiagoff(int i)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	if ( i == -1 )
 	{
@@ -6054,7 +6068,7 @@ void SVM_Scalar::recalcdiagoff(const Vector<double> &offset)
     {
 	isStateOpt           = 0;
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	Vector<double> bn(GPNWIDTH(biasdim));
 
@@ -6085,7 +6099,7 @@ void SVM_Scalar::recalcdiagoff(int i, double offset)
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     kerndiagval("&",i) += offset;
     kerncache.recalcDiag(i);
@@ -6233,7 +6247,7 @@ int SVM_Scalar::train(int &res, svmvolatile int &killSwitch)
     isStateOpt = res ? 0 : 1;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     return 1;
 }
@@ -6360,7 +6374,7 @@ double emmupfixer(fullOptState<double,double> &x, void *y, const Vector<double> 
 
     caller.alphaPrev("&",0,1,baseN-1,tmpva) = alpha(0,1,baseN-1,tmpvb);
 
-    (caller.kerncache).clear();
+    (caller. kerncache).clear();
     (caller.sigmacache).clear();
 
     gpgnhpGpnGnscalefactor = 1.0/((caller.emm)-1);
@@ -7821,7 +7835,7 @@ void SVM_Scalar::setbiasdim(int xbiasdim, int addpos, double addval, int rempos)
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
 	// At this point we know that GpnExt != nullptr
 	// Allow for any changes in the value of existing elements of GpnExt
@@ -8037,7 +8051,7 @@ int SVM_Scalar::setLinBiasForceclass(int i, double newval)
         isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
-        isMaxInfGainCalced   = 0;
+        isInfGainCalced      = 0;
 
         Vector<double> gnnew(gn);
 
@@ -8054,7 +8068,7 @@ void SVM_Scalar::setBiasVMulti(const Vector<double> &newbias)
     isStateOpt = 0;
 
     isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
+    isInfGainCalced      = 0;
 
     Q.setBeta(newbias,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 
@@ -8283,10 +8297,10 @@ std::ostream &SVM_Scalar::printstream(std::ostream &output, int dep) const
 
     repPrint(output,'>',dep) << "Is SVM optimal:                  " << isStateOpt             << "\n";
     repPrint(output,'>',dep) << "Is quasi log likelihood calced:  " << isQuasiLogLikeCalced   << "\n";
-    repPrint(output,'>',dep) << "Is max info gain calced:         " << isMaxInfGainCalced     << "\n";
+    repPrint(output,'>',dep) << "Is max info gain calced:         " << isInfGainCalced        << "\n";
 
-    repPrint(output,'>',dep) << "Quasi log likelihood calced:     " << (quasiloglike)           << "\n";
-    repPrint(output,'>',dep) << "Max info gain calced:            " << (quasimaxinfogain)       << "\n";
+    repPrint(output,'>',dep) << "Quasi log likelihood calced:     " << (quasiloglike)         << "\n";
+    repPrint(output,'>',dep) << "Max info gain calced:            " << (quasiinfogain)        << "\n";
 
     SVM_Generic::printstream(output,dep+1);
 
@@ -8379,10 +8393,10 @@ std::istream &SVM_Scalar::inputstream(std::istream &input)
 
     input >> dummy; input >> isStateOpt;
     input >> dummy; input >> isQuasiLogLikeCalced;
-    input >> dummy; input >> isMaxInfGainCalced;
+    input >> dummy; input >> isInfGainCalced;
 
     input >> dummy; input >> (quasiloglike);
-    input >> dummy; input >> (quasimaxinfogain);
+    input >> dummy; input >> (quasiinfogain);
 
     SVM_Generic::inputstream(input);
 
@@ -8678,7 +8692,7 @@ int SVM_Scalar::setuseLweight(void)
             isStateOpt = 0;
 
             isQuasiLogLikeCalced = 0;
-            isMaxInfGainCalced   = 0;
+            isInfGainCalced      = 0;
         }
 
         if ( Gplocal )
@@ -8712,7 +8726,7 @@ int SVM_Scalar::setnoLweight(void)
             isStateOpt = 0;
 
             isQuasiLogLikeCalced = 0;
-            isMaxInfGainCalced   = 0;
+            isInfGainCalced      = 0;
         }
 
         if ( Gplocal )

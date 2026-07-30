@@ -1,36 +1,8 @@
-// From Sunil:
-//
-// DONE: epsilon-greedy, where you just add epsilon to the probofvalid
-// EONE: EIPE add epsilon.sigma_c(x) to the acquisition function (pure exploration term in the constraint, note could break ratchetting)
-// DONE: greedyalt: add epsilon.sigma_c(x) to the probability of valid - could work?
-// DONE: Thompson-sampling c(x) at each iteration
-// DONE: Thompson-sampling c(x) at each iteration, sample again if no convergence up to maxresamp
-// DONE: Move acquisition function to log-scale to amplify small values
-// TODO: Replace mu(x) in c(x) with UCB from GPUCB
-//
-// My later ideas
-//
-// TODO: Thompson-sampling as fallback - if convergence fails then switch to TS until you find something
-// TODO: for grid version, need to do gridded TS (that is, Thompson sample based on set of grid points, only randomising this points not specified)
-//
-// Long-term:
-//
-// Need to be able to do large matrix multiplication on the GPU - use mdl maybe?
-
-
-
-
-//when model_convertx is called, only go through near part. far part should mimic near part (it's the other side of a rank constraint)
-
-//FIXME: if you hvae y specified in a gridfile, but x has nulls, you should do
-//       a random spread of points for the nulls to induce equality for all x
-// crazy idea: if true for 2 x values then you get a sum alpha1 x1 + alpha2 x2
-// so a continuum should give a weighted integral.
-
-//#define ADDJITTER false
-#define ADDJITTER true // this just masks the problem
-
-
+//- keep grid separate? - In  double fnfnapproxNoUnscent(int n, const double *xx) find gridi
+//- for grid version, need to do gridded TS (that is, Thompson sample based on set of grid points, only randomising this points not specified)
+//- need to be able to do large matrix multiplication on the GPU - use mdl maybe?
+//- when model_convertx is called, only go through near part. far part should mimic near part (it's the other side of a rank constraint)
+//- if you hvae y specified in a gridfile, but x has nulls, you should do a random spread of points for the nulls to induce equality for all x
 
 //
 // Bayesian Optimiser
@@ -39,6 +11,9 @@
 // Written by: Alistair Shilton (AlShilton@gmail.com)
 // Copyright: all rights reserved
 //
+
+//#define ADDJITTER false
+#define ADDJITTER true // this just masks the problem
 
 #include "bayesopt.hpp"
 #include "ml_mutable.hpp"
@@ -244,7 +219,9 @@ class fninnerinnerArg
                     int _fidmode,
                     double _cgtVarScale,
                     const Vector<SparseVector<gentype>> &_xexpdone,
-                    const Vector<SparseVector<gentype>> &_xexpblocked) : bbopts(_bbopts),
+                    const Vector<SparseVector<gentype>> &_xexpblocked,
+                    double &_min_constraint_confidence,
+                    int &_feascnt) : bbopts(_bbopts),
                                                 _q_x(&_x),
                                                 _q_x_fullfid(&_x_fullfid),
                                                 _q_x_minfid(&_x_minfid),
@@ -301,7 +278,7 @@ class fninnerinnerArg
                                                 Nbasemu(_qNbasemu),
                                                 Nbasesigma(_qNbasesigma),
                                                 Nbasecgt(_qNbasecgt),
-                                                _q_gridi(_gridi),
+                                                gridi(_gridi),
                                                 isgridopt(_isgridopt),
                                                 iscontopt(_iscontopt),
                                                 isfullgrid(_isfullgrid),
@@ -337,7 +314,9 @@ class fninnerinnerArg
                                                 fidmode(_fidmode),
                                                 cgtVarScale(_cgtVarScale),
                                                 xexpdone(_xexpdone),
-                                                xexpblocked(_xexpblocked)
+                                                xexpblocked(_xexpblocked),
+                                                min_constraint_confidence(_min_constraint_confidence),
+                                                feascnt(_feascnt)
     {
         return;
     }
@@ -399,7 +378,7 @@ class fninnerinnerArg
                                                   Nbasemu(src.Nbasemu),
                                                   Nbasesigma(src.Nbasesigma),
                                                   Nbasecgt(src.Nbasecgt),
-                                                  _q_gridi(src._q_gridi),
+                                                  gridi(src.gridi),
                                                   isgridopt(src.isgridopt),
                                                   iscontopt(src.iscontopt),
                                                   isfullgrid(src.isfullgrid),
@@ -435,7 +414,9 @@ class fninnerinnerArg
                                                   fidmode(src.fidmode),
                                                   cgtVarScale(src.cgtVarScale),
                                                   xexpdone(src.xexpdone),
-                                                  xexpblocked(src.xexpblocked)
+                                                  xexpblocked(src.xexpblocked),
+                                                  min_constraint_confidence(src.min_constraint_confidence),
+                                                  feascnt(src.feascnt)
     {
         NiceThrow("Can't use copy constructer on fninnerinnerArg");
     }
@@ -503,7 +484,7 @@ class fninnerinnerArg
     const int &Nbasemu;
     const int &Nbasesigma;
     const int &Nbasecgt;
-    int _q_gridi;
+    int gridi;
     const int &isgridopt;
     const int &iscontopt;
     const bool &isfullgrid;
@@ -550,6 +531,10 @@ class fninnerinnerArg
 
     const Vector<SparseVector<gentype>> &xexpdone;
     const Vector<SparseVector<gentype>> &xexpblocked;
+
+    double &min_constraint_confidence;
+
+    int &feascnt;
 
     double fnfnapprox(int n, const double *xx)
     {
@@ -627,9 +612,17 @@ class fninnerinnerArg
     int locacqcgt    = ( (bbopts.cgtapprox).size() && ( iires == -1 ) ) ? 10 : _q_locacqcgt;
     int locacqvalexp = ( (bbopts.cgtapprox).size() && ( iires == -1 ) ) ? 10 : _q_locacqvalexp;
 
+    double weightmain = bbopts.weightmain;
+    double weightcgt  = bbopts.weightcgt;
+    double weightmisc = bbopts.weightmisc;
+
+    if ( (bbopts.cgtapprox).size() && ( iires == -1 ) ) { weightmain = 1; weightcgt = 1; }
+
+    if ( ( locacqmain == 22 ) || !weightmain                               ) { locacqmain = 22; weightmain = 0; }
+    if ( ( locacqcgt  == 22 ) || !weightcgt  || !(bbopts.cgtapprox).size() ) { locacqcgt  = 22; weightcgt  = 0; }
+
     int thisbatchsize   = _q_thisbatchsize;
     int thisbatchmethod = _q_thisbatchmethod;
-    int gridi           = _q_gridi;
 
     int dimfid  = bbopts.getdimfid();
     int numfids = bbopts.numfids;
@@ -689,9 +682,14 @@ class fninnerinnerArg
     // mode = 1: calculate beta, set mode = 2 later (same beta is required multiple times)
     // mode = 2: we have beta, use that
 
+    double iter    = static_cast<double>(( itcntmethod == 2 ) ? iters-itinbatch : iters    ); //+1;
+//    double itermin = static_cast<double>(( itcntmethod == 2 ) ? 0               : itinbatch); //+1;
+
+    double beta31etc    = (5.0*((double) (dim-dimfid)))/(iter   +0.1);
+//    double beta31etcmax = (5.0*((double) (dim-dimfid)))/(itermin+0.1);
+
     if ( ( mode == 0 ) || ( mode == 1 ) )
     {
-        double iter       = static_cast<double>(( itcntmethod == 2 ) ? iters-itinbatch : iters); //+1;
         double d          = (double) (dim-dimfid); // don't include fidelity variables in this scaling: it's not really a "feature" in the usual sense
         double Bsize      = (double) thisbatchsize;
         double ell1main   = d/model_lenscalemain; // this needs to be generalized. It's in BOCA, but the paper never says what it is, only that this is the SE case
@@ -783,15 +781,28 @@ class fninnerinnerArg
             // Human: ask a human (unreachable, kept as placeholder)
             // HE: human exploration agent, as per BO-Muse paper
             // gpUCB MultiFid: gpUCB Kandasamy multifidelity 2017
+            // LSE 31,32,33: maxiter scales linearly with d, so we want to scale the numerator to do the same so the overall curve
+            //               starts and finishes at the same time. Observe that 20/iter works well in 4d, so let the numerator be 5d
 
             //FIXME ell1 should be the L1 diameter of X computed by scaling each dimension by the inverse of the SE bandwitdh
 
-            case 1:   /* EI                  */ { alphamain = 0; numain = 1; epsmain = 0;     break; }
-            case 2:   /* PI                  */ { alphamain = 0; numain = 1; epsmain = 0;     break; }
+            case 1:   /* EI                  */ { alphamain = 1; numain = 1; epsmain = 0; break; }
+            case 2:   /* PI                  */ { alphamain = 0; numain = 1; epsmain = 1; break; }
 
-            case 23:  /* LSE Saddle, Bry1    */ { alphamain = 0; numain = 1; epsmain = 0;     break; }
-            case 24:  /* LSE C2LSE, Ngo1     */ { alphamain = 0; numain = 1; epsmain = 0;     break; }
-            case 26:  /* LSE C2LSE tanh, Ng01*/ { alphamain = 0; numain = 1; epsmain = 0;     break; }
+            case 23:  /* LSE Saddle, Bry1    */ { alphamain = 0; numain = 1; epsmain = 1;                                                            break; }
+            case 24:  /* LSE C2LSE, Ngo1     */ { alphamain = 0; numain = 1; epsmain = 1;                                                            break; }
+            case 25:  /* LSE C2LSE log, Ngo1 */ { alphamain = 0; numain = 1; epsmain = 1;                                                            break; }
+            case 26:  /* LSE C2LSE tanh, Ng01*/ { alphamain = 0; numain = 1; epsmain = 1;                                                            break; }
+            case 27:  /* LSE C2LSE Brochu    */ { alphamain = 0; numain = 1; epsmain = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 28:  /* LSE C2LSE log Broch */ { alphamain = 0; numain = 1; epsmain = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 29:  /* LSE C2LSE tanh Broch*/ { alphamain = 0; numain = 1; epsmain = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 31:  /* LSE C2LSE Decrease  */ { alphamain = 0; numain = 1; epsmain = beta31etc;                                                    break; }
+            case 32:  /* LSE C2LSE log Decr  */ { alphamain = 0; numain = 1; epsmain = beta31etc;                                                    break; }
+            case 33:  /* LSE C2LSE tanh Decr */ { alphamain = 0; numain = 1; epsmain = beta31etc;                                                    break; }
+
+            case 34:  /* PoF entropy         */ { alphamain = 0; numain = 1; epsmain = 1;                                                            break; }
+            case 35:  /* PoF entropy Bruchu  */ { alphamain = 0; numain = 1; epsmain = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 36:  /* PoF entropy Decr    */ { alphamain = 0; numain = 1; epsmain = 20.0/(iter+0.1);                                              break; }
 
             case 22:  /* Zero                */ { alphamain = 0; numain = 1; epsmain = 0;     break; }
             case 0:   /* Mean only           */ { alphamain = 1; numain = 1; epsmain = 0;     break; }
@@ -800,7 +811,7 @@ class fninnerinnerArg
             case 19:  /* HE                  */ { alphamain = 1; numain = 1; epsmain = 0.001; break; }
             case 9:   /* PE                  */ { alphamain = 0; numain = 1; epsmain = 1;     break; }
             case 10:  /* PEc                 */ { alphamain = 0; numain = 1; epsmain = 1;     break; }
-            case 25:  /* Mean + variance     */ { alphamain = 1; numain = 1; epsmain = 1;     break; }
+            case 30:  /* Mean + variance     */ { alphamain = 1; numain = 1; epsmain = 1;     break; }
 
             case 4:   /* gpUCB finite        */ { alphamain = 1; numain = defnumain; epsmain = 2*log(modD*iter*iter*(NUMBASE_PI*NUMBASE_PI/(6*delta)));                break; }
             case 7:   /* gpUCB p finite      */ { alphamain = 1; numain = defnumain; epsmain = 2*log(modD*numbase_zeta(p)*pow(iter,p)/delta);                          break; }
@@ -827,15 +838,28 @@ class fninnerinnerArg
             // Human: ask a human (unreachable, kept as placeholder)
             // HE: human exploration agent, as per BO-Muse paper
             // gpUCB MultiFid: gpUCB Kandasamy multifidelity 2017
+            // LSE 31,32,33: maxiter scales linearly with d, so we want to scale the numerator to do the same so the overall curve
+            //               starts and finishes at the same time. Observe that 20/iter works well in 4d, so let the numerator be 5d
 
             //FIXME ell1 should be the L1 diameter of X computed by scaling each dimension by the inverse of the SE bandwitdh
 
-            case 1:   /* EI                  */ { alphacgt = 0; nucgt = 1; epscgt = 0;     break; }
-            case 2:   /* PI                  */ { alphacgt = 0; nucgt = 1; epscgt = 0;     break; }
+            case 1:   /* EI                  */ { alphacgt = 1; nucgt = 1; epscgt = 0; break; }
+            case 2:   /* PI                  */ { alphacgt = 0; nucgt = 1; epscgt = 1; break; }
 
-            case 23:  /* LSE Saddle, Bry1    */ { alphacgt = 0; nucgt = 1; epscgt = 0;     break; }
-            case 24:  /* LSE C2LSE, Ngo1     */ { alphacgt = 0; nucgt = 1; epscgt = 0;     break; }
-            case 26:  /* LSE C2LSE tanh, Ngo1*/ { alphacgt = 0; nucgt = 1; epscgt = 0;     break; }
+            case 23:  /* LSE Saddle, Bry1    */ { alphacgt = 0; nucgt = 1; epscgt = 1;                                                            break; }
+            case 24:  /* LSE C2LSE, Ngo1     */ { alphacgt = 0; nucgt = 1; epscgt = 1;                                                            break; }
+            case 25:  /* LSE C2LSE log, Ngo1 */ { alphacgt = 0; nucgt = 1; epscgt = 1;                                                            break; }
+            case 26:  /* LSE C2LSE tanh, Ngo1*/ { alphacgt = 0; nucgt = 1; epscgt = 1;                                                            break; }
+            case 27:  /* LSE C2LSE Brochu    */ { alphacgt = 0; nucgt = 1; epscgt = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 28:  /* LSE C2LSE log Brochu*/ { alphacgt = 0; nucgt = 1; epscgt = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 29:  /* LSE C2LSE tanh Broch*/ { alphacgt = 0; nucgt = 1; epscgt = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 31:  /* LSE C2LSE Decrease  */ { alphacgt = 0; nucgt = 1; epscgt = beta31etc;                                                    break; }
+            case 32:  /* LSE C2LSE log Decr  */ { alphacgt = 0; nucgt = 1; epscgt = beta31etc;                                                    break; }
+            case 33:  /* LSE C2LSE tanh Decr */ { alphacgt = 0; nucgt = 1; epscgt = beta31etc;                                                    break; }
+
+            case 34:  /* PoF entropy         */ { alphacgt = 0; nucgt = 1; epscgt = 1;                                                            break; }
+            case 35:  /* PoF entropy Bruchu  */ { alphacgt = 0; nucgt = 1; epscgt = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 36:  /* PoF entropy Decr    */ { alphacgt = 0; nucgt = 1; epscgt = 20.0/(iter+0.1);                                              break; }
 
             case 22:  /* Zero                */ { alphacgt = 0; nucgt = 1; epscgt = 0;     break; }
             case 0:   /* Mean only           */ { alphacgt = 1; nucgt = 1; epscgt = 0;     break; }
@@ -844,7 +868,7 @@ class fninnerinnerArg
             case 19:  /* HE                  */ { alphacgt = 1; nucgt = 1; epscgt = 0.001; break; }
             case 9:   /* PE                  */ { alphacgt = 0; nucgt = 1; epscgt = 1;     break; }
             case 10:  /* PEc                 */ { alphacgt = 0; nucgt = 1; epscgt = 1;     break; }
-            case 25:  /* Mean + variance     */ { alphacgt = 1; nucgt = 1; epscgt = 1;     break; }
+            case 30:  /* Mean + variance     */ { alphacgt = 1; nucgt = 1; epscgt = 1;     break; }
 
             case 4:   /* gpUCB finite        */ { alphacgt = 1; nucgt = defnucgt; epscgt = 2*log(modD*iter*iter*(NUMBASE_PI*NUMBASE_PI/(6*delta)));                    break; }
             case 7:   /* gpUCB p finite      */ { alphacgt = 1; nucgt = defnucgt; epscgt = 2*log(modD*numbase_zeta(p)*pow(iter,p)/delta);                              break; }
@@ -871,15 +895,28 @@ class fninnerinnerArg
             // Human: ask a human (unreachable, kept as placeholder)
             // HE: human exploration agent, as per BO-Muse paper
             // gpUCB MultiFid: gpUCB Kandasamy multifidelity 2017
+            // LSE 31,32,33: maxiter scales linearly with d, so we want to scale the numerator to do the same so the overall curve
+            //               starts and finishes at the same time. Observe that 20/iter works well in 4d, so let the numerator be 5d
 
             //FIXME ell1 should be the L1 diameter of X computed by scaling each dimension by the inverse of the SE bandwitdh
 
-            case 1:   /* EI                  */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 0;     break; }
-            case 2:   /* PI                  */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 0;     break; }
+            case 1:   /* EI                  */ { alphavalexp = 1; nuvalexp = 1; epsvalexp = 0; break; }
+            case 2:   /* PI                  */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 1; break; }
 
-            case 23:  /* LSE Saddle, Bry1    */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 0;     break; }
-            case 24:  /* LSE C2LSE, Ngo1     */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 0;     break; }
-            case 26:  /* LSE C2LSE tanh, Ngo1*/ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 0;     break; }
+            case 23:  /* LSE Saddle, Bry1    */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 1;                                                            break; }
+            case 24:  /* LSE C2LSE, Ngo1     */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 1;                                                            break; }
+            case 25:  /* LSE C2LSE log, Ngo1 */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 1;                                                            break; }
+            case 26:  /* LSE C2LSE tanh, Ngo1*/ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 1;                                                            break; }
+            case 27:  /* LSE C2LSE Brochu    */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 28:  /* LSE C2LSE log Brochu*/ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 29:  /* LSE C2LSE tanh Broch*/ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 31:  /* LSE C2LSE Decrease  */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = beta31etc;                                                    break; }
+            case 32:  /* LSE C2LSE log Decr  */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = beta31etc;                                                    break; }
+            case 33:  /* LSE C2LSE tanh Decr */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = beta31etc;                                                    break; }
+
+            case 34:  /* PoF entropy         */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 1;                                                            break; }
+            case 35:  /* PoF entropy Bruchu  */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta))); break; }
+            case 36:  /* PoF entropy Decr    */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 20.0/(iter+0.1);                                              break; }
 
             case 22:  /* Zero                */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 0;     break; }
             case 0:   /* Mean only           */ { alphavalexp = 1; nuvalexp = 1; epsvalexp = 0;     break; }
@@ -888,7 +925,7 @@ class fninnerinnerArg
             case 19:  /* HE                  */ { alphavalexp = 1; nuvalexp = 1; epsvalexp = 0.001; break; }
             case 9:   /* PE                  */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 1;     break; }
             case 10:  /* PEc                 */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 1;     break; }
-            case 25:  /* Mean + variance     */ { alphavalexp = 1; nuvalexp = 1; epsvalexp = 1;     break; }
+            case 30:  /* Mean + variance     */ { alphavalexp = 1; nuvalexp = 1; epsvalexp = 1;     break; }
 
             case 4:   /* gpUCB finite        */ { alphavalexp = 1; nuvalexp = defnuvalexp; epsvalexp = 2*log(modD*iter*iter*(NUMBASE_PI*NUMBASE_PI/(6*delta)));                    break; }
             case 7:   /* gpUCB p finite      */ { alphavalexp = 1; nuvalexp = defnuvalexp; epsvalexp = 2*log(modD*numbase_zeta(p)*pow(iter,p)/delta);                              break; }
@@ -1028,6 +1065,9 @@ class fninnerinnerArg
     // Attempt 1: return valvnan() causes optimization failure under -O3 as nan is not treated properly in this case
     // Attempt 2: return NANTRIGSET also causes issues as the "Step" is too large by default
     // Attempt 3: return 1 seems to work, assuming 1 is the upper range limit for return
+    //
+    // NB: xexpdone is empty unless norepeats is set (by default it is zero, so xexpdone is empty)
+    //     xexpblocked is only added to when the user return None, indicating a desire to not evaluate this point
 
     for ( int i = xexpdone.   size()-1 ; i >= 0 ; --i ) { if ( ( xexpdone(i)    == x ) || ( norm2(xexpdone   (i)-x) < norepdist ) ) { return 1; } }
     for ( int i = xexpblocked.size()-1 ; i >= 0 ; --i ) { if ( ( xexpblocked(i) == x ) || ( norm2(xexpblocked(i)-x) < blockdist ) ) { return 1; } }
@@ -1136,9 +1176,9 @@ class fninnerinnerArg
         // then reform them to get the min mean vector and modified determinat of the
         // covariance matrix (the geometric mean of the determinants).
 
-        meanvector.resize(thisbatchsize);
+        meanvector .resize(thisbatchsize);
         covarmatrix.resize(thisbatchsize,thisbatchsize);
-        multivecin.resize(thisbatchsize);
+        multivecin .resize(thisbatchsize);
 
         for ( int i = 0 ; i < thisbatchsize ; ++i )
         {
@@ -1176,8 +1216,8 @@ class fninnerinnerArg
 //errstream() << "muy = " << muy << ",\t";
     double yymax        = ( ymax.isValVector() ) ? 0.0 : ((double) ymax);
     double yymaxcorrect = yymax;
-    double hh           = -bbopts.h;
-    double hhcgt        = bbopts.hcgt;
+    double hh           = -(bbopts.h    + (iter*(bbopts.hstep   )));
+    double hhcgt        =  (bbopts.hcgt + (iter*(bbopts.hcgtstep)));
 
     // Correction factors (min/max and other misc)
 
@@ -1211,7 +1251,7 @@ class fninnerinnerArg
     Vector<gentype> varcgtsq(numcgt,altsig);
     Vector<gentype> varcgtsq_pred(numcgt,altsig);
 
-    if ( numcgt && ( bbopts.cgtmethod != -1 ) )
+    if ( numcgt )
     {
         if ( dimfid && ( fidmode == 0 ) ) { bbopts.model_predmuvar_cgt(varcgtsq_pred,varcgtsq,mucgt,x_fullfid,x); varcgtsq += varcgtsq_pred; }
         else                              { bbopts.model_muvar_cgt(varcgtsq,mucgt,x);                                                        }
@@ -1232,14 +1272,19 @@ class fninnerinnerArg
 
     double probofvalid = 1;
 
+    bool hardinvalid = false;
+
     bool    resfeas     = true;  // x is feasible
     bool objresfeasmain = true;  // acquisition function for result is in feasible region.
     bool objresfeascgt  = false; // acquisition function for cgt result is in feasible region (use inverted logic for simplicity, set later)
     bool objresfeasmisc = false; // additional variance term (set true later if included)
 
-    if ( numcgt && ( bbopts.cgtmethod != -1 ) )
+    bool objresinfeascgt = false; // override for PIscale == 3
+
+    if ( numcgt )
     {
         bool inlevelset = true;
+        bool cgtinfeas  = false;
 
         NiceAssert( thisbatchsize == 1 );
 
@@ -1250,23 +1295,28 @@ class fninnerinnerArg
         {
             double ecgt   = (double) mucgt(i);
             double vcgtsq = (double) varcgtsq(i);
+            double betacgt = (bbopts.lseeps)*sqrt((std::log(1+(1/model_sigmacgt))*iter)/(2*migcgt)); // As per Ngo1
 
-            if      ( ( bbopts.cgtmethod == 4 ) || ( bbopts.cgtmethod == 5 ) ) { if ( ecgt < bbopts.cgtmargin ) { probofvalid = 0; } } //objresfeasmain = false; }
-            else if ( vcgtsq > ztol*ztol                                     ) { probofvalid *= normPhi(ecgt/sqrt(vcgtsq));          }
-            else if ( ecgt < 0                                               ) { probofvalid = 0;                                    }
-
-            if ( ecgt <= (bbopts.cgtcertain)*sqrt(vcgtsq) ) { inlevelset = false; }
-
+            ecgt -= bbopts.cgtmargin; // Margin
             totalconstraintvariance += sqrt(vcgtsq);
+
+            if ( bbopts.cgtmethod == 7 ) { ecgt -=   betacgt*sqrt(vcgtsq); } // As per Ngo1
+            if ( bbopts.cgtmethod == 8 ) { ecgt -= 2*betacgt*sqrt(vcgtsq); } // As per Ngo1 (slack variant)
+
+            if      ( bbopts.cgtmethod == 4 ) { if ( ecgt < 0 ) { probofvalid = 0;          cgtinfeas = true; } } // Mean-only case
+            if      ( bbopts.cgtmethod == 5 ) { if ( ecgt < 0 ) { probofvalid = 0;          cgtinfeas = true; } } // Mean-only case
+            else if ( vcgtsq > ztol*ztol    ) { probofvalid *= normPhi(ecgt/sqrt(vcgtsq));                      } // PoF with variance
+            else if ( ecgt < 0              ) { probofvalid = 0;                            cgtinfeas = true;   } // PoF without variance, infeasible
+
+            if ( ecgt <= 0 ) { inlevelset = false; } // Level-set membership calculation
         }
 
-        // mucgt >= cgtmargin
-        // mucgt-cgtmargin >= 0
-
-//errstream() << probofvalid << ", ";
-        for ( int i = 0 ; i < mucgt.size() ; ++i ) { mucgt("&",i) -= bbopts.cgtmargin; } // ((bbopts.cgtmargin)*2*sqrt(varcgtsq(i)))
-
-        if ( bbopts.cgtmethod == 6 ) { probofvalid = inlevelset ? 1.0 : 0.0; } //objresfeasmain = inlevelset; } // alternative "in or out of level set" test
+             if ( bbopts.cgtmethod == 0 ) {                                       hardinvalid = cgtinfeas;   }
+        else if ( bbopts.cgtmethod == 4 ) {                                       hardinvalid = cgtinfeas;   }
+        else if ( bbopts.cgtmethod == 5 ) {                                       hardinvalid = cgtinfeas;   }
+        else if ( bbopts.cgtmethod == 6 ) { probofvalid = inlevelset ? 1.0 : 0.0; hardinvalid = !inlevelset; }
+        else if ( bbopts.cgtmethod == 7 ) { probofvalid = inlevelset ? 1.0 : 0.0; hardinvalid = !inlevelset; }
+        else if ( bbopts.cgtmethod == 8 ) { probofvalid = inlevelset ? 1.0 : 0.0; hardinvalid = !inlevelset; }
 //errstream() << probofvalid << ", ";
 //printoneline(errstream(),x);
 //errstream() << "-_\t";
@@ -1275,6 +1325,8 @@ class fninnerinnerArg
     // Apply epsilon-greedy to constraint probability
 
     probofvalid = ((1-cgtepsgreedypof)*probofvalid) + cgtepsgreedypof;
+
+    if ( cgtepsgreedypof ) { hardinvalid = false; }
 
     // =======================================================================
     // =======================================================================
@@ -1294,10 +1346,7 @@ class fninnerinnerArg
         else if ( (double) muy <= yymaxcorrect           ) { resscalemain = 0; if ( PIscale == 2 ) { resfeas = false; } }
         else                                               { resscalemain = 1;                                          }
 
-        if ( PIscale == 3 )
-        {
-            resscalecgt = resscalemain;
-        }
+        if ( PIscale == 3 ) { resscalecgt = resscalemain; if ( !resscalecgt ) { objresinfeascgt = true; } }
     }
 
     // =======================================================================
@@ -1366,6 +1415,7 @@ class fninnerinnerArg
         sigmay = sqrt(vartot); // corrected variance
 
         probofvalid = 1;
+        hardinvalid = false;
     }
 
     // =======================================================================
@@ -1380,23 +1430,17 @@ class fninnerinnerArg
     {
         // Calculate stability score on x
 
-        if ( !( isgridopt && ( gridi >= 0 ) ) )
-        {
-            bbopts.model_stabProb(stabscore,x,stabp,stabpnrm,stabrot,stabmu,stabB);
-        }
+        NiceAssert( !( isgridopt && ( gridi >= 0 ) ) || ( !isfullgrid || ( gridi >= 0 ) ) );
 
-        else
-        {
-            NiceAssert( !isfullgrid );
-            NiceAssert( gridi >= 0 );
-            bbopts.model_stabProbTrainingVector(stabscore,Nbasemu+gridi,stabp,stabpnrm,stabrot,stabmu,stabB);
-        }
+        if ( !( isgridopt && ( gridi >= 0 ) ) ) { bbopts.model_stabProb(stabscore,x,stabp,stabpnrm,stabrot,stabmu,stabB);                           }
+        else                                    { bbopts.model_stabProbTrainingVector(stabscore,Nbasemu+gridi,stabp,stabpnrm,stabrot,stabmu,stabB); }
 
         if ( stabUseSig )
         {
             //stabscore = ( stabscore >= stabThresh ) ? 1.0 : DISCOUNTRATE;
-            stabscore = 1/(1+exp(-1000*(stabscore-stabThresh)));
             //stabscore = 1/(1+exp(-(stabscore-stabThresh)/(stabscore*(1-stabscore))));
+
+            stabscore = 1/(1+exp(-1000*(stabscore-stabThresh)));
         }
 
         if ( firstevalinseq && ( acqmain == 1 ) )
@@ -1418,15 +1462,10 @@ class fninnerinnerArg
 
             for ( int j = s_score.size()-1 ; j >= 1 ; --j ) { s_score("&",0,1,j-1,tmpva) *= s_score(j); }
 
-            if ( stabUseSig )
-            {
-                for ( int j = 0 ; j < s_score.size() ; ++j )
-                {
-                    //s_score("&",j) = ( s_score(j) >= stabThresh ) ? 1.0 : DISCOUNTRATE;
-                    s_score("&",j) = 1/(1+exp(-1000*(s_score(j)-stabThresh)));
-                    //s_score("&",j) = 1/(1+exp(-(s_score(j)-stabThresh)/(s_score(j)*(1-s_score(j)))));
-                }
-            }
+            //s_score("&",j) = ( s_score(j) >= stabThresh ) ? 1.0 : DISCOUNTRATE;
+            //s_score("&",j) = 1/(1+exp(-(s_score(j)-stabThresh)/(s_score(j)*(1-s_score(j)))));
+
+            if ( stabUseSig ) { for ( int j = 0 ; j < s_score.size() ; ++j ) { s_score("&",j) = 1/(1+exp(-1000*(s_score(j)-stabThresh))); } }
         }
     }
 
@@ -1468,6 +1507,8 @@ class fninnerinnerArg
         }
     }
 
+    bool ratchetout = false;
+
     double exploitFactor = 0;
     double exploreFactor = 0;
 
@@ -1476,12 +1517,6 @@ class fninnerinnerArg
 
     double exploitFactorcgt = 0;
     double exploreFactorcgt = 0;
-
-    double minexploitFactor = 0;
-    double minexploreFactor = 0;
-
-    double minexploitFactorcgt = 0;
-    double minexploreFactorcgt = 0;
 
     double maxexploitFactor = 0;
     double maxexploreFactor = 0;
@@ -1577,11 +1612,17 @@ class fninnerinnerArg
             if ( ( bbopts.minstdev > 0 ) && ( locsigmay < bbopts.minstdev ) )
             {
                 probofvalid    = 1e-8;
-                //objresfeasmain = false;
+                objresfeasmain = false;
+
+                exploitFactor *= 1e-8;
+                exploreFactor *= 1e-8;
             }
 
-            exploitFactor *= probofvalid;
-            exploreFactor *= probofvalid;
+            else
+            {
+                exploitFactor *= ( ( bbopts.cgtmethod != -1 ) ? probofvalid : 1.0 );
+                exploreFactor *= ( ( bbopts.cgtmethod != -1 ) ? probofvalid : 1.0 );
+            }
 
             StrucAssert( !numcgt );
 
@@ -1613,11 +1654,10 @@ class fninnerinnerArg
             double exploitFactorTailR = 0;
             double exploreFactorTailR = 0;
 
-            double minexploitFactorR = 0;
-            double minexploreFactorR = 0;
-
             double maxexploitFactorR = 1;
             double maxexploreFactorR = 1;
+
+            double probofvalidR = 0;
 
             int acqR = acqmain;
 
@@ -1631,13 +1671,11 @@ class fninnerinnerArg
                     double Phizm = normPhi((muR-(yymaxR+zeta))/sigmaR);
                     double phizm = normphi((muR-(yymaxR+zeta))/sigmaR);
 
-                    if ( sigmaR > ztol ) { exploitFactorR = ((muR-(yymaxR+zeta))*Phizm) + ((sigmaR)*phizm);    exploreFactorR = 0; }
-                    else                 { exploitFactorR = ( muR > yymaxR+zeta ) ? (muR-(yymaxR+zeta)) : 0.0; exploreFactorR = 0; }
+                    if ( sigmaR > ztol ) { exploitFactorR = sqrt(alphaR)*(((muR-(yymaxR+zeta))*Phizm) + ((sigmaR)*phizm));    exploreFactorR = 0; }
+                    else                 { exploitFactorR = sqrt(alphaR)*(( muR > yymaxR+zeta ) ? (muR-(yymaxR+zeta)) : 0.0); exploreFactorR = 0;
+                                           ratchetout = ( muR > yymaxR+zeta ) ? false : true;                                                     }
 
-                    minexploitFactorR = 0;
-                    maxexploitFactorR = (mumax-mumin);
-
-                    minexploreFactorR = 0;
+                    maxexploitFactorR = sqrt(alphaR)*(mumax-mumin);
                     maxexploreFactorR = 0;
 ////errstream() << exploitFactorR << "\t" << minexploitFactorR << "\t" << maxexploitFactorR << " |\t";
 
@@ -1646,8 +1684,8 @@ class fninnerinnerArg
                     double PhizmTail = normPhi(-(muR-(yymaxR+zeta))/sigmaR);
                     double phizmTail = normphi(-(muR-(yymaxR+zeta))/sigmaR);
 
-                    if ( sigmaR > ztol ) { exploitFactorTailR = (-(muR-(yymaxR+zeta))*PhizmTail) + ((sigmaR)*phizmTail); exploreFactorTailR = 0; }
-                    else                 { exploitFactorTailR = ( muR < yymaxR+zeta ) ? -(muR-(yymaxR+zeta)) : 0.0;      exploreFactorTailR = 0; }
+                    if ( sigmaR > ztol ) { exploitFactorTailR = sqrt(alphaR)*((-(muR-(yymaxR+zeta))*PhizmTail) + ((sigmaR)*phizmTail)); exploreFactorTailR = 0; }
+                    else                 { exploitFactorTailR = sqrt(alphaR)*(( muR < yymaxR+zeta ) ? -(muR-(yymaxR+zeta)) : 0.0);      exploreFactorTailR = 0; }
 
                     break;
                 }
@@ -1656,14 +1694,11 @@ class fninnerinnerArg
                 {
                     double Phiz = normPhi((muR-yymaxR)/sigmaR);
 
-                    if ( sigmaR > ztol ) { exploitFactorR = Phiz;                     exploreFactorR = 0; }
-                    else                 { exploitFactorR = ( muR > yymaxR ) ? 1 : 0; exploreFactorR = 0; }
+                    if ( sigmaR > ztol ) { exploreFactorR = betasgnR*sqrt(betaR)*(Phiz);                     exploitFactorR = 0; }
+                    else                 { exploreFactorR = betasgnR*sqrt(betaR)*(( muR > yymaxR ) ? 1 : 0); exploitFactorR = 0; }
 
-                    minexploitFactorR = 0;
-                    maxexploitFactorR = 1;
-
-                    minexploreFactorR = 0;
-                    maxexploreFactorR = 0;
+                    maxexploitFactorR = 0;
+                    maxexploreFactorR = betasgnR*sqrt(betaR);
 
                     break;
                 }
@@ -1671,41 +1706,69 @@ class fninnerinnerArg
                 case 23: // LSE Saddle, Bry1 - note additional factor to ensure positivity
                 {
                     exploitFactorR = 0;
-                    exploreFactorR = (1.96*sigmaR) - std::abs(muR-hhR) + ((mumax-mumin)+std::abs(hhR));
+                    exploreFactorR = betasgnR*sqrt(betaR)*((1.96*sigmaR) - std::abs(muR-hhR) + ((mumax-mumin)+std::abs(hhR)));
 
-                    minexploitFactorR = 0;
                     maxexploitFactorR = 0;
-
-                    minexploreFactorR = 0; //(1.96*modelsigmaR);
-                    maxexploreFactorR = (1.96*(1+modelsigmaR)) + ((mumax-mumin)+std::abs(hhR));
+                    maxexploreFactorR = betasgnR*sqrt(betaR)*((1.96*(1+modelsigmaR)) + ((mumax-mumin)+std::abs(hhR)));
 
                     break;
                 }
 
-                case 24: // LSE C2LSE, Ngo1 - rescaled and squished, but still has the same minima. Also bounds are a bit arbitrary
+                case 24: // LSE C2LSE, Ngo1
+                case 27: // Brochu scaled variance
+                case 31: // Decreasing exploration
                 {
                     exploitFactorR = 0;
-                    exploreFactorR = log(1+(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR))));
+                    exploreFactorR = betasgnR*sqrt(betaR)*(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR)));
+//FIXME * bbopts.lseeps ****THIS MAKES THE maxexploreFactorR below correct
 
-                    minexploitFactorR = 0;
                     maxexploitFactorR = 0;
+                    maxexploreFactorR = betasgnR*sqrt(betaR);
 
-                    minexploreFactorR = 0; //log(1+modelsigmaR/((mumax-mumin)+std::abs(hhR)));
-                    maxexploreFactorR = minexploreFactorR+1; // This is arbitrary! The real max is very large, and we don't want to "squash" what matters.
-                                                             // "real" max: log(1+((1+modelsigmaR)/lseeps))
+                    break;
+                }
+
+                case 25: // LSE C2LSE, log Ngo1
+                case 28: // Brochu scaled variance
+                case 32: // Decreasing exploration
+                {
+                    exploitFactorR = 0;
+                    exploreFactorR = betasgnR*sqrt(betaR)*log(1+(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR))));
+
+                    maxexploitFactorR = 0;
+                    maxexploreFactorR = betasgnR*sqrt(betaR);
 
                     break;
                 }
 
                 case 26: // LSE C2LSE, Ngo1, tanh
+                case 29: // Brochu scaled variance
+                case 33: // Decreasing exploration
+                {
+                    double constraint_confidence = ( sigmaR > ztol ) ? normPhi(std::abs(muR-hhR)/sigmaR) : 1;
+
+                    exploitFactorR = 0;
+                    exploreFactorR = betasgnR*sqrt(betaR)*2*(1-constraint_confidence);
+
+                    maxexploitFactorR = 0;
+                    maxexploreFactorR = betasgnR*sqrt(betaR);
+
+                    break;
+                }
+
+                case 34: // Entropy
+                case 35: // Entropy Brochu scaled
+                case 36: // Entropy decreasing exploration
                 {
                     exploitFactorR = 0;
-                    exploreFactorR = tanh(log(1+(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR)))));
+                    exploreFactorR = 0;
 
-                    minexploitFactorR = 0;
+                    if ( ( probofvalid > 1e-8 ) && ( 1-probofvalid > 1e-8 ) )
+                    {
+                        exploreFactorR = -(probofvalidR*std::log2f((float) probofvalidR))-((1-probofvalidR)*std::log2f((float) (1-probofvalidR)));
+                    }
+
                     maxexploitFactorR = 0;
-
-                    minexploreFactorR = 0;
                     maxexploreFactorR = 1;
 
                     break;
@@ -1713,13 +1776,10 @@ class fninnerinnerArg
 
                 default: // gpUCB variants
                 {
-                    exploitFactorR = alphaR*(muR-mumin);
+                    exploitFactorR = sqrt(alphaR)*(muR-mumin);
                     exploreFactorR = (betasgnR*sqrt(betaR)*sigmaR);
 
-                    minexploitFactorR = 0;
-                    maxexploitFactorR = alphaR*(mumax-mumin);
-
-                    minexploreFactorR = 0; //(betasgnR*sqrt(betaR)*modelsigmaR);
+                    maxexploitFactorR = sqrt(alphaR)*(mumax-mumin);
                     maxexploreFactorR = (betasgnR*sqrt(betaR)*(1+modelsigmaR));
 
                     break;
@@ -1729,17 +1789,20 @@ class fninnerinnerArg
             if ( ( bbopts.minstdev > 0 ) && ( sigmaR < bbopts.minstdev ) )
             {
                 probofvalid    = 1e-8;
-                //objresfeasmain = false;
+                objresfeasmain = false;
+
+                exploitFactor += 1e-8*exploitFactorR;
+                exploreFactor += 1e-8*exploreFactorR;
             }
 
-            exploitFactor += probofvalid*exploitFactorR;
-            exploreFactor += probofvalid*exploreFactorR;
+            else
+            {
+                exploitFactor += ( ( bbopts.cgtmethod != -1 ) ? probofvalid : 1.0 )*exploitFactorR;
+                exploreFactor += ( ( bbopts.cgtmethod != -1 ) ? probofvalid : 1.0 )*exploreFactorR;
+            }
 
             exploitFactorTail += exploitFactorTailR;
             exploreFactorTail += exploreFactorTailR;
-
-            minexploitFactor += minexploitFactorR;
-            minexploreFactor += minexploreFactorR;
 
             maxexploitFactor += maxexploitFactorR;
             maxexploreFactor += maxexploreFactorR;
@@ -1761,11 +1824,10 @@ class fninnerinnerArg
             double exploitFactorR = 0;
             double exploreFactorR = 0;
 
-            double minexploitFactorR = 0;
-            double minexploreFactorR = 0;
-
             double maxexploitFactorR = 0;
             double maxexploreFactorR = 0;
+
+            double probofvalidR = probofvalid;
 
             int acqR = acqcgt;
 
@@ -1776,13 +1838,10 @@ class fninnerinnerArg
                     double Phizm = normPhi(((muR-yymaxR)/(sigmaR))-zeta);
                     double phizm = normphi(((muR-yymaxR)/(sigmaR))-zeta);
 
-                    if ( sigmaR > ztol ) { exploitFactorR = ((muR-yymaxR-zeta)*Phizm) + ((sigmaR)*phizm);    exploreFactorR = 0; }
-                    else                 { exploitFactorR = ( muR > yymaxR+zeta ) ? (muR-yymaxR-zeta) : 0.0; exploreFactorR = 0; }
+                    if ( sigmaR > ztol ) { exploitFactorR = sqrt(alphaR)*(((muR-yymaxR-zeta)*Phizm) + ((sigmaR)*phizm));    exploreFactorR = 0; }
+                    else                 { exploitFactorR = sqrt(alphaR)*(( muR > yymaxR+zeta ) ? (muR-yymaxR-zeta) : 0.0); exploreFactorR = 0; }
 
-                    minexploitFactorR = 0;
-                    maxexploitFactorR = (mumax-mumin);
-
-                    minexploreFactorR = 0;
+                    maxexploitFactorR = sqrt(alphaR)*(mumax-mumin);
                     maxexploreFactorR = 0;
 
                     break;
@@ -1792,14 +1851,11 @@ class fninnerinnerArg
                 {
                     double Phiz = normPhi((muR-yymaxR)/sigmaR);
 
-                    if ( sigmaR > ztol ) { exploitFactorR = Phiz;                     exploreFactorR = 0; }
-                    else                 { exploitFactorR = ( muR > yymaxR ) ? 1 : 0; exploreFactorR = 0; }
+                    if ( sigmaR > ztol ) { exploreFactorR = betasgnR*sqrt(betaR)*(Phiz);                     exploitFactorR = 0; }
+                    else                 { exploreFactorR = betasgnR*sqrt(betaR)*(( muR > yymaxR ) ? 1 : 0); exploitFactorR = 0; }
 
-                    minexploitFactorR = 0;
-                    maxexploitFactorR = 1;
-
-                    minexploreFactorR = 0;
-                    maxexploreFactorR = 0;
+                    maxexploitFactorR = 0;
+                    maxexploreFactorR = betasgnR*sqrt(betaR);
 
                     break;
                 }
@@ -1807,41 +1863,82 @@ class fninnerinnerArg
                 case 23: // LSE Saddle, Bry1 - note additional factor to ensure positivity
                 {
                     exploitFactorR = 0;
-                    exploreFactorR = (1.96*sigmaR) - std::abs(muR-hhR) + ((mumax-mumin)+std::abs(hhR));
+                    exploreFactorR = betasgnR*sqrt(betaR)*((1.96*sigmaR) - std::abs(muR-hhR) + ((mumax-mumin)+std::abs(hhR)));
 
-                    minexploitFactorR = 0;
                     maxexploitFactorR = 0;
-
-                    minexploreFactorR = 0; //(1.96*modelsigmaR);
-                    maxexploreFactorR = (1.96*(1+modelsigmaR)) + ((mumax-mumin)+std::abs(hhR));
+                    maxexploreFactorR = betasgnR*sqrt(betaR)*((1.96*(1+modelsigmaR)) + ((mumax-mumin)+std::abs(hhR)));
 
                     break;
                 }
 
                 case 24: // LSE C2LSE, Ngo1 - rescaled and squished, but still has the same minima. Also bounds are a bit arbitrary
+                case 27: // Brochu scaled variance
+                case 31: // Decreasing exploration
                 {
+                    double constraint_confidence = ( sigmaR > ztol ) ? normPhi(std::abs(muR-hhR)/sigmaR) : 1;
+
+                    // resscalecgt > 0 is enforced so that we don't count the "ratcheted out" part of design space
+                    min_constraint_confidence = ( ( resscalecgt > 0 ) && ( constraint_confidence < min_constraint_confidence ) ) ? constraint_confidence : min_constraint_confidence;
+
                     exploitFactorR = 0;
-                    exploreFactorR = log(1+(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR))));
+                    exploreFactorR = betasgnR*sqrt(betaR)*(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR)));
+//FIXME * bbopts.lseeps ****THIS MAKES THE maxexploreFactorR below correct
 
-                    minexploitFactorR = 0;
                     maxexploitFactorR = 0;
+                    maxexploreFactorR = betasgnR*sqrt(betaR);
 
-                    minexploreFactorR = 0; //log(1+modelsigmaR/((mumax-mumin)+std::abs(hhR)));
-                    maxexploreFactorR = 1; // This is arbitrary! The real max is very large, and we don't want to "squash" what matters.
-                                           // "real" max: log(1+((1+modelsigmaR)/lseeps))
+                    break;
+                }
+
+                case 25: // LSE C2LSE, Ngo1 - rescaled and squished, but still has the same minima. Also bounds are a bit arbitrary
+                case 28: // Brochu scaled variance
+                case 32: // Decreasing exploration
+                {
+                    double constraint_confidence = ( sigmaR > ztol ) ? normPhi(std::abs(muR-hhR)/sigmaR) : 1;
+
+                    // resscalecgt > 0 is enforced so that we don't count the "ratcheted out" part of design space
+                    min_constraint_confidence = ( ( resscalecgt > 0 ) && ( constraint_confidence < min_constraint_confidence ) ) ? constraint_confidence : min_constraint_confidence;
+
+                    exploitFactorR = 0;
+                    exploreFactorR = betasgnR*sqrt(betaR)*log(1+(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR))));
+
+                    maxexploitFactorR = 0;
+                    maxexploreFactorR = betasgnR*sqrt(betaR);
 
                     break;
                 }
 
                 case 26: // LSE C2LSE, Ngo1, tanh
+                case 29: // Brochu scaled variance
+                case 33: // Decreasing exploration
+                {
+                    double constraint_confidence = ( sigmaR > ztol ) ? normPhi(std::abs(muR-hhR)/sigmaR) : 1;
+
+                    // resscalecgt > 0 is enforced so that we don't count the "ratcheted out" part of design space
+                    min_constraint_confidence = ( ( resscalecgt > 0 ) && ( constraint_confidence < min_constraint_confidence ) ) ? constraint_confidence : min_constraint_confidence;
+
+                    exploitFactorR = 0;
+                    exploreFactorR = betasgnR*sqrt(betaR)*2*(1-constraint_confidence);
+
+                    maxexploitFactorR = 0;
+                    maxexploreFactorR = betasgnR*sqrt(betaR);
+
+                    break;
+                }
+
+                case 34: // Entropy
+                case 35: // Entropy Brochu scaled
+                case 36: // Entropy decreasing exploration
                 {
                     exploitFactorR = 0;
-                    exploreFactorR = tanh(log(1+(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR)))));
+                    exploreFactorR = 0;
 
-                    minexploitFactorR = 0;
+                    if ( ( probofvalid > 1e-8 ) && ( 1-probofvalid > 1e-8 ) )
+                    {
+                        exploreFactorR = -(probofvalidR*std::log2f((float) probofvalidR))-((1-probofvalidR)*std::log2f((float) (1-probofvalidR)));
+                    }
+
                     maxexploitFactorR = 0;
-
-                    minexploreFactorR = 0;
                     maxexploreFactorR = 1;
 
                     break;
@@ -1849,13 +1946,10 @@ class fninnerinnerArg
 
                 default: // gpUCB variants
                 {
-                    exploitFactorR = alphaR*(muR-mumin);
+                    exploitFactorR = sqrt(alphaR)*(muR-mumin);
                     exploreFactorR = (betasgnR*sqrt(betaR)*sigmaR);
 
-                    minexploitFactorR = 0;
-                    maxexploitFactorR = alphaR*(mumax-mumin);
-
-                    minexploreFactorR = 0; //(betasgnR*sqrt(betaR)*modelsigmaR);
+                    maxexploitFactorR = sqrt(alphaR)*(mumax-mumin);
                     maxexploreFactorR = (betasgnR*sqrt(betaR)*(1+modelsigmaR));
 
                     break;
@@ -1873,9 +1967,6 @@ class fninnerinnerArg
             exploitFactorcgt += probofvalidcgt*exploitFactorR;
             exploreFactorcgt += probofvalidcgt*exploreFactorR;
 
-            minexploitFactorcgt += minexploitFactorR;
-            minexploreFactorcgt += minexploreFactorR;
-
             maxexploitFactorcgt += maxexploitFactorR;
             maxexploreFactorcgt += maxexploreFactorR;
         }
@@ -1886,9 +1977,9 @@ class fninnerinnerArg
     double rescgt  = 0;
     double resmisc = 0;
 
-    resmain = exploitFactor+exploreFactor;
+    resmain = exploitFactor    +exploreFactor;
     restail = exploitFactorTail+exploreFactorTail;
-    rescgt  = exploitFactorcgt+exploreFactorcgt;
+    rescgt  = exploitFactorcgt +exploreFactorcgt;
 
     double resminmain = 0;
     double resmaxmain = maxexploitFactor+maxexploreFactor;
@@ -1908,6 +1999,7 @@ class fninnerinnerArg
     if      ( acqmain == 10         ) { resmisc = betasgnmain*         totalconstraintvariance; objresfeasmisc = true; }
     else if ( bbopts.cgtmethod == 2 ) { resmisc = betasgnmain*betamain*totalconstraintvariance; objresfeasmisc = true; }
     else if ( bbopts.cgtmethod == 3 ) { resmisc = betasgnmain*         totalconstraintvariance; objresfeasmisc = true; }
+    else                              { weightmisc = 0;                                                                }
 
     // =======================================================================
     // =======================================================================
@@ -1953,11 +2045,12 @@ class fninnerinnerArg
 
     // Scale roughly 0->1
 
+//IMPORTANT: the relative scaling changes with iteration, so we don't want to lose it by rescale with resmaxmain and cgt separately per factor!
 //errstream() << resmain << "\t" << rescgt << "\t" << resmisc << " ->\t";
-    resmain = ( resmaxmain > 0 ) ? resmain/resmaxmain : resmain;
-    restail = ( resmaxmain > 0 ) ? restail/resmaxmain : restail;
-    rescgt  = ( resmaxcgt  > 0 ) ? rescgt /resmaxcgt  : rescgt;
-    resmisc = ( resmaxmisc > 0 ) ? resmisc/resmaxmisc : resmisc;
+    resmain = ( resmaxmain > 0 ) ? resmain/std::max(resmaxmain,resmaxcgt) : resmain;
+    restail = ( resmaxmain > 0 ) ? restail/std::max(resmaxmain,resmaxcgt) : restail;
+    rescgt  = ( resmaxcgt  > 0 ) ? rescgt /std::max(resmaxmain,resmaxcgt) : rescgt;
+    resmisc = ( resmaxmisc > 0 ) ? resmisc/resmaxmisc                     : resmisc;
 
     // Distort to amplify small signals
 
@@ -1985,33 +2078,71 @@ class fninnerinnerArg
 
     // Record "effectively infeasible" cases
 
-    if ( objresfeasmain && (              acqmain == 22   ) ) { resmain = 1; } //objresfeasmain = false; }
-    if ( objresfeascgt  && ( !numcgt || ( acqcgt  == 22 ) ) ) { rescgt  = 1; } //objresfeascgt  = false; }
+    if ( objresfeasmain && (              acqmain == 22   ) ) { resmain = 1; objresfeasmain = false; }
+    if ( objresfeascgt  && ( !numcgt || ( acqcgt  == 22 ) ) ) { rescgt  = 1; objresfeascgt  = false; }
+
+    // Feasibility overrides
+
+    if ( ratchetout      ) { objresfeasmain = false; }
+    if ( hardinvalid     ) { objresfeasmain = false; }
+    if ( objresinfeascgt ) { objresfeascgt  = false; }
 
     // Sum up components of result
 
 //errstream() << resmain << "\t" << rescgt << "\t" << resmisc << " ->\t";
     double res = 0;
-    int termcnt = 0;
+
+    int feastermcnt = 0; // this is for the flatland detection
+    int termcnt = 0; // this is for all terms, noting that we need to scaling consistent over the whole space, which will include feasible and infeasible
     double termweight = 0;
 
-    if ( objresfeasmain ) { res += (bbopts.weightmain)*resmain; termcnt++; termweight += bbopts.weightmain; }
-    if ( objresfeascgt  ) { res += (bbopts.weightcgt) *rescgt;  termcnt++; termweight += bbopts.weightcgt;  }
-    if ( objresfeasmisc ) { res += (bbopts.weightmisc)*resmisc; termcnt++; termweight += bbopts.weightmisc; }
+    if ( objresfeasmain && weightmain ) { feastermcnt++; }
+    if ( objresfeascgt  && weightcgt  ) { feastermcnt++; }
+    if ( objresfeasmisc && weightmisc ) { feastermcnt++; }
 
-    if ( termcnt ) { res /= termweight; }
+    if ( weightmain ) { termcnt++; termweight += weightmain; }
+    if ( weightcgt  ) { termcnt++; termweight += weightcgt ; }
+    if ( weightmisc ) { termcnt++; termweight += weightmisc; }
+
+    if ( !termweight ) { termcnt = 0; }
+
+    if ( termcnt )
+    {
+        if ( weightmain ) { res += objresfeasmain ? weightmain*resmain : weightmain; }
+        if ( weightcgt  ) { res += objresfeascgt  ? weightcgt *rescgt  : weightcgt;  }
+        if ( weightmisc ) { res += objresfeasmisc ? weightmisc*resmisc : weightmisc; }
+
+        res /= termweight;
 
 //errstream() << "muy = " << muy << ",\t";
 //errstream() << "res = " << res << " + " << (bbopts.tailweight) << " * " << restail << " ->\t";
-    res += (bbopts.tailweight)*restail; // this will add a positive number that is dependent on how bad (from an EI perspective) x is. This can push res>1
-    res /= (1+(bbopts.tailweight));
+        res += (bbopts.tailweight)*restail; // this will add a positive number that is dependent on how bad (from an EI perspective) x is. This can push res>1
+        res /= (1+(bbopts.tailweight));
 //errstream() << res << "\n";
+    }
+
+    else if ( restail && bbopts.tailweight )
+    {
+        res = 1;
+
+        res += (bbopts.tailweight)*restail; // this will add a positive number that is dependent on how bad (from an EI perspective) x is. This can push res>1
+        res /= (1+(bbopts.tailweight));
+    }
+
+    bool anyres = ( !( restail && bbopts.tailweight ) && !feastermcnt ) ? false : true; // is result feasible in any way
+
+    if ( anyres ) { feascnt++; } // we only increment this counter when the result is feasible, both in terms of constraint satisfaction
+                                 // (either not in feasible set for LSE, or effectively zero variance and not in feasible set) and in
+                                 // terms of ratchetting (again, either true not feasible or variance effectively zero and not feasible).
+                                 // If the counter remains un-iterated for the entire DIRect run then this indicates that the result
+                                 // found by DIRect is just "some random point in flatland", so a backup optimization strategy should
+                                 // be used to find a better recommendation (or termination called).
 
 //errstream() << res << " ->\t";
     // When only one of the acquisition (obj and cgt) contribute, and PIscale == 2,
     // we can use the infeasible feature of DIRect to tag the result as infeasible
 
-    if ( !objresfeasmain && !objresfeascgt && !objresfeasmisc && ( PIscale == 2 ) ) { resfeas = false; }
+    if ( !( restail && bbopts.tailweight ) && !objresfeasmain && !objresfeascgt && !objresfeasmisc && ( PIscale == 2 ) ) { resfeas = false; }
     if ( !resfeas ) { res  = NANTRIGSET; } // don't use this because optimized builds fail valvnan("infeasible inner loop result"); }
 
 //errstream() << res << "\n";
@@ -2103,7 +2234,7 @@ int dogridOpt(int dim,
     int dimfid  = bopts.getdimfid();
 //    int numfids = bopts.numfids;
 
-    int &gridi  = (*((fninnerinnerArg *) fnarg))._q_gridi;
+    int &gridi  = (*((fninnerinnerArg *) fnarg)).gridi;
     int Nbasemu = (*((fninnerinnerArg *) fnarg)).Nbasemu;
 
     const Vector<double>         &fidpencost = (*((fninnerinnerArg *) fnarg)).fidpencost;
@@ -2111,6 +2242,8 @@ int dogridOpt(int dim,
 
     double &fidpenalty    = (*((fninnerinnerArg *) fnarg)).fidpenalty;
     double &maxfidpenalty = (*((fninnerinnerArg *) fnarg)).maxfidpenalty;
+
+//    int &feascnt = (*((fninnerinnerArg *) fnarg)).feascnt;
 
 //    double hardmin = bopts.hardmin;
 //    double hardmax = bopts.hardmax;
@@ -2121,7 +2254,7 @@ int dogridOpt(int dim,
 
     Vector<double> xxres(dim);
 
-    double *x  = &xres("&",0);
+    double  *x =  &xres("&",0);
     double *xx = &xxres("&",0);
 
     nullPrint(errstream(),"MLGrid Optimisation Initiated");
@@ -2171,6 +2304,7 @@ int dogridOpt(int dim,
             else
             {
                 // element not defined, so need to call inner optimizer to find value
+                xxres("&",j)   = 0.0;
                 locxmin("&",j) = xmin(j);
                 locxmax("&",j) = xmax(j);
 
@@ -2207,49 +2341,30 @@ int dogridOpt(int dim,
 //errstream() << "phantomxabc: locxmax " << locxmax << "\n";
 //errstream() << "phantomxabc: numnulls " << numnulls << "\n";
 
-                    if ( !numnulls )
-                    {
-                        // x is fully defined by the grid, so we need only evaluate the acquisition function
-                        tempfres = (*fn)(dim,xx,fnarg);
-                    }
+                    bool evalfn = true;
 
-                    else if ( havesoln && !numnullfids )
-                    {
-                        // x is fully defined by the grid, so we need only evaluate the acquisition function
+                    // Case 1: x fully defined on grid, so we need only evaluate the acquisition function
+                    // Case 2: x fully defined on grid, but there are nulls, so we use random null fill
+                    // Case 3: random search, so fill the vector with (uniform) random values
+                    // Case 4: x not fully defined, so invoke DIRect to optimize the continuous factors,
+                    //         (note that the bounds xmin,xmax are already clamped to the non-null grid components, preventing change)
 
-                        // Random null fill
-                        for ( int j = 0 ; j < dim ; ++j )
-                        {
-                            if ( bopts.model_x(Nbasemu+gridi).direcref(j).isValNull() && ( xmin(j) != xmax(j) ) ) { randufill(xxres("&",j),xmin(j),xmax(j)); }
-                        }
-
-                        tempfres = (*fn)(dim,xx,fnarg);
-                    }
-
-                    else if ( randsearch )
-                    {
-                        // Random fill, evaluate
-
-                        for ( int j = 0 ; j < dim-dimfid ; ++j )
-                        {
-                            if ( xmin(j) != xmax(j) ) { randufill(xxres("&",j),xmin(j),xmax(j)); }
-                        }
-
-                        tempfres = (*fn)(dim,xx,fnarg);
-                    }
+                    if      ( !numnulls                ) { ; }
+                    else if ( havesoln && !numnullfids ) { for ( int j = 0 ; j < dim        ; ++j ) { if ( bopts.model_x(Nbasemu+gridi).direcref(j).isValNull() && ( xmin(j) != xmax(j) ) ) { randufill(xxres("&",j),xmin(j),xmax(j)); } } }
+                    else if ( randsearch               ) { for ( int j = 0 ; j < dim-dimfid ; ++j ) { if (                                                           xmin(j) != xmax(j)   ) { randufill(xxres("&",j),xmin(j),xmax(j)); } } }
 
                     else
                     {
-                        // x is not fully defined by the grid, so we need to invoke direct to optimise the continuous factors
-                        // Note that the bounds xmin,xmax are already clamped to the non-null grid components to prevent change
-
                         gentype dummyres;
 
                         int directres = directOpt(dim,xxres,dummyres,locxmin,locxmax,fnfnapprox,fnarg,dopts,killSwitch,ADDJITTER); // && !bopts.norepeats);
                         errstream() << "direct(" << gridi << "," << directres << "):";
 
+                        evalfn = false;
                         tempfres = !dummyres.isValNull() ? ((double) dummyres) : NANTRIGSET; // don't use this because optimized builds fail valvnan("no solution found");
                     }
+
+                    if ( evalfn ) { tempfres = (*fn)(dim,xx,fnarg); }
 //errstream() << "phantomxabc: tempfres " << tempfres << "\n";
 
                     if ( !std::isnan(tempfres) && ( tempfres < NANTRIGTEST ) )
@@ -2301,49 +2416,30 @@ int dogridOpt(int dim,
 //errstream() << "phantomxabc: locxmax " << locxmax << "\n";
 //errstream() << "phantomxabc: numnulls " << numnulls << "\n";
 
-            if ( !numnulls )
-            {
-                // x is fully defined by the grid, so we need only evaluate the acquisition function
-                tempfres = (*fn)(dim,xx,fnarg);
-            }
+            // Case 1: x is fully defined by the grid, so we need only evaluate the acquisition function
+            // Case 2: x is fully defined by the grid, so we need only evaluate the acquisition function
+            // Case 3: Random fill, evaluate
+            // Case 4: x is not fully defined by the grid, so we need to invoke direct to optimise the continuous factors
+            //         (note that the bounds xmin,xmax are already clamped to the non-null grid components to prevent change)
 
-            else if ( havesoln && !numnullfids )
-            {
-                // x is fully defined by the grid, so we need only evaluate the acquisition function
+            bool evalfn = true;
 
-                // Random null fill
-                for ( int j = 0 ; j < dim ; ++j )
-                {
-                    if ( bopts.model_x(Nbasemu+gridi).direcref(j).isValNull() && ( xmin(j) != xmax(j) ) ) { randufill(xxres("&",j),xmin(j),xmax(j)); }
-                }
-
-                tempfres = (*fn)(dim,xx,fnarg);
-            }
-
-            else if ( randsearch )
-            {
-                // Random fill, evaluate
-
-                for ( int j = 0 ; j < dim ; ++j )
-                {
-                    if ( xmin(j) != xmax(j) ) { randufill(xxres("&",j),xmin(j),xmax(j)); }
-                }
-
-                tempfres = (*fn)(dim,xx,fnarg);
-            }
+            if      ( !numnulls                ) { ; }
+            else if ( havesoln && !numnullfids ) { for ( int j = 0 ; j < dim ; ++j ) { if ( bopts.model_x(Nbasemu+gridi).direcref(j).isValNull() && ( xmin(j) != xmax(j) ) ) { randufill(xxres("&",j),xmin(j),xmax(j)); } } }
+            else if ( randsearch               ) { for ( int j = 0 ; j < dim ; ++j ) { if (                                                           xmin(j) != xmax(j)   ) { randufill(xxres("&",j),xmin(j),xmax(j)); } } }
 
             else
             {
-                // x is not fully defined by the grid, so we need to invoke direct to optimise the continuous factors
-                // Note that the bounds xmin,xmax are already clamped to the non-null grid components to prevent change
-
                 gentype dummyres;
 
                 int directres = directOpt(dim,xxres,dummyres,locxmin,locxmax,fnfnapprox,fnarg,dopts,killSwitch,ADDJITTER); // && !bopts.norepeats);
                 errstream() << "direct(" << gridi << "," << directres << "):";
 
+                evalfn = false;
                 tempfres = !dummyres.isValNull() ? ((double) dummyres) : NANTRIGSET; //valvnan("no solution found");
             }
+
+            if ( evalfn ) { tempfres = (*fn)(dim,xx,fnarg); }
 //errstream() << "phantomxabc: tempfres " << tempfres << "\n";
 
             if ( !std::isnan(tempfres) && ( tempfres < NANTRIGTEST ) )
@@ -2487,7 +2583,7 @@ bool process_obs(gentype &y, Vector<gentype> &ycgt, int &xobstype, Vector<int> &
     if ( ycgt.size() && !xobstype_cgt.size() ) { xobstype_cgt.resize(ycgt.size()) = 2; }
 
     if ( y.isValVector() ) { for ( int iy = 0 ; ( !isnull && ( iy < y.size() ) ) ; ++iy ) { isnull = y(iy).isValNull() ? 1 : 0; } }
-    else                                                                                  { isnull = y.isValNull();             }
+    else                                                                                  { isnull = y.isValNull();               }
 
     if ( isnull )
     {
@@ -2508,6 +2604,9 @@ bool process_obs(gentype &y, Vector<gentype> &ycgt, int &xobstype, Vector<int> &
 
     if ( numcgt && !ycgt.size() )
     {
+//        ycgt.resize(numcgt);
+//        xobstype_cgt.resize(numcgt);
+
         xobstype_cgt = 0;        // ...and unconstrained by definition
         ycgt         = 0.0_gent; // if c(x) undefined then this is null observation
         fullobs      = false;
@@ -2618,7 +2717,7 @@ bool addDataToModel(int &ii,
         }
     }
 
-    if ( doaddstep )
+    if ( doaddstep && xtoadd.size() )
     {
         if ( locxhasnulls )
         {
@@ -2675,7 +2774,7 @@ bool addDataToModel(int &ii,
 
     // Record if optimal solution (so far)
 
-    if ( !locxhasnulls ) // ie is this a true observation (all x known, constraints observed (or no constraints))
+    if ( !locxhasnulls && xtoadd.size() ) // ie is this a true observation (all x known, constraints observed (or no constraints))
     {
          if (    isfullfid                                     // full fidelity (or "real system") observation
               && ( ii >= 0 )
@@ -2685,7 +2784,7 @@ bool addDataToModel(int &ii,
               && ( ycgt >= 0.0_gent )                          // feasible observation (note [] >= [] is always true)
               && ( xtoadd.indsize() == xtoadd.nindsize() ) )   // and double check for "implicit" rank/gradient/special observations for gridsource!
         {
-            errstream() << "New fres (a) = " << fres << " -> " << ytoadd << "\n";
+            errstream() << "***(a) = " << fres << " -> " << ytoadd << "\n";
             fres = (double) ytoadd;
             ires = ii;
         }
@@ -3265,7 +3364,7 @@ int bayesOpt(int dim,
     const vecInfo *xinf = nullptr;
     gentype ggridy;
 
-    Vector<int> gridall;
+    //Vector<int> gridall;
     Vector<int> gridind;
     Vector<int> griddone; // this will store indices that have been added
     Vector<int> grid_xobstype;
@@ -3342,6 +3441,17 @@ int bayesOpt(int dim,
         int ii = -3;
         int alti = 0;
 
+        // Prealloc heuristics for speed
+        {
+            int  ismultfid    = dimfid ? 1 : 0;
+            bool usefidbudget = ismultfid && ( bopts.fidbudget > 0 ) && ( ( bopts.startpoints < 0 ) || ( bopts.totiters < 0 ) );
+            int  startpoints  = ( bopts.startpoints == -1 ) ? ( usefidbudget ? 0 : (effdim+1+dimfid) ) : bopts.startpoints;
+            int  maxitcnt     = (int) ( ( ( bopts.totiters == -2 ) ||  usefidbudget ) ? ( ( bopts.totiters > 0 ) ? bopts.totiters : 0 ) : ( ( bopts.totiters == -1 ) ? DEFITERS(effdim) : bopts.totiters ) );
+
+            bopts.model_prealloc_musigma(Nbasemu +(((*gridsource).N())*( ( dimfid && ( fidmode == 0 ) ) ? fidpenvecs.size() : 1 ))+startpoints+maxitcnt+200);
+            bopts.model_prealloc_cgt    (Nbasecgt+(((*gridsource).N())*( ( dimfid && ( fidmode == 0 ) ) ? fidpenvecs.size() : 1 ))+startpoints+maxitcnt+200);
+        }
+
         for ( i = 0 ; i < (*gridsource).N() ; ++i )
         {
             gentype yyval = (*gridsource).y()(i); // y value as defined in the model (not processed yet)
@@ -3388,8 +3498,8 @@ int bayesOpt(int dim,
 
                     if ( !fullobs )
                     {
-                        gridall.add(gridall.size());
-                        gridall("&",gridall.size()-1) = alti;
+                        //gridall.add(gridall.size());
+                        //gridall("&",gridall.size()-1) = alti;
 
                         gridind.add(gridind.size());
                         gridind("&",gridind.size()-1) = alti;
@@ -3455,8 +3565,8 @@ int bayesOpt(int dim,
 
                 if ( !fullobs )
                 {
-                    gridall.add(gridall.size());
-                    gridall("&",gridall.size()-1) = alti;
+                    //gridall.add(gridall.size());
+                    //gridall("&",gridall.size()-1) = alti;
 
                     gridind.add(gridind.size());
                     gridind("&",gridind.size()-1) = alti;
@@ -3811,7 +3921,7 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
                 xb("&",k)("&",dim+12) = gridi;
                 xb("&",k)("&",dim+13) = gridy;
                 xb("&",k)("&",dim+14) = ( ( bopts.B <= 0 ) && !bopts.ismoo() ) ? bopts.model_RKHSnorm(0) : bopts.B; // Only makes sense for single-objective
-                xb("&",k)("&",dim+15) = !bopts.ismoo() ? bopts.model_maxinfogain(0) : 0.0;                          // Only makes sense for single-objective
+                xb("&",k)("&",dim+15) = !bopts.ismoo() ? bopts.model_infogain(0) : 0.0;                             // Only makes sense for single-objective
                 xb("&",k)("&",dim+16) = fidtotcost;
 
                 // ===========================================================
@@ -4046,7 +4156,7 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
                          && ( ycgt >= 0.0_gent )
                          && ( xxb(k).indsize() == xxb(k).nindsize() ) )
                     {
-                        errstream() << "New fres (d) = " << fres << " -> " << fnapproxout << "\n";
+                        errstream() << "***(d) = " << fres << " -> " << fnapproxout << "\n";
                         outstream() << "***";
                         fres = (double) fnapproxout;
                         ires = ( isgridopt && !iscontopt && ( gridi >= 0 ) ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
@@ -4340,15 +4450,19 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
 
     int skipcnt     = 0;
     int itcnt       = 0;
+    int itcntmax    = 0;
+    bool startphase = true;
     int itcntmethod = bopts.itcntmethod;
     int altitcnt    = ( bopts.model_N_mu() / ( itcntmethod ? 1 : recBatchSize ) ) + 1;
+    int feascnt     = 0;
+    int prevfeascnt = -1;
 
     double betavalmin = 0.0;
 
     int ismultitargrec      = 0;
     int currintrinbatchsize = 1;
 
-    gentype dummyres(0.0);
+    //gentype dummyres(0.0);
     gentype sigmax('R');
     gentype predsigmax('R');
     gentype tempval;
@@ -4382,6 +4496,10 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
     // Variables used in stable bayesian
 
     int firstevalinseq = 1;
+
+    // Constraint confidence recorder
+
+    double min_constraint_confidence = 100; // >10 means "not srt"
 
     // =======================================================================
     // The following variable is used to pass variables through to fnfnapprox.
@@ -4471,7 +4589,9 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
                                fidmode,
                                cgtVarScale,
                                xexpdone,
-                               xexpblocked);
+                               xexpblocked,
+                               min_constraint_confidence,
+                               feascnt);
 
     void *fnarginnerdr = (void *) &fnarginner;
 
@@ -4564,6 +4684,13 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
     // Main loop starts here
 
     if ( maxitcnt ) { maxitcnt -= Noverrun; }
+
+    // Save these for later
+
+    double weightmain = bopts.weightmain;
+    double weightcgt  = bopts.weightcgt;
+    double weightmisc = bopts.weightmisc;
+    gentype innerfres('N'); // None to indicate to result yet
 
     while ( CONT_TEST )
     {
@@ -4728,6 +4855,280 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
             // ===============================================================
             // ===============================================================
 
+            int fallbackcounta = 0; // only use fallback strategy once
+//            int fallbackcountb = 0; // only use fallback strategy once
+
+randweightfallback:
+            if ( bopts.randweights && ( ires != -1 ) )
+            {
+                // Get min confidence in constraints (leave 0 if unknown)
+
+                if ( bopts.randweights == 3 )
+                {
+                    // Need to calculate min_constraint_confidence
+
+                    bopts.weightmain = 0;
+                    bopts.weightcgt  = 1;
+                    //bopts.weightmisc = 0;
+
+                    min_constraint_confidence = 100;
+
+                    StrucAssert( !ismultitargrec );
+                    StrucAssert( dim*currintrinbatchsize <= xa.size() );
+                    StrucAssert( direcdim <= xa.size() );
+                    StrucAssert( !dimfid );
+                    StrucAssert( !isgridopt );
+                    StrucAssert( iscontopt );
+                    StrucAssert( !anyindirect );
+
+                    // Copied from below
+                    {
+                        // Use DIRect to maximise the acquisition function
+
+                        int n = direcdim;
+
+                        retVector<double> tmpvaa;
+                        retVector<double> tmpvb;
+                        retVector<double> tmpvc;
+
+                        const Vector<double> &direcmin = anyindirect ? bopts.direcmin : xmin;
+                        const Vector<double> &direcmax = anyindirect ? bopts.direcmax : xmax;
+
+                        fnarginner.mode = 1; // turn on single beta, stale x calculation fast mode
+                        dres = directOpt(n,
+                                         xa("&",0,1,n-1,tmpvaa),
+                                         innerfres, //dummyres,
+                                         direcmin(0,1,n-1,tmpvb),
+                                         direcmax(0,1,n-1,tmpvc),
+                                         fnfnapprox,
+                                         fnarginnerdr,
+                                         bopts.goptssingleobj,
+                                         killSwitch,
+                                         ADDJITTER); // && !bopts.norepeats);
+                        fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
+                    }
+                }
+
+                double loc_min_constraint_confidence = ( min_constraint_confidence < 10 ) ? min_constraint_confidence : 0.5; // remember the min is 0.5, ie "flip a coin"
+
+                errstream() << "Min Constraint confidence: " << loc_min_constraint_confidence << "\n";
+
+                // set up weights if randomization used (basically randomly choose acq or acqcgt using based on beta split)
+
+                double dmaxitcnt = maxitcnt;
+                double ditcnt = itcnt-skipcnt;
+                double ditcntmax = itcntmax;
+
+                if ( bopts.randweights == 1 )
+                {
+                    // Default to user-provided weights
+
+                    bopts.weightmain = weightmain;
+                    bopts.weightcgt  = weightcgt;
+                    //bopts.weightmisc = 0;
+                }
+
+                else if ( bopts.randweights == 2 )
+                {
+                    // Linearly decrease from level-set default to EI default
+
+                    bopts.weightmain = ditcnt;
+                    bopts.weightcgt  = dmaxitcnt-ditcnt;
+                    //bopts.weightmisc = 0;
+                }
+
+                else if ( bopts.randweights == 3 )
+                {
+                    // Based on constraint confidence
+
+                    double minweight = bopts.minrandweight; //.0.35; //0.5; //0.35;
+                    double maxweight = bopts.maxrandweight; //0.95;
+
+                    bopts.weightmain = (std::max(loc_min_constraint_confidence-0.5,0.0)*((maxweight-minweight)/0.5))+minweight;
+                    bopts.weightcgt  = 1-bopts.weightmain;
+                    //bopts.weightmisc = 0;
+                }
+
+                else if ( bopts.randweights == 4 )
+                {
+                    double minweight = bopts.minrandweight; // 0.25; //0.05;
+                    double maxweight = bopts.maxrandweight; // 0.75; //0.95;
+                    double upsilon   = bopts.upsrandweight; //5;
+
+                    // hhh = 1-tanh(ryt)
+                    double ryt = upsilon*(ditcnt-ditcntmax)/dmaxitcnt;
+                    double hhh = 1-((exp(ryt)-exp(-ryt))/(exp(ryt)+exp(-ryt)));
+
+                    bopts.weightmain = (hhh*(maxweight-minweight))+minweight;
+                    bopts.weightcgt  = 1-bopts.weightmain;
+                    //bopts.weightmisc = 0;
+                }
+
+                else if ( bopts.randweights == 5 )
+                {
+                    if ( startphase && ( ditcnt <= 10 ) )
+                    {
+                        bopts.weightmain = 1;
+                        bopts.weightcgt  = 0;
+                        //bopts.weightmisc = 0;
+                    }
+
+                    else
+                    {
+                        startphase = false;
+
+                        double minweight = bopts.minrandweight; //0.2; //0.05;
+                        double maxweight = bopts.maxrandweight; //0.9;
+                        double upsilon   = bopts.upsrandweight; //5;
+
+                        // hhh = 1-tanh(ryt)
+                        double ryt = upsilon*(std::max(dmaxitcnt-ditcntmax,0.0))/dmaxitcnt;
+                        double hhh = 1-((exp(ryt)-exp(-ryt))/(exp(ryt)+exp(-ryt)));
+
+                        bopts.weightmain = (hhh*(maxweight-minweight))+minweight;
+                        bopts.weightcgt  = 1-bopts.weightmain;
+                        //bopts.weightmisc = 0;
+                    }
+                }
+
+                else if ( bopts.randweights == 6 )
+                {
+                    if ( startphase && ( ditcnt <= 10 ) && ( ditcnt-ditcntmax <= 3 ) )
+                    {
+                        bopts.weightmain = 1;
+                        bopts.weightcgt  = 0;
+                        //bopts.weightmisc = 0;
+                    }
+
+                    else
+                    {
+                        startphase = false;
+
+                        double minweight = bopts.minrandweight; //0.2; //0.05;
+                        double maxweight = bopts.maxrandweight; //0.9;
+                        double upsilon   = bopts.upsrandweight; //5;
+
+                        // hhh = 1-tanh(ryt)
+                        double ryt = upsilon*(std::max(ditcnt-ditcntmax-1,0.0))/dmaxitcnt;
+                        double hhh = 1-((exp(ryt)-exp(-ryt))/(exp(ryt)+exp(-ryt)));
+
+                        bopts.weightmain = (hhh*(maxweight-minweight))+minweight;
+                        bopts.weightcgt  = 1-bopts.weightmain;
+                        //bopts.weightmisc = 0;
+                    }
+                }
+
+                else if ( bopts.randweights == 7 )
+                {
+                    if ( startphase && ( ditcnt <= 10 ) && ( ditcnt-ditcntmax <= 3 ) )
+                    {
+                        bopts.weightmain = 1;
+                        bopts.weightcgt  = 0;
+                        //bopts.weightmisc = 0;
+                    }
+
+                    else
+                    {
+                        startphase = false;
+
+                        bopts.weightmain = 0.3;
+                        bopts.weightcgt  = 1-bopts.weightmain;
+                        //bopts.weightmisc = 0;
+                    }
+                }
+
+                else if ( bopts.randweights == 8 )
+                {
+                    if ( startphase && ( ditcnt <= 10 ) && ( ditcnt-ditcntmax <= 3 ) )
+                    {
+                        bopts.weightmain = 1;
+                        bopts.weightcgt  = 0;
+                        //bopts.weightmisc = 0;
+                    }
+
+                    else
+                    {
+                        startphase = false;
+
+                        double minweight = bopts.minrandweight; //0.2; //0.05;
+                        double maxweight = bopts.maxrandweight; //0.9;
+
+                        bopts.weightmain = minweight + ((maxweight-minweight)*((dmaxitcnt-ditcnt)/dmaxitcnt));
+                        bopts.weightcgt  = 1-bopts.weightmain;
+                        //bopts.weightmisc = 0;
+                    }
+                }
+
+                else if ( bopts.randweights == 9 )
+                {
+                    if ( startphase && ( ditcnt <= 10 ) && ( ditcnt-ditcntmax <= 3 ) )
+                    {
+                        bopts.weightmain = 1;
+                        bopts.weightcgt  = 0;
+                        //bopts.weightmisc = 0;
+                    }
+
+                    else
+                    {
+                        startphase = false;
+
+                        double minweight = bopts.minrandweight; //0.2; //0.05;
+                        double maxweight = bopts.maxrandweight; //0.9;
+
+                        bopts.weightcgt  = minweight + ((maxweight-minweight)*((dmaxitcnt-ditcnt)/dmaxitcnt));
+                        bopts.weightmain = 1-bopts.weightcgt;
+                        //bopts.weightmisc = 0;
+                    }
+                }
+
+                else if ( bopts.randweights == 10 )
+                {
+                    if ( startphase && ( ditcnt <= 10 ) && ( ditcnt-ditcntmax <= 3 ) )
+                    {
+                        bopts.weightmain = 1;
+                        bopts.weightcgt  = 0;
+                        //bopts.weightmisc = 0;
+                    }
+
+                    else if ( ditcnt >= dmaxitcnt-10 )
+                    {
+                        bopts.weightmain = 1;
+                        bopts.weightcgt  = 0;
+                        //bopts.weightmisc = 0;
+                    }
+
+                    else
+                    {
+                        startphase = false;
+
+                        double minweight = bopts.minrandweight; //0.3; //0.05;
+                        double maxweight = bopts.maxrandweight; //0.8;
+
+                        bopts.weightcgt  = minweight + ((maxweight-minweight)*((dmaxitcnt-ditcnt)/dmaxitcnt));
+                        bopts.weightmain = 1-bopts.weightcgt;
+                        //bopts.weightmisc = 0;
+                    }
+                }
+
+                // Normalise weights before randomization
+
+                double weighttot = (bopts.weightmain)+(bopts.weightcgt);
+
+                bopts.weightmain /= weighttot;
+                bopts.weightcgt  /= weighttot;
+
+                errstream() << "$m:" << bopts.weightmain << "," << bopts.weightcgt;
+                errstream() << " (" << dmaxitcnt << "," << ditcnt << ")$";
+
+                // Randomly select main or cgt acq function
+
+                double randsel = 0;
+                randufill(randsel,0,(bopts.weightmain)+(bopts.weightcgt)); // want to end in 50/50 split, not all trivial objective
+
+                if ( prevfeascnt && ( randsel <= bopts.weightmain ) ) { outstream() << "$m$"; bopts.weightmain = 1; bopts.weightcgt = 0;                                  }
+                else                                                  { outstream() << "$c$"; bopts.weightmain = 0; bopts.weightcgt = 1; min_constraint_confidence = 100; }
+            }
+
             {
                 //std::stringstream resbuffer;
                 errbuffer << "@(" << itcnt << ")";
@@ -4782,14 +5183,14 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
                 firstevalinseq = 1;
 
                 B        = ( bopts.B <= 0 ) ? bopts.model_RKHSnorm(0) : bopts.B;
-                mig      = bopts.model_maxinfogain(0);
+                mig      = bopts.model_infogain(0);
                 rkhsnorm = bopts.model_RKHSnorm(0);
                 kappa0   = bopts.model_kappa0(0);
 
                 if ( bopts.numcgt )
                 {
                     Bcgt        = ( bopts.B <= 0 ) ? bopts.modelcgt_RKHSnorm(0) : bopts.B;
-                    migcgt      = bopts.modelcgt_maxinfogain(0);
+                    migcgt      = bopts.modelcgt_infogain(0);
                     rkhsnormcgt = bopts.modelcgt_RKHSnorm(0);
                     kappa0cgt   = bopts.modelcgt_kappa0(0);
                 }
@@ -4835,6 +5236,8 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
 
                     if ( locacq == 18 )
                     {
+                        feascnt = 1;
+
                         // Fill with nulls/nans to indicate "human expert to fill"
 
                         for ( int jij = 0 ; jij < n ; jij++ )
@@ -4847,6 +5250,9 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
 
                     else if ( locacq == 21 )
                     {
+//randfallback:
+                        feascnt = 1;
+
                         // Random fill as per initial points
 
                         for ( int jij = 0 ; jij < n ; jij++ )
@@ -4859,13 +5265,15 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
 
                     else if ( bopts.randsearch )
                     {
+                        feascnt = 0;
+
                         int itorem   = -1;
                         int gridires = -1;
 
                         fnarginner.mode = 1; // turn on single beta, stale x calculation fast mode
                         dres = dogridOpt(n,
                                          xa("&",0,1,n-1,tmpvaa),
-                                         dummyres,
+                                         innerfres, // dummyres,
                                          itorem,
                                          gridires,
                                          direcmin(0,1,n-1,tmpvb),
@@ -4880,7 +5288,7 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
                                          isfullgrid);
                         fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
 
-                        errstream() << "#rand((" << dres << "," << dummyres << "))";
+                        errstream() << "#rand((" << dres << "," << innerfres << "))"; //dummyres << "))";
                     }
 
                     else
@@ -4920,11 +5328,13 @@ playitagain:
                         }
 
 nearplayitagain:
+                        feascnt = 0;
+
 bopts.cgtmargin = cgtmargin-diagperturbcgt;
                         fnarginner.mode = 1; // turn on single beta, stale x calculation fast mode
                         dres = directOpt(n,
                                          xa("&",0,1,n-1,tmpvaa),
-                                         dummyres,
+                                         innerfres, //dummyres,
                                          direcmin(0,1,n-1,tmpvb),
                                          direcmax(0,1,n-1,tmpvc),
                                          fnfnapprox,
@@ -4933,6 +5343,7 @@ bopts.cgtmargin = cgtmargin-diagperturbcgt;
                                          killSwitch,
                                          addjitter); //ADDJITTER); // && !bopts.norepeats);
                         fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
+                        outstream() << "(a=" << innerfres << "," << feascnt << ")";
 bopts.cgtmargin = cgtmargin;
 
                         bool isTS = false;
@@ -4968,11 +5379,55 @@ errstream() << "+++" << diagperturbcgt << "+++";
                         }
                         bopts.gammacgt = oldgammacgt;
 
-                        errstream() << "#((" << dres << "," << dummyres << "))";
+                        if ( !feascnt )
+                        {
+                            if ( bopts.randweights && !fallbackcounta )
+                            {
+                                // Fall-back to constraint optimizer strategy
+
+                                fallbackcounta++; // only use this fallback once per iteration
+                                prevfeascnt = 0;  // this will trigger the fallback strategy strategy
+
+                                if ( dimfid && ( fidmode != 0 ) )
+                                {
+                                    for ( int jij = 0 ; jij < dimfid ; jij++ )
+                                    {
+                                        xmin("&",n-dimfid+jij) = 0;
+                                        xmax("&",n-dimfid+jij) = 1;
+                                    }
+                                }
+
+                                outstream() << "...repa...";
+
+                                goto randweightfallback;
+                            }
+
+                            else
+                            {
+                                // Trigger secondary fallback
+
+                                feascnt = 1;
+                                dres = -200;
+                            }
+                        }
+
+//Don't do this: we want to know if a method fails, not get artificial results back
+//                        if ( ( dres == -200 ) && !fallbackcountb )
+//                        {
+//                            // Fall-back to random search
+//
+//                            fallbackcountb++; // only use this fallback once per iteration
+//
+//                            outstream() << "...repb...";
+//
+//                            goto randfallback;
+//                        }
+
+                        errstream() << "#((" << dres << "," << innerfres << "))"; //dummyres << "))";
                     }
 
                     errstream() << "Unfiltered result x before fidelity selection: "; printoneline(errstream(),xa); errstream() << "\n";
-                    errstream() << "Unfiltered result y before fidelity selection: " << dummyres << "\n";
+                    errstream() << "Unfiltered result y before fidelity selection: " << innerfres << "\n"; //dummyres << "\n";
 
                     printrec = true;
                 }
@@ -5003,6 +5458,8 @@ errstream() << "+++" << diagperturbcgt << "+++";
 
                     if ( locacq == 18 )
                     {
+                        feascnt = 1;
+
                         // Fill with nulls/nans to indicate "human expert to fill"
 
                         for ( int jij = 0 ; jij < n ; jij++ )
@@ -5015,17 +5472,28 @@ errstream() << "+++" << diagperturbcgt << "+++";
 
                     else if ( locacq == 21 )
                     {
-                        // Random fill as per initial points
+//randfallbackindex:
+                        feascnt = 1;
 
-                        itorem    = rand()%(gridind.size());
-                        gridires  = gridind(gridref);
-
-                        for ( int jij = 0 ; jij < n ; jij++ )
+                        if ( gridind.size() )
                         {
-                            if      ( ( jij < n-dimfid ) && bopts.model_x(Nbasemu+gridires)(jij).isValNull() ) { randufill(xa("&",jij),direcmin(jij),direcmax(jij));               }
-                            else if (   jij < n-dimfid                                                       ) { xa("&",jij) = (double) bopts.model_x(Nbasemu+gridires)(jij);      }
-                            else if ( fidmode != 0                                                           ) { xa("&",jij) = 1;                                                  }
-                            else                                                                               { xa("&",jij) = (double) bopts.model_x(Nbasemu+gridires)(jij);      }
+                            // Random fill as per initial points
+
+                            itorem    = rand()%(gridind.size());
+                            gridires  = gridind(gridref);
+
+                            for ( int jij = 0 ; jij < n ; jij++ )
+                            {
+                                if      ( ( jij < n-dimfid ) && bopts.model_x(Nbasemu+gridires)(jij).isValNull() ) { randufill(xa("&",jij),direcmin(jij),direcmax(jij));               }
+                                else if (   jij < n-dimfid                                                       ) { xa("&",jij) = (double) bopts.model_x(Nbasemu+gridires)(jij);      }
+                                else if ( fidmode != 0                                                           ) { xa("&",jij) = 1;                                                  }
+                                else                                                                               { xa("&",jij) = (double) bopts.model_x(Nbasemu+gridires)(jij);      }
+                            }
+                        }
+
+                        else
+                        {
+                            dres = -200;
                         }
                     }
 
@@ -5033,6 +5501,7 @@ errstream() << "+++" << diagperturbcgt << "+++";
                     {
                         // over-ride goptssingleobj with relevant components from *this (assuming non-virtual assignment operators)
                         static_cast<GlobalOptions &>(bopts.goptssingleobj) = static_cast<GlobalOptions &>(bopts);
+
 
                         double oldgammacgt = bopts.gammacgt;
                         //bool addjitter = ADDJITTER; // && !bopts.norepeats;
@@ -5068,10 +5537,12 @@ playitagaindesc:
 
 nearplayitagaindesc:
 bopts.cgtmargin = cgtmargin-diagperturbcgt;
+                        feascnt = 0;
+
                         fnarginner.mode = 1; // turn on single beta, stale x calculation fast mode
                         dres = dogridOpt(n,
                                          xa("&",0,1,n-1,tmpvaa),
-                                         dummyres,
+                                         innerfres, //dummyres,
                                          itorem,
                                          gridires,
                                          direcmin(0,1,n-1,tmpvb),
@@ -5085,6 +5556,7 @@ bopts.cgtmargin = cgtmargin-diagperturbcgt;
                                          xmtrtime,
                                          isfullgrid);
                         fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
+                        outstream() << "(a=" << innerfres << "," << feascnt << ")";
 bopts.cgtmargin = cgtmargin;
 
                         bool isTS = false;
@@ -5119,6 +5591,52 @@ errstream() << "+++" << diagperturbcgt << "+++";
                             goto playitagaindesc;
                         }
                         bopts.gammacgt = oldgammacgt;
+
+                        if ( !feascnt )
+                        {
+                            if ( bopts.randweights && !fallbackcounta )
+                            {
+                                // Fall-back to constraint optimizer strategy
+
+                                fallbackcounta++; // only use this fallback once per iteration
+                                prevfeascnt = 0;  // this will trigger the fallback strategy strategy
+
+                                if ( dimfid && ( fidmode != 0 ) )
+                                {
+                                    for ( int jij = 0 ; jij < dimfid ; jij++ )
+                                    {
+                                        xmin("&",n-dimfid+jij) = 0;
+                                        xmax("&",n-dimfid+jij) = 1;
+                                    }
+                                }
+
+                                outstream() << "...repa...";
+
+                                goto randweightfallback;
+                            }
+
+                            else
+                            {
+                                // Trigger secondary fallback
+
+                                feascnt = 1;
+                                dres = -200;
+                            }
+                        }
+
+//Don't do this: we want to know if a method fails, not get artificial results back
+//                        if ( ( dres == -200 ) && !fallbackcountb )
+//                        {
+//                            // Fall-back to random search
+//
+//                            fallbackcountb++; // only use this fallback once per iteration
+//
+//                            outstream() << "...repb...";
+//
+//                            goto randfallbackindex;
+//                        }
+
+                        errstream() << "#((grid:" << dres << "," << innerfres << "))"; //dummyres << "))";
                     }
 
                     gridi = gridires;
@@ -5138,7 +5656,7 @@ errstream() << "+++" << diagperturbcgt << "+++";
                     }
 
                     errstream() << "Unfiltered result x before fidelity selection: "; printoneline(errstream(),xa); errstream() << "\n";
-                    errstream() << "Unfiltered result y before fidelity selection: " << dummyres << "\n";
+                    errstream() << "Unfiltered result y before fidelity selection: " << innerfres << "\n"; //dummyres << "\n";
 
                     printrec = true;
                 }
@@ -5598,6 +6116,8 @@ errstream() << "\n";
 
             else
             {
+                feascnt = 1;
+
                 StrucAssert( !dimfid )
 
 // TODO: need to be able to do grid-search here
@@ -5877,7 +6397,7 @@ errstream() << "\n";
                 xb("&",numRecs)("&",dim+12) = gridi;
                 xb("&",numRecs)("&",dim+13) = gridy;
                 xb("&",numRecs)("&",dim+14) = ( ( bopts.B <= 0 ) && !bopts.ismoo() ) ? bopts.model_RKHSnorm(0) : bopts.B;
-                xb("&",numRecs)("&",dim+15) = !bopts.ismoo() ? bopts.model_maxinfogain(0) : 0.0;
+                xb("&",numRecs)("&",dim+15) = !bopts.ismoo() ? bopts.model_infogain(0) : 0.0;
                 xb("&",numRecs)("&",dim+16) = fidtotcost;
 
                 ++numRecs;
@@ -6299,10 +6819,12 @@ outstream() << numRecs << ": ";
                      && ( ycgt >= 0.0_gent )
                      && ( xxb(k).indsize() == xxb(k).nindsize() ) )
                 {
-                    errstream() << "New fres (e) = " << fres << " -> " << fnapproxout << "\n";
+                    errstream() << "***(e) = " << fres << " -> " << fnapproxout << "\n";
                     outstream() << "***";
                     fres = fnapproxout;
                     ires = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
+
+                    itcntmax = itcnt+1;
                 }
 
                 outstream() << "\n";
@@ -6416,6 +6938,8 @@ outstream() << numRecs << ": ";
             isopt = 1;
         }
 
+        prevfeascnt = feascnt;
+
 
         // ===================================================================
         // ===================================================================
@@ -6491,6 +7015,10 @@ outstream() << numRecs << ": ";
     errstream() << "\n\n";
 
     xinf = nullptr;
+
+    bopts.weightmain = weightmain;
+    bopts.weightcgt  = weightcgt;
+    bopts.weightmisc = weightmisc;
 
 //    NiceAssert( ires >= 0 );
 
@@ -6749,10 +7277,7 @@ class fninnerArg
             return;
         }
 
-        for ( int i = 0 ; i < dim ; ++i )
-        {
-            xa("&",i).force_double() = x[i];
-        }
+        for ( int i = 0 ; i < dim ; ++i ) { xa("&",i).force_double() = x[i]; }
 
         int gridi = (int) x[dim+12];
 
@@ -6762,11 +7287,7 @@ class fninnerArg
         // be loaded into result var which will be evaluated and passed back as
         // result!
 
-        if ( !onlyAdd && ( gridi >= 0 ) )
-        {
-            xa.resize(dim+1);
-            xa("[]",dim) = gridi;
-        }
+        if ( !onlyAdd && ( gridi >= 0 ) ) { xa.resize(dim+1); xa("[]",dim) = gridi; }
 
         // =======================================================================
         // Call function and record times

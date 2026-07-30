@@ -1,13 +1,3 @@
-//TO DO: now that pthread_t has been generalised to svm_pthread_t, do this:
-//
-// - add unique ID to svm_pthread_t
-// - record these IDs to a global variable (linked list?)
-// - have option in interactive mode to list active threads, pause, kill, edit variables etc
-//
-// see for example
-//
-// void pthread_cleanup_pop(int execute);
-// void pthread_cleanup_push(void (*routine)(void*), void *arg); [Option End]
 
 //
 // Miscellaneous stuff
@@ -35,14 +25,8 @@
 // DJGPP_MATHS:    bessel functions available from DJGPP maths library (and
 //                 some other stuff).  Used in numbase.cc
 // SPECFN_ASUPP:   special functions in cmath from c++11 (eg gamma) are
-//                 supported (see numbase.h).  HOWEVER: SUPPORT IS HOPELESSLY
-//                 PATCHY SO USE ALTERNATIVES BY DEFAULT.
-// ALLOW_SOCKETS:  sockets are used in awarestream for TCP and UDP streams.
-// ENABLE_THREADS: threads are used for background-training and mutexes.
-//                 (mutexes are still supported without this, but non-posix)
-// CYGWIN_BUILD:   uncomment for cygwin.  Locates various libaries in
-//                 different places.  Only required for threads, specifies
-//                 location of un.h header file.
+//                 supported (see numbase.h). NOTE: support is extremely
+//                 patchy, so take care.
 // CYGWIN10:       cygwin, in windows 10, has two oddities - no usleep
 //                 function (so use nanosleep instead) and abs *is* defined
 //                 for doubles (latter no longer relevant since moving
@@ -59,142 +43,115 @@
 // DISABLE_KB_BY_DEF: define to disable interactive keyboard by default
 // USE_HOPDM:      Use system call to hopdm for linear optimisation rather than
 //                 the default internal optimisation routine
-// IS_CPP11:       enable c++11 features (true by default)
-// IS_CPP14:       enable c++14 features (true by default)
 // IS_CPP17:       enable c++17 features
 // IS_CPP20:       enable c++20 features (automatically sets IS_CPP17)
 // IS_CPP23:       enable c++23 features (automatically sets IS_CPP20, IS_CPP17)
+// IS_CPP26:       enable c++26 features (automatically sets IS_CPP23, IS_CPP20, IS_CPP17)
 //
 // =======================================================================
 
 // =======================================================================
 //
 // Multithreading note: there is nothing in the C++ standard about whether
-// initialisation of static local variables is threadsafe.  The initialisation
+// initialisation of statiic local variables is threadsafe.  The initialisation
 // occurs the first time that a segment of code is reached, but if two threads
-// hit the static variable at the same time then *in theory* both will call
+// hit the statiic variable at the same time then *in theory* both will call
 // the initialisation function.
 //
-// In practice, gcc does put locks around static variable initialisation, so
+// In practice, gcc does put locks around statiic variable initialisation, so
 // this won't be an issue in unix environments (though I can't speak for clang).
 // However visual c++ does not put locks around the same code, so there could
 // be an issue here.
 //
-// UPDATE: for c++11 static local variable initialisation is threadsafe.  If
+// UPDATE: for c++11 statiic local variable initialisation is threadsafe.  If
 // the variable is being initialised in one thread and a second thread reaches
 // the point where it may initialise it then instead it will wait until the
 // first thread has finished initialising and then use the variable so
 // initialised.  I assume visual now follows this behaviour (gcc always has).
 //
-//
-// ***************************
-// MULTITHREADING AND GENTYPE:
-// ***************************
-//
-// Multithreaded initialisation function: initgentype
-//
-// Initialises all derivatives in one block.  This is not required for single
-// threaded operation, but for multithreaded use call this function first
-// before starting any new threads.
-//
 // =======================================================================
 
 #ifndef SPECIFYSYSVIAMAKE
 
+/*
 // dos/djgpp (no longer supported)
 
-// #define DJGPP_MATHS
-// #define HAVE_CONIO
+#define DJGPP_MATHS
+#define HAVE_CONIO
 
 // cygwin/gcc
 
-// #define ALLOW_SOCKETS
-// #define ENABLE_THREADS
-// #define CYGWIN_BUILD
-// #define HAVE_TERMIOS
+#define CYGWIN_BUILD
+#define HAVE_TERMIOS
 
 // cygwin/gcc modern
 
-// #define ALLOW_SOCKETS
-// #define ENABLE_THREADS
-// #define CYGWIN_BUILD
-// #define HAVE_TERMIOS
+#define CYGWIN_BUILD
+#define HAVE_TERMIOS
 
 // linux/gcc
 
-// #define ALLOW_SOCKETS
-// #define ENABLE_THREADS
-// #define HAVE_TERMIOS
+#define HAVE_TERMIOS
 
 // linux/gcc modern
 
-// #define ALLOW_SOCKETS
-// #define ENABLE_THREADS
-// #define HAVE_TERMIOS
+#define HAVE_TERMIOS
 
 // Linux/gcc unthreaded unthreaded
 
-// #define ALLOW_SOCKETS
-// #define ENABLE_THREADS
-// #define HAVE_TERMIOS
+#define HAVE_TERMIOS
 
 // Visual Studio
 
-//#define VISUAL_STU
-//#define VISUAL_STU_OLD
-//#define VISUAL_STU_NOERF
-//#define HAVE_CONIO
-//#define IGNOREMEM
-//#define ALLOW_SOCKETS
-//#define _CRT_SECURE_NO_WARNINGS 1
+#define VISUAL_STU
+#define VISUAL_STU_OLD
+#define VISUAL_STU_NOERF
+#define HAVE_CONIO
+#define IGNOREMEM
+#define _CRT_SECURE_NO_WARNINGS 1
 
 // Visual Studio modern
 
-//#define VISUAL_STU
-//#define VISUAL_STUDIO_BESSEL
-//#define VISUAL_STU_NOERF
-//#define HAVE_CONIO
-//#define IGNOREMEM
-//#define ALLOW_SOCKETS
-//#define ENABLE_THREADS
-//#define _CRT_SECURE_NO_WARNINGS 1
-//#pragma warning(disable:4996)
-//#pragma warning(disable:4244)
-//#pragma warning(disable:4756)
+#define VISUAL_STU
+#define VISUAL_STUDIO_BESSEL
+#define VISUAL_STU_NOERF
+#define HAVE_CONIO
+#define IGNOREMEM
+#define _CRT_SECURE_NO_WARNINGS 1
+#pragma warning(disable:4996)
+#pragma warning(disable:4244)
+#pragma warning(disable:4756)
 
 // Mex old
 
-//#define USE_MEX
-//#define VISUAL_STU
-//#define VISUAL_STU_NOERF
-//#define HAVE_CONIO
-//#define IGNOREMEM
-//#define ALLOW_SOCKETS
+#define USE_MEX
+#define VISUAL_STU
+#define VISUAL_STU_NOERF
+#define HAVE_CONIO
+#define IGNOREMEM
 
 // Mex modern
 
-///#define USE_MEX
-//#define VISUAL_STU
-//#define VISUAL_STUDIO_BESSEL
-//#define VISUAL_STU_NOERF
-//#define HAVE_CONIO
-//#define NDEBUG
-//// Uncomment to enable threads (currently not supported)
-////#define ENABLE_THREADS
-//// Comment to debug
-////#define ALLOW_SOCKETS
-//#define IGNOREMEM
-//// Uncomment to debug memory
-////#define DEBUG_MEM
-//#ifdef _CRT_SECURE_NO_WARNINGS
-//#undef _CRT_SECURE_NO_WARNINGS
-//#endif
-//#define _CRT_SECURE_NO_WARNINGS 1
-////#pragma warning(disable:4996)
-////#pragma warning(disable:4244)
-//#pragma warning(disable:4005)
-////#pragma warning(disable:4756)
-
+#define USE_MEX
+#define VISUAL_STU
+#define VISUAL_STUDIO_BESSEL
+#define VISUAL_STU_NOERF
+#define HAVE_CONIO
+#define NDEBUG
+// Uncomment to enable threads (currently not supported)
+// Comment to debug
+#define IGNOREMEM
+// Uncomment to debug memory
+//#define DEBUG_MEM
+#ifdef _CRT_SECURE_NO_WARNINGS
+#undef _CRT_SECURE_NO_WARNINGS
+#endif
+#define _CRT_SECURE_NO_WARNINGS 1
+//#pragma warning(disable:4996)
+//#pragma warning(disable:4244)
+#pragma warning(disable:4005)
+//#pragma warning(disable:4756)
+*/
 
 // Mex modern on *nix
 
@@ -211,17 +168,12 @@
 
 
 // Assume at least cpp14
-#define IS_CPP11
-#define IS_CPP14
-
 #ifdef IS_CPP26
 #define IS_CPP23
 #endif
-
 #ifdef IS_CPP23
 #define IS_CPP20
 #endif
-
 #ifdef IS_CPP20
 #define IS_CPP17
 #endif
@@ -255,6 +207,7 @@
 #include <chrono>
 #include <vector>
 #include <complex>
+#include <atomic>
 
 #ifdef VISUAL_STU
 #include <windows.h>
@@ -271,28 +224,6 @@
 #include <sys/select.h>
 #endif
 
-#ifdef ALLOW_SOCKETS
-#include <errno.h>
-#ifdef CYGWIN_BUILD
-#include <sys/un.h>
-#endif
-#ifndef VISUAL_STU
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#ifndef CYGWIN_BUILD
-#include <linux/un.h>
-#endif
-#endif
-#endif
-
-#ifdef ENABLE_THREADS
-#include <mutex>
-#include <thread>
-#include <atomic>
-#endif
 
 // spoilers...
 
@@ -305,6 +236,8 @@ inline int getThreadID(void);
 
 
 
+
+// Macros to define basic functionality in vector.hpp etc
 
 #define COMMONOPDEF(_classname_) \
 inline _classname_ &setident (_classname_ &a) { throw("something"); return a; } \
@@ -465,7 +398,6 @@ int addremoveptr(void *addr, int newdel, int type, int size, const char *desc);
 // System command
 //
 // svm_execall: Call executable.  If runbg then attempt to leave it running in the background
-// svm_pycall: Call python script.  If runbg then attempt to leave it running in the background
 //
 // Versions with result (res) string read this from pyres.txt, which must
 // be created by the command.
@@ -474,9 +406,7 @@ int addremoveptr(void *addr, int newdel, int type, int size, const char *desc);
 
 int svm_system (const char *command);
 int svm_execall(const std::string &command, bool runbg);
-int svm_pycall (const std::string &command, bool runbg);
 int svm_execall(std::string &res, const std::string &command);
-int svm_pycall (std::string &res, const std::string &command);
 
 // The above function uses system by default.  However
 // this is not suitable in some environments (eg mex).  The following function
@@ -506,14 +436,6 @@ systemfn svm_setsystemfn(systemfn xfn = nullptr);
 
 
 
-
-
-
-
-
-
-
-
 // ------------------------------------------------------------------------
 // ------------------------------------------------------------------------
 // ------------------------------------------------------------------------
@@ -542,224 +464,9 @@ systemfn svm_setsystemfn(systemfn xfn = nullptr);
 // ------------------------------------------------------------------------
 // ------------------------------------------------------------------------
 // ------------------------------------------------------------------------
-// Sockets stuff
+// Simple whitespace remover (replace with underscore)
 
-// --- If sockets available include relevant libraries ---
-
-#ifdef ALLOW_SOCKETS
-
-#ifdef VISUAL_STU
-// windows doesn't define this, but inferring from final argument of recvfrom
-#define socklen_t int
-//class sockaddr_un;
-//class sockaddr_un
-//{
-//    public:
-//
-//    int sun_family;
-//    char *sun_path;
-//};
-#define UNIX_PATH_MAX 256
-#define SHUT_RDWR     2
-struct sockaddr_un
-{
-    int sun_family;
-    char *sun_path;
-
-    sockaddr_un()
-    {
-        sun_family = 0;
-        sun_path = new char[UNIX_PATH_MAX+1];
-        sun_path[0] = '\0';
-    }
-
-    ~sockaddr_un()
-    {
-        delete[] sun_path;
-    }
-};
-//#define SHUT_RDWR     SD_BOTH
-inline int close(int a);
-inline int close(int a) { return closesocket(a); }
-#pragma comment(lib, "Ws2_32.lib")
-#endif
-
-#define UDPBUFFERLEN 1024
-
-// Alias everything
-
-#define SVM_SOCK_STREAM   SOCK_STREAM
-#define SVM_SOCK_DGRAM    SOCK_DGRAM
-#define SVM_MAX_RETRIES   MAX_RETRIES
-#define SVM_AF_INET       AF_INET
-#define SVM_AF_UNIX       AF_UNIX
-#define SVM_UNIX_PATH_MAX UNIX_PATH_MAX
-#define SVM_INADDR_ANY    INADDR_ANY
-#define SVM_SHUT_WR       SHUT_WR
-#define SVM_SHUT_RDWR     SHUT_RDWR
-#define SVM_UDPBUFFERLEN  UDPBUFFERLEN
-#define svm_socklen_t     socklen_t
-#define svm_sockaddr_in   sockaddr_in
-#define svm_sockaddr_un   sockaddr_un
-#define svm_sockaddr      sockaddr
-
-inline int svm_send(int a, const char *b, size_t c, int d);
-inline int svm_send(int a, const char *b, size_t c, int d) { return (int) send(a,b,c,d); }
-
-inline int svm_recvfrom(int a, char *b, int c, int d, svm_sockaddr *e, svm_socklen_t *f);
-inline int svm_recvfrom(int a, char *b, int c, int d, svm_sockaddr *e, svm_socklen_t *f) { return (int) recvfrom(a,b,c,d,e,f); }
-
-inline int svm_htons(int a);
-inline int svm_htons(int a) { return htons((uint16_t) a); }
-
-inline int svm_htonl(int a);
-inline int svm_htonl(int a) { return htonl(a); }
-
-inline int svm_inet_addr(const char *a);
-inline int svm_inet_addr(const char *a) { return inet_addr(a); }
-
-inline int svm_shutdown(int a, int b);
-inline int svm_shutdown(int a, int b) { return shutdown(a,b); }
-
-inline int svm_close(int a);
-inline int svm_close(int a) { return close(a); }
-
-inline int svm_socket(int a, int b, int c);
-inline int svm_socket(int a, int b, int c) { return socket(a,b,c); }
-
-inline int svm_bind(int a, svm_sockaddr *b, int c);
-inline int svm_bind(int a, svm_sockaddr *b, int c) { return bind(a,b,c); }
-
-inline int svm_accept(int a, svm_sockaddr *b, svm_socklen_t *c);
-inline int svm_accept(int a, svm_sockaddr *b, svm_socklen_t *c) { return accept(a,b,c); }
-
-inline int svm_connect(int a, svm_sockaddr *b, int c);
-inline int svm_connect(int a, svm_sockaddr *b, int c) { return connect(a,b,c); }
-
-inline int svm_listen(int a, int b);
-inline int svm_listen(int a, int b) { return listen(a,b); }
-
-#endif
-
-// --- If sockets not possible define stubs and fake classes to allow ---
-// --- compilation and return error codes if sockets used.            ---
-
-#ifndef ALLOW_SOCKETS
-
-#define SVM_SOCK_STREAM   0
-#define SVM_SOCK_DGRAM    0
-#define SVM_MAX_RETRIES   5
-#define SVM_AF_INET       0
-#define SVM_AF_UNIX       0
-#define SVM_UNIX_PATH_MAX 0
-#define SVM_INADDR_ANY    0
-#define SVM_SHUT_WR       0
-#define SVM_SHUT_RDWR     0
-#define SVM_UDPBUFFERLEN  1024
-#define svm_socklen_t     int
-
-struct svm_saddr;
-struct svm_saddr
-{
-    public:
-
-    int ws_addr;
-    int wS_un; // something windows uses apparently
-};
-
-struct svm_sockaddr_in;
-struct svm_sockaddr_in
-{
-    public:
-
-    int sin_family;
-    int sin_port;
-    struct svm_saddr sin_addr;
-};
-
-struct svm_sockaddr_un;
-struct svm_sockaddr_un
-{
-    public:
-
-    int sun_family;
-    char *sun_path;
-};
-
-struct svm_sockaddr;
-struct svm_sockaddr
-{
-    public:
-
-    int sin_family;
-    int sin_port;
-    struct svm_saddr sin_addr;
-};
-
-inline int svm_send(int a, const char *b, size_t c, int d);
-inline int svm_send(int,   const char *,  size_t,   int) { return -1; }
-
-inline int svm_recvfrom(int a, char *b, int c, int d, svm_sockaddr *e, svm_socklen_t *f);
-inline int svm_recvfrom(int,   char *,  int,   int,   svm_sockaddr *,  svm_socklen_t *)  { return -1; }
-
-inline int svm_htons(int a);
-inline int svm_htons(int) { return -1; }
-
-inline int svm_htonl(int a);
-inline int svm_htonl(int) { return -1; }
-
-inline int svm_inet_addr(const char *a);
-inline int svm_inet_addr(const char *) { return -1; }
-
-inline int svm_shutdown(int a, int b);
-inline int svm_shutdown(int,   int) { return -1; }
-
-inline int svm_close(int a);
-inline int svm_close(int) { return -1; }
-
-inline int svm_socket(int a, int b, int c);
-inline int svm_socket(int,   int,   int) { return -1; }
-
-inline int svm_bind(int a, svm_sockaddr *b, int c);
-inline int svm_bind(int,   svm_sockaddr *,  int) { return -1; }
-
-inline int svm_accept(int a, svm_sockaddr *b, svm_socklen_t *c);
-inline int svm_accept(int,   svm_sockaddr *,  svm_socklen_t *) { return -1; }
-
-inline int svm_connect(int a, svm_sockaddr *b, int c);
-inline int svm_connect(int,   svm_sockaddr *,  int) { return -1; }
-
-inline int svm_listen(int a, int b);
-inline int svm_listen(int,   int) { return -1; }
-
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+std::string space2under(const std::string &src);
 
 
 
@@ -811,254 +518,45 @@ inline int svm_listen(int,   int) { return -1; }
 // ------------------------------------------------------------------------
 // ------------------------------------------------------------------------
 // mutex and thread stuff
-//
-// mutex:   very basic mutex stuff, typically maps to c++11 or pthreads.
-// threads: pthreads if available, or similar on windows (if available).
-//
-// ------------------------------------------------------------------------
-// ------------------------------------------------------------------------
-// ------------------------------------------------------------------------
-// ------------------------------------------------------------------------
-//
-// Threads:
-//
-// - implements basic posix functions only.
-//
-//
-// ------------------------------------------------------------------------
-// ------------------------------------------------------------------------
-// ------------------------------------------------------------------------
-// ------------------------------------------------------------------------
-//
-// isMainThread: Thread ID recorder
-//
-//     Call with val == +1 to set current thread as main
-//     Call with val == 0  to test if current thread is main thread (nz is true)
-//     Call with val == -1 to set no main thread (so isMainThread will always return true)
-//
-// getThreadID: generates, sets and returns a unique ID for this thread
 
-//inline int isMainThread(int val = 0);
-//inline int getThreadID(void);
-
-// No point in using volatile if threads not available (we use them sparingly
-// for thread-related tasks only)
-
-#ifdef ENABLE_THREADS
 #define svmvolatile volatile
-#endif
 
-#ifndef ENABLE_THREADS
-#define svmvolatile
-#endif
+#include <mutex>
+#include <thread>
+COMMONOPDEFPT(std::thread);
 
-#ifdef ENABLE_THREADS
-
-// ------------------------------------------------------------------------
-// Threads
-// ------------------------------------------------------------------------
-
-class svm_pthread_t
-{
-    public:
-    std::thread *a = nullptr;
-};
-
-inline void qswap(svm_pthread_t &a, svm_pthread_t &b);
-inline void qswap(svm_pthread_t &a, svm_pthread_t &b)
-{
-    std::thread *x = a.a; a.a = b.a; b.a = x;
-}
-
-inline void qswap(svm_pthread_t *&a, svm_pthread_t *&b);
-inline void qswap(svm_pthread_t *&a, svm_pthread_t *&b)
-{
-    svm_pthread_t *x = a; a = b; b = x;
-}
-
-COMMONOPDEFPT(svm_pthread_t);
-
-
-//typedef std::thread svm_pthread_t;
-typedef std::thread::id svm_pthread_id;
-//#define svm_pthread_id std::thread::id
-
-// local aliases
-
-inline int svm_pthread_create(svm_pthread_t *a, void *(*c)(void *), void *d);
-inline int svm_pthread_create(svm_pthread_t *a, void *(*c)(void *), void *d)
-{
-    a->a = new std::thread(c,d);
-
-    return 0;
-}
-
-inline int svm_pthread_join(svm_pthread_t a, void **retval);
-inline int svm_pthread_join(svm_pthread_t a, void **)
-{
-    (a.a)->join();
-
-    return 0;
-}
-
-inline svm_pthread_id svm_pthread_self(void);
-inline svm_pthread_id svm_pthread_self(void)
-{
-    return std::this_thread::get_id();
-}
-
-inline int svm_pthread_same_as_this(const svm_pthread_id &a);
-inline int svm_pthread_same_as_this(const svm_pthread_id &a)
-{
-    return ( a == std::this_thread::get_id() );
-}
-
-inline int svm_pthread_same(const svm_pthread_id &a, const svm_pthread_id &b);
-inline int svm_pthread_same(const svm_pthread_id &a, const svm_pthread_id &b)
-{
-    return ( a == b );
-}
-
-inline size_t numThreadsGuess(void);
-inline size_t numThreadsGuess(void)
-{
-    return std::thread::hardware_concurrency();
-}
-
-//inline int isMainThread(int val)
 inline int isMainThread(int val)
 {
-    static thread_local int mainThread = 0; // this will be set per thread, remember, and should
-                                            // only get set/reset by the main thread
+    thread_local int mainThread = 0; // this will be set per thread, remember, and should only get set/reset by the main thread
 
-    if ( val == 1 )
-    {
-        mainThread = 1;
-    }
-
-    else if ( val == -1 )
-    {
-        mainThread = 0;
-    }
+    if      ( val ==  1 ) { mainThread = 1; }
+    else if ( val == -1 ) { mainThread = 0; }
 
     return mainThread;
-/*
-    int res = 1;
-
-    static int mainThreadSet = 0;
-    static svm_pthread_id currthread;
-
-    if ( val == 1 )
-    {
-// Only the main thread will call this, so no need to lock
-
-//        static std::mutex eyelock;
-//        eyelock.lock();
-
-        mainThreadSet = 1;
-        currthread = svm_pthread_self();
-
-//        eyelock.unlock();
-    }
-
-    else if ( val == -1 )
-    {
-        mainThreadSet = 0;
-    }
-
-    if ( mainThreadSet )
-    {
-        res = ( ( val == 2 ) || svm_pthread_same_as_this(currthread) );
-    }
-
-    return res;
-*/
 }
 
-//inline int getThreadID(void);
 inline int getThreadID(void)
 {
-    static thread_local int threadID = -1; // this holds our ID in thread_local storage. -1 indicates not yet set
+    thread_local int threadID = -1; // this holds our ID in thread_local storage. -1 indicates not yet set
+    static std::atomic<int> loccnt(-1); // overall record for assigned IDs
+    static std::mutex cachelock;
 
     if ( threadID == -1 )
     {
-        std::mutex cachelock;
-        cachelock.lock();
+        const std::lock_guard<std::mutex> lock(cachelock);
 
-        static std::atomic<int> loccnt(-1); // global and atomic, so safe to use
-
-        threadID = ++loccnt; // increment atomic count and use this as threadID
-
-        cachelock.unlock();
+        if ( threadID == -1 )
+        {
+            threadID = ++loccnt; // increment atomic count and use this as threadID
+        }
     }
 
     return threadID;
 }
 
-#endif
 
 
 
-// --- If threads not present then define relevant stubs and functions ---
-// --- to enable compilation and return relevant error codes etc.      ---
-
-#ifndef ENABLE_THREADS
-//inline int isMainThread(int val)
-inline int isMainThread(int)
-{
-    return 1;
-}
-
-//inline int getThreadID(void);
-inline int getThreadID(void)
-{
-    return 0;
-}
-
-typedef size_t svm_pthread_t;
-typedef size_t svm_pthread_id;
-
-/* should be elsewhere - see size_t versions in qswapbase
-inline void qswap(svm_pthread_t &a, svm_pthread_t &b);
-inline void qswap(svm_pthread_t &,  svm_pthread_t &)
-{
-    ;
-}
-
-inline void qswap(svm_pthread_t *&a, svm_pthread_t *&b);
-inline void qswap(svm_pthread_t *&a, svm_pthread_t *&b)
-{
-    svm_pthread_t *c = a; a = b; b = c;
-}
-
-inline svm_pthread_t *&setident (svm_pthread_t *&a) { throw("something"); return a; }
-inline svm_pthread_t *&setzero  (svm_pthread_t *&a) { return a = nullptr; }
-inline svm_pthread_t *&setposate(svm_pthread_t *&a) { return a; }
-inline svm_pthread_t *&setnegate(svm_pthread_t *&a) { throw("something"); return a; }
-inline svm_pthread_t *&setconj  (svm_pthread_t *&a) { throw("something"); return a; }
-inline svm_pthread_t *&setrand  (svm_pthread_t *&a) { throw("something"); return a; }
-inline svm_pthread_t *&postProInnerProd(svm_pthread_t *&a) { return a; }
-*/
-
-inline int svm_pthread_create(svm_pthread_t *a, void *(*c)(void *), void *d);
-inline int svm_pthread_create(svm_pthread_t *a, void *(*)(void *),  void *) { svm_pthread_t onlythreadid = 0; *a = onlythreadid; return -1; }
-
-inline int svm_pthread_join(svm_pthread_t a, void **retval);
-inline int svm_pthread_join(svm_pthread_t,   void **) { return -1; }
-
-inline svm_pthread_id svm_pthread_self(void);
-inline svm_pthread_id svm_pthread_self(void) { return 0; }
-
-inline int svm_pthread_same_as_this(const svm_pthread_id &a);
-inline int svm_pthread_same_as_this(const svm_pthread_id &) { return 1; }
-
-inline int svm_pthread_same(const svm_pthread_id &a, const svm_pthread_id &b);
-inline int svm_pthread_same(const svm_pthread_id &a, const svm_pthread_id &b) { return a == b; }
-
-inline size_t numThreadsGuess(void);
-inline size_t numThreadsGuess(void) { return 1; }
-
-#endif
 
 
 
@@ -1140,16 +638,10 @@ inline int genUUID(void);
 inline int genUUID(void)
 {
     //NB zero result not allowed
-#ifdef ENABLE_THREADS
     static std::atomic<int> nextUUID(1);
-#endif
-#ifndef ENABLE_THREADS
-    static int nextUUID(1);
-#endif
 
     //FIXME: extrememly unlikely bug may result when the UUID wraps back
     // through negatives and reaches zero.
-
     return (int) nextUUID++;
 }
 
@@ -1641,7 +1133,7 @@ inline std::ostream &errstreamunlogged(void);
 inline std::ostream &errstreamunlogged(void) { return std::cerr; }
 #endif
 #ifdef HEADLESS
-inline std::ostream &errstreamunlogged(void) { static thread_local std::ostream cnull(0); return cnull; }
+inline std::ostream &errstreamunlogged(void) { thread_local std::ostream cnull(0); return cnull; }
 #endif
 
 inline std::ostream &outstreamunlogged(void);
@@ -1649,12 +1141,12 @@ inline std::ostream &outstreamunlogged(void);
 inline std::ostream &outstreamunlogged(void) { return std::cout; }
 #endif
 #ifdef HEADLESS
-inline std::ostream &outstreamunlogged(void) { static thread_local std::ostream cnull(0); return cnull; }
+inline std::ostream &outstreamunlogged(void) { thread_local std::ostream cnull(0); return cnull; }
 #endif
 
 std::ostream &errstream(int i = 0);
 inline void errstream(const char *src);
-inline void errstream(const char *src) { if ( isMainThread() ) { errstream() << src; } }
+inline void errstream(const char *src) { errstream() << src; } //if ( isMainThread() ) { errstream() << src; } }
 void seterrstream(LoggingOstreamErr *altdest, int i = 0);
 
 void   suppresserrstreamcout(void);
@@ -1672,7 +1164,7 @@ inline void errstreamunlogged(const char *) { ; }
 
 std::ostream &outstream(int i = 0);
 inline void outstream(const char *src);
-inline void outstream(const char *src) { if ( isMainThread() ) { outstream() << src; } }
+inline void outstream(const char *src) { outstream() << src; } //if ( isMainThread() ) { outstream() << src; } }
 void setoutstream(LoggingOstreamOut *altdest, int i = 0);
 
 void   suppressoutstreamcout(void);
@@ -2029,7 +1521,7 @@ int prompttod(double &dest, double min, double max, const std::string &prompt, i
 
 void enternonblockmode (void);
 void exitnonblockmode  (void);
-int testinnonblockmode (void);
+int  testinnonblockmode(void);
 char svm_getch_nonblock(void);
 
 void svmclrscr(int fastver);
@@ -2279,7 +1771,7 @@ FIXME - has a key been pressed
 inline int retkeytriggerandclear(int val = 0);
 inline int retkeytriggerandclear(int val)
 {
-    static thread_local int trval = 0; // trigger not set by default
+    thread_local int trval = 0; // trigger not set by default
     int retval = trval;   // return is current trigger state
 
     trval = val; // Set new value
@@ -2291,22 +1783,12 @@ inline int retkeytriggerandclear(int val)
 inline int setgetkbstate(int x = 2);
 inline int setgetkbstate(int x)
 {
-/*
     #ifdef DISABLE_KB_BY_DEF
-    svmvolatile static int status = 0; // 1 enabled, 0 disabled
+    thread_local int status = 0; // 1 enabled, 0 disabled
     #endif
 
     #ifndef DISABLE_KB_BY_DEF
-    svmvolatile static int status = 1; // 1 enabled, 0 disabled
-    #endif
-*/
-
-    #ifdef DISABLE_KB_BY_DEF
-    static thread_local int status = 0; // 1 enabled, 0 disabled
-    #endif
-
-    #ifndef DISABLE_KB_BY_DEF
-    static thread_local int status = 1; // 1 enabled, 0 disabled
+    thread_local int status = 1; // 1 enabled, 0 disabled
     #endif
 
     if ( x == 0 ) { status = 0; }
@@ -2318,7 +1800,7 @@ inline int setgetkbstate(int x)
 
 inline int gkbcallback(int (*kbcallback)(void))
 {
-    static thread_local int (*lockbcallback)(void) = nullptr;
+    thread_local int (*lockbcallback)(void) = nullptr;
     int res = 0;
 
     if ( kbcallback )
@@ -2414,9 +1896,9 @@ inline bool kbquitdet(const char *stateDescr, double **uservars, const char **va
 
 #ifndef USERLESS
 #ifndef HEADLESS
-    static thread_local int goupone = 0;
-    static thread_local int dostep = 0;
-    static thread_local int reallymainthread = isMainThread(); // only need to call once this way
+    thread_local int goupone = 0;
+    thread_local int dostep = 0;
+    thread_local int reallymainthread = isMainThread(); // only need to call once this way
 #endif
 #endif
     bool res = false;
@@ -2558,12 +2040,7 @@ inline bool kbquitdet(const char *stateDescr, double **uservars, const char **va
 inline size_t memcount(size_t incsize = 0, int direction = -1);
 inline size_t memcount(size_t incsize,     int direction)
 {
-#ifdef ENABLE_THREADS
     static std::atomic<size_t> memused(0);
-#endif
-#ifndef ENABLE_THREADS
-    static size_t memused(0);
-#endif
 
     if ( direction > 0 )
     {

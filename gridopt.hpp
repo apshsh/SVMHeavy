@@ -43,6 +43,11 @@ public:
 
     GridOptions(const GridOptions &src) : GlobalOptions(src)
     {
+        optname = "opt_grid";
+
+        numZooms = 0;
+        zoomFact = 0.333333333333;
+
         *this = src;
     }
 
@@ -68,14 +73,7 @@ public:
 
     // Generate a copy of the relevant optimisation class.
 
-//    virtual GlobalOptions *makeDup(void) const
-//    {
-//        GridOptions *newver;
-//
-//        MEMNEW(newver,GridOptions(*this));
-//
-//        return newver;
-//    }
+    virtual GlobalOptions *makeDup(void) const { GridOptions *res; MEMNEW(res,GridOptions(*this)); return res; }
 
     // allsres: none
 

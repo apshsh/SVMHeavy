@@ -562,7 +562,7 @@ public:
     // Information Functions:
 
     virtual double loglikelihood(void) const override { return getQconst().loglikelihood(); }
-    virtual double maxinfogain  (void) const override { return getQconst().maxinfogain  (); }
+    virtual double infogain     (void) const override { return getQconst().infogain     (); }
     virtual double RKHSnorm     (void) const override { return getQconst().RKHSnorm     (); }
     virtual double RKHSabs      (void) const override { return getQconst().RKHSabs      (); }
 

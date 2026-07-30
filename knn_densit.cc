@@ -96,10 +96,10 @@ int KNN_Densit::NNC(int xd) const
 
 const Vector<int> &KNN_Densit::ClassLabels(void) const
 {
-    static thread_local int firstrun = 1;
-    static thread_local int insetup = 0;
+    thread_local int firstrun = 1;
+    thread_local int insetup = 0;
 
-    static thread_local Vector<int> *pres;
+    thread_local Vector<int> *pres;
 
     if ( firstrun )
     {

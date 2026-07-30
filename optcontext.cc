@@ -22,10 +22,32 @@ void optContext::refact(const Matrix<double> &Gp, const Matrix<double> &Gn, cons
     NiceAssert( ( xzt > 0 ) || ( xzt == -1 ) );
     NiceAssert( ( xkeepfact == 0 ) || ( xkeepfact == 1 ) || ( xkeepfact == -1 ) );
 
-    if ( dkeepfact && (betaFixUpdate) )
+    // If we have a full factorization then try to just overwrite with a new full factorization
+
+    if ( dkeepfact && ( dnfact == pBetaF.size() ) && ( dpfact == pAlphaF.size() ) )
     {
-        fixbetaFix(Gn,Gpn);
+        retMatrix<double> tmpmGp;
+        retMatrix<double> tmpmGn;
+        retMatrix<double> tmpmGpn;
+
+        Chol<double> newfreeVarChol(Gp(pAlphaF,pAlphaF,tmpmGp),
+                                    Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),
+                                    Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1),
+                                    D,xzt,freeVarChol.fudge());
+
+        if ( !newfreeVarChol.nbad() )
+        {
+            qswap(freeVarChol,newfreeVarChol);
+            betaFixUpdate = 1;
+            fixbetaFix(Gn,Gpn);
+
+            return;
+        }
     }
+
+    // Fallback to clean-slate approach
+
+    if ( dkeepfact && betaFixUpdate ) { fixbetaFix(Gn,Gpn); }
 
     int oldaN = aN();
     int oldbN = bN();
@@ -33,15 +55,8 @@ void optContext::refact(const Matrix<double> &Gp, const Matrix<double> &Gn, cons
 
     // Keep current values for keepfact and zt if new values set to -1 ("keep")
 
-    if ( xkeepfact == -1 )
-    {
-        xkeepfact = dkeepfact;
-    }
-
-    if ( xzt < 0 )
-    {
-        xzt = dzt;
-    }
+    if ( xkeepfact == -1 ) { xkeepfact = dkeepfact; }
+    if ( xzt < 0         ) { xzt = dzt;             }
 
     // Set new values for zt and keepfact
 
@@ -52,7 +67,7 @@ void optContext::refact(const Matrix<double> &Gp, const Matrix<double> &Gn, cons
 
     Vector<int> spAlphaLB(pAlphaLB);
     Vector<int> spAlphaUB(pAlphaUB);
-    Vector<int> spAlphaF(pAlphaF);
+    Vector<int> spAlphaF (pAlphaF );
 
     Vector<int> spBetaC(pBetaC);
     Vector<int> spBetaF(pBetaF);
@@ -62,15 +77,15 @@ void optContext::refact(const Matrix<double> &Gp, const Matrix<double> &Gn, cons
     // Empty pivotting and state.
 
     pAlphaLB.resize(0);
-    pAlphaZ.resize(0);
+    pAlphaZ. resize(0);
     pAlphaUB.resize(0);
-    pAlphaF.resize(0);
+    pAlphaF. resize(0);
 
     pBetaC.resize(0);
     pBetaF.resize(0);
 
     dalphaState.resize(0);
-    dbetaState.resize(0);
+    dbetaState. resize(0);
 
     // Reset counts of NLF and NUF
 
@@ -103,52 +118,26 @@ void optContext::refact(const Matrix<double> &Gp, const Matrix<double> &Gn, cons
 	fBetaF.resize(0);
     }
 
-    int i,iP;
-
     // Systematically re-add variables
 
-    for ( i = 0 ; i < oldbN ; ++i )
-    {
-        addBeta(i);
-    }
-
-    for ( i = 0 ; i < oldaN ; ++i )
-    {
-        addAlpha(i);
-    }
+    for ( int i = 0 ; i < oldbN ; ++i ) { addBeta (i); }
+    for ( int i = 0 ; i < oldaN ; ++i ) { addAlpha(i); }
 
     // Restore pivotting and state
 
-    for ( iP = 0 ; iP < spAlphaLB.size() ; ++iP )
+    for ( int iP = 0 ; iP < spAlphaLB.size() ; ++iP ) { modAlphaZtoLB(findInAlphaZ(spAlphaLB.v(iP))); }
+    for ( int iP = 0 ; iP < spAlphaUB.size() ; ++iP ) { modAlphaZtoUB(findInAlphaZ(spAlphaUB.v(iP))); }
+
+    for ( int iP = 0 ; iP < spAlphaF.size() ; ++iP )
     {
-        modAlphaZtoLB(findInAlphaZ(spAlphaLB.v(iP)));
+        int aposdummy = 0;
+        int bposdummy = 0;
+
+        if ( salphaState.v(spAlphaF.v(iP)) < 0 ) { modAlphaZtoLF(findInAlphaZ(spAlphaF.v(iP)),Gp,Gn,Gpn,aposdummy,bposdummy); }
+        else                                     { modAlphaZtoUF(findInAlphaZ(spAlphaF.v(iP)),Gp,Gn,Gpn,aposdummy,bposdummy); }
     }
 
-    for ( iP = 0 ; iP < spAlphaUB.size() ; ++iP )
-    {
-        modAlphaZtoUB(findInAlphaZ(spAlphaUB.v(iP)));
-    }
-
-    for ( iP = 0 ; iP < spAlphaF.size() ; ++iP )
-    {
-        if ( salphaState.v(spAlphaF.v(iP)) < 0 )
-        {
-            int aposdummy = 0;
-            int bposdummy = 0;
-
-            modAlphaZtoLF(findInAlphaZ(spAlphaF.v(iP)),Gp,Gn,Gpn,aposdummy,bposdummy);
-        }
-
-        else
-        {
-            int aposdummy = 0;
-            int bposdummy = 0;
-
-            modAlphaZtoUF(findInAlphaZ(spAlphaF.v(iP)),Gp,Gn,Gpn,aposdummy,bposdummy);
-        }
-    }
-
-    for ( iP = 0 ; iP < spBetaF.size() ; ++iP )
+    for ( int iP = 0 ; iP < spBetaF.size() ; ++iP )
     {
         int aposdummy = 0;
         int bposdummy = 0;
@@ -171,33 +160,16 @@ void optContext::reset(const Matrix<double> &Gp, const Matrix<double> &Gn, const
     int apos = 0;
     int bpos = 0;
 
-    while ( aNLB() )
-    {
-	modAlphaLBtoZ(aNLB()-1); // take from end for computational efficiency
-    }
-
-    while ( aNUB() )
-    {
-	modAlphaUBtoZ(aNUB()-1);
-    }
+    while ( aNLB() ) { modAlphaLBtoZ(aNLB()-1); } // take from end for computational efficiency
+    while ( aNUB() ) { modAlphaUBtoZ(aNUB()-1); }
 
     while ( aNF() )
     {
-	if ( alphaState(pivAlphaF(aNF()-1)) == -1 )
-	{
-	    modAlphaLFtoZ(aNF()-1,Gp,Gn,Gpn,apos,bpos);
-	}
-
-	else
-	{
-	    modAlphaUFtoZ(aNF()-1,Gp,Gn,Gpn,apos,bpos);
-	}
+	if ( alphaState(pivAlphaF(aNF()-1)) == -1 ) { modAlphaLFtoZ(aNF()-1,Gp,Gn,Gpn,apos,bpos); }
+	else                                        { modAlphaUFtoZ(aNF()-1,Gp,Gn,Gpn,apos,bpos); }
     }
 
-    while ( bNF() )
-    {
-	modBetaFtoC(bNF()-1,Gp,Gn,Gpn,apos,bpos);
-    }
+    while ( bNF() ) { modBetaFtoC(bNF()-1,Gp,Gn,Gpn,apos,bpos); }
 
     return;
 }
@@ -207,53 +179,12 @@ int optContext::addAlpha(int i)
     NiceAssert( i >= 0 );
     NiceAssert( i <= aN() );
 
-    int j;
-
     // Fix all pivots to reflect pending increase in number of alphas
 
-    //if ( aNLB() )
-    {
-	for ( j = 0 ; j < aNLB() ; ++j )
-	{
-	    if ( pivAlphaLB(j) >= i )
-	    {
-                ++(pAlphaLB("&",j));
-	    }
-	}
-    }
-
-    //if ( aNZ() )
-    {
-	for ( j = 0 ; j < aNZ() ; ++j )
-	{
-	    if ( pivAlphaZ(j) >= i )
-	    {
-                ++(pAlphaZ("&",j));
-	    }
-	}
-    }
-
-    //if ( aNUB() )
-    {
-	for ( j = 0 ; j < aNUB() ; ++j )
-	{
-	    if ( pivAlphaUB(j) >= i )
-	    {
-                ++(pAlphaUB("&",j));
-	    }
-	}
-    }
-
-    //if ( aNF() )
-    {
-	for ( j = 0 ; j < aNF() ; ++j )
-	{
-	    if ( pivAlphaF(j) >= i )
-	    {
-                ++(pAlphaF("&",j));
-	    }
-	}
-    }
+    for ( int j = 0 ; j < aNLB() ; ++j ) { if ( pivAlphaLB(j) >= i ) { ++(pAlphaLB("&",j)); } }
+    for ( int j = 0 ; j < aNZ()  ; ++j ) { if ( pivAlphaZ (j) >= i ) { ++(pAlphaZ ("&",j)); } }
+    for ( int j = 0 ; j < aNUB() ; ++j ) { if ( pivAlphaUB(j) >= i ) { ++(pAlphaUB("&",j)); } }
+    for ( int j = 0 ; j < aNF()  ; ++j ) { if ( pivAlphaF (j) >= i ) { ++(pAlphaF ("&",j)); } }
 
     // Add to zero pivot
 
@@ -270,31 +201,10 @@ int optContext::addBeta(int i)
     NiceAssert( i >= 0 );
     NiceAssert( i <= bN() );
 
-    int j;
-
     // Fix all pivots to reflect pending increase in number of betas
 
-    //if ( bNC() )
-    {
-	for ( j = 0 ; j < bNC() ; ++j )
-	{
-	    if ( pivBetaC(j) >= i )
-	    {
-                ++(pBetaC("&",j));
-	    }
-	}
-    }
-
-    //if ( bNF() )
-    {
-	for ( j = 0 ; j < bNF() ; ++j )
-	{
-	    if ( pivBetaF(j) >= i )
-	    {
-                ++(pBetaF("&",j));
-	    }
-	}
-    }
+    for ( int j = 0 ; j < bNC() ; ++j ) { if ( pivBetaC(j) >= i ) { ++(pBetaC("&",j)); } }
+    for ( int j = 0 ; j < bNF() ; ++j ) { if ( pivBetaF(j) >= i ) { ++(pBetaF("&",j)); } }
 
     // Add to constrained pivot
 
@@ -324,24 +234,13 @@ int optContext::removeAlpha(int i)
     NiceAssert( i < aN() );
 
     int iP = -1;
-    int j;
 
     // Find i in pivot vector
 
-    //if ( aNZ() )
+    for ( int j = 0 ; j < aNZ() ; ++j )
     {
-	for ( j = 0 ; j < aNZ() ; ++j )
-	{
-	    if ( pivAlphaZ(j) == i )
-	    {
-		iP = j;
-	    }
-
-	    else if ( pivAlphaZ(j) > i )
-	    {
-                --(pAlphaZ("&",j));
-	    }
-	}
+        if      ( pivAlphaZ(j) == i ) { iP = j;             }
+        else if ( pivAlphaZ(j) >  i ) { --(pAlphaZ("&",j)); }
     }
 
     // Sanity check
@@ -355,38 +254,9 @@ int optContext::removeAlpha(int i)
 
     // Fix all pivots to reflect decrease in number of alphas
 
-    //if ( aNLB() )
-    {
-	for ( j = 0 ; j < aNLB() ; ++j )
-	{
-	    if ( pivAlphaLB(j) > i )
-	    {
-                --(pAlphaLB("&",j));
-	    }
-	}
-    }
-
-    //if ( aNF() )
-    {
-	for ( j = 0 ; j < aNF() ; ++j )
-	{
-	    if ( pivAlphaF(j) > i )
-	    {
-                --(pAlphaF("&",j));
-	    }
-	}
-    }
-
-    //if ( aNUB() )
-    {
-	for ( j = 0 ; j < aNUB() ; ++j )
-	{
-	    if ( pivAlphaUB(j) > i )
-	    {
-                --(pAlphaUB("&",j));
-	    }
-	}
-    }
+    for ( int j = 0 ; j < aNLB() ; ++j ) { if ( pivAlphaLB(j) > i ) { --(pAlphaLB("&",j)); } }
+    for ( int j = 0 ; j < aNF()  ; ++j ) { if ( pivAlphaF (j) > i ) { --(pAlphaF ("&",j)); } }
+    for ( int j = 0 ; j < aNUB() ; ++j ) { if ( pivAlphaUB(j) > i ) { --(pAlphaUB("&",j)); } }
 
     return iP;
 }
@@ -397,24 +267,13 @@ int optContext::removeBeta(int i)
     NiceAssert( i < bN() );
 
     int iP = -1;
-    int j;
 
     // Find i in pivot vector
 
-    //if ( bNC() )
+    for ( int j = 0 ; j < bNC() ; ++j )
     {
-	for ( j = 0 ; j < bNC() ; ++j )
-	{
-	    if ( pivBetaC(j) == i )
-	    {
-		iP = j;
-	    }
-
-	    else if ( pivBetaC(j) > i )
-	    {
-                --(pBetaC("&",j));
-	    }
-	}
+        if      ( pivBetaC(j) == i ) { iP = j;            }
+        else if ( pivBetaC(j) >  i ) { --(pBetaC("&",j)); }
     }
 
     // Sanity check
@@ -428,16 +287,7 @@ int optContext::removeBeta(int i)
 
     // Fix all pivots to reflect decrease in number of betas
 
-    //if ( bNF() )
-    {
-	for ( j = 0 ; j < bNF() ; ++j )
-	{
-	    if ( pivBetaF(j) > i )
-	    {
-                --(pBetaF("&",j));
-	    }
-	}
-    }
+    for ( int j = 0 ; j < bNF() ; ++j ) { if ( pivBetaF(j) > i ) { --(pBetaF("&",j)); } }
 
     if ( dkeepfact )
     {
@@ -473,8 +323,8 @@ double optContext::fact_testFact(Matrix<double> &Gpdest, Matrix<double> &Gndest,
 
     double res = 0;
 
-    Gpdest = Gp;
-    Gndest = Gn;
+    Gpdest  = Gp;
+    Gndest  = Gn;
     Gpndest = Gpn;
 
     Vector<double> Ddest(D);
@@ -485,48 +335,9 @@ double optContext::fact_testFact(Matrix<double> &Gpdest, Matrix<double> &Gndest,
 
     freeVarChol.testFact(Gpdest("&",pAlphaF,pAlphaF,tmpmGp),Gndest("&",pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpndest("&",pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1),Ddest);
 
-    //if ( aN() )
-    {
-	for ( int i = 0 ; i < aN() ; ++i )
-	{
-	    for ( int j = 0 ; j < aN() ; ++j )
-	    {
-		if ( abs2(Gp.v(i,j)-Gpdest.v(i,j)) > res )
-		{
-                    res = abs2(Gp.v(i,j)-Gpdest.v(i,j));
-		}
-	    }
-	}
-    }
-
-    //if ( bN() )
-    {
-	for ( int i = 0 ; i < bN() ; ++i )
-	{
-	    for ( int j = 0 ; j < bN() ; ++j )
-	    {
-		if ( abs2(Gn.v(i,j)-Gndest.v(i,j)) > res )
-		{
-                    res = abs2(Gn.v(i,j)-Gndest.v(i,j));
-		}
-	    }
-	}
-    }
-
-    //if ( aN() && bN() )
-    if ( bN() )
-    {
-	for ( int i = 0 ; i < aN() ; ++i )
-	{
-	    for ( int j = 0 ; j < bN() ; ++j )
-	    {
-		if ( abs2(Gpn.v(i,j)-Gpndest.v(i,j)) > res )
-		{
-                    res = abs2(Gpn.v(i,j)-Gpndest.v(i,j));
-		}
-	    }
-	}
-    }
+    for ( int i = 0 ; i < aN() ; ++i ) { for ( int j = 0 ; j < aN() ; ++j ) { if ( abs2(Gp. v(i,j)-Gpdest. v(i,j)) > res ) { res = abs2(Gp. v(i,j)-Gpdest. v(i,j)); } } }
+    for ( int i = 0 ; i < bN() ; ++i ) { for ( int j = 0 ; j < bN() ; ++j ) { if ( abs2(Gn. v(i,j)-Gndest. v(i,j)) > res ) { res = abs2(Gn. v(i,j)-Gndest. v(i,j)); } } }
+    for ( int i = 0 ; i < aN() ; ++i ) { for ( int j = 0 ; j < bN() ; ++j ) { if ( abs2(Gpn.v(i,j)-Gpndest.v(i,j)) > res ) { res = abs2(Gpn.v(i,j)-Gpndest.v(i,j)); } } }
 
     return res;
 }
@@ -544,10 +355,7 @@ void optContext::fact_fudgeOn(const Matrix<double> &Gp, const Matrix<double> &Gn
     // No point doing this before the update as we'll need to complete
     // restart afterwards.
     //
-    //if ( dkeepfact && betaFixUpdate )
-    //{
-    //    fixbetaFix(Gn,Gpn);
-    //}
+    //if ( dkeepfact && betaFixUpdate ) { fixbetaFix(Gn,Gpn); }
 
     freeVarChol.fudgeOn();
     dpfact = (freeVarChol.npos())-(freeVarChol.nbadpos());
@@ -580,10 +388,7 @@ void optContext::fact_fudgeOff(const Matrix<double> &Gp, const Matrix<double> &G
     // No point doing this before the update as we'll need to complete
     // restart afterwards.
     //
-    //if ( dkeepfact && betaFixUpdate )
-    //{
-    //    fixbetaFix(Gn,Gpn);
-    //}
+    //if ( dkeepfact && betaFixUpdate ) { fixbetaFix(Gn,Gpn); }
 
     freeVarChol.fudgeOff();
     dpfact = (freeVarChol.npos())-(freeVarChol.nbadpos());
@@ -613,15 +418,11 @@ int optContext::extendFactAlpha(const Matrix<double> &Gp, const Matrix<double> &
     NiceAssert( Gpn.numCols() == bN() );
     NiceAssert( dkeepfact );
 
-    if ( dkeepfact && (betaFixUpdate) )
-    {
-        fixbetaFix(Gn,Gpn);
-    }
+    if ( dkeepfact && betaFixUpdate ) { fixbetaFix(Gn,Gpn); }
 
     int retval = (pAlphaF.size())-1;
     int fpos = D.size();
     int i = pivAlphaF(retval);
-    int j;
     int addpos = 0;
     int betafixchange = 0;
     int betaunfixedextend = 0;
@@ -635,21 +436,13 @@ int optContext::extendFactAlpha(const Matrix<double> &Gp, const Matrix<double> &
     // a given threshold (and can therefore be included, potentially,
     // in the factorisation), zero otherwise.
 
-    //if ( betaFix.size() )
+    for ( int j = 0 ; j < (betaFix).size() ; ++j )
     {
-	for ( j = 0 ; j < (betaFix).size() ; ++j )
-	{
-	    (GpnFColNorm)("&",j) += (Gpn.v(i,j)*Gpn.v(i,j));
+        (GpnFColNorm)("&",j) += (Gpn.v(i,j)*Gpn.v(i,j));
+        oldbetafix = betaFix.v(j);
+        (betaFix)("&",j) = CALCBETAFIX(j);
 
-            oldbetafix = betaFix.v(j);
-
-	    (betaFix)("&",j) = CALCBETAFIX(j);
-
-	    if ( oldbetafix != betaFix.v(j) )
-	    {
-                betafixchange = 1;
-	    }
-	}
+        if ( oldbetafix != betaFix.v(j) ) { betafixchange = 1; }
     }
 
     // Run through those columns of Gpn and row/columns of Gn not
@@ -657,23 +450,11 @@ int optContext::extendFactAlpha(const Matrix<double> &Gp, const Matrix<double> &
     // non-zero then set betaunfixedextend = 1 to indicate that we
     // should try to add these to the factorisation.
 
-    //if ( dnfact < pBetaF.size() )
-    {
-	for ( j = dnfact ; j < pBetaF.size() ; ++j )
-	{
-	    if ( !(betaFix.v(j)) )
-	    {
-                betaunfixedextend = 1;
-	    }
-	}
-    }
+    for ( int j = dnfact ; j < pBetaF.size() ; ++j ) { if ( !(betaFix.v(j)) ) { betaunfixedextend = 1; } }
 
     // Set flag if new diagonal in Hessian is non-zero to within zerotol
 
-    if ( Gp.v(retval,retval) > dzt )
-    {
-        addpos = 1;
-    }
+    if ( Gp.v(retval,retval) > dzt ) { addpos = 1; }
 
     // If factoristion non-singular,
     // or if factorisation is completely singular and the new diagonal on
@@ -724,47 +505,15 @@ void optContext::shrinkFactAlpha(int i, int iP, const Matrix<double> &Gp, const 
     NiceAssert( Gpn.numCols() == bN() );
     NiceAssert( dkeepfact );
 
-    if ( dkeepfact && (betaFixUpdate) )
-    {
-        fixbetaFix(Gn,Gpn);
-    }
+    if ( dkeepfact && betaFixUpdate ) { fixbetaFix(Gn,Gpn); }
 
-    int j,jP;
     int fpos = fAlphaF.v(iP);
 
     fAlphaF.remove(iP);
 
-    //if ( fAlphaF.size() )
-    {
-	for ( jP = 0 ; jP < fAlphaF.size() ; ++jP )
-	{
-	    if ( fAlphaF.v(jP) > fpos )
-	    {
-                --(fAlphaF("&",jP));
-	    }
-	}
-    }
-
-    //if ( fBetaF.size() )
-    {
-	for ( jP = 0 ; jP < fBetaF.size() ; ++jP )
-	{
-	    if ( fBetaF.v(jP) > fpos )
-	    {
-                --(fBetaF("&",jP));
-	    }
-	}
-    }
-
-    //if ( betaFix.size() )
-    {
-	for ( j = 0 ; j < (betaFix).size() ; ++j )
-	{
-	    (GpnFColNorm)("&",j) -= (Gpn.v(i,j)*Gpn.v(i,j));
-
-	    (betaFix)("&",j) = CALCBETAFIX(j);
-	}
-    }
+    for ( int jP = 0 ; jP < fAlphaF.size() ; ++jP ) { if ( fAlphaF.v(jP) > fpos ) { --(fAlphaF("&",jP)); } }
+    for ( int jP = 0 ; jP < fBetaF. size() ; ++jP ) { if ( fBetaF. v(jP) > fpos ) { --(fBetaF ("&",jP)); } }
+    for ( int j  = 0 ; j  < betaFix.size() ; ++j  ) { (GpnFColNorm)("&",j) -= (Gpn.v(i,j)*Gpn.v(i,j)); (betaFix)("&",j) = CALCBETAFIX(j); }
 
     retMatrix<double> tmpmGp;
     retMatrix<double> tmpmGn;
@@ -804,24 +553,14 @@ int optContext::extendFactBeta(const Matrix<double> &Gp, const Matrix<double> &G
     NiceAssert( Gpn.numCols() == bN() );
     NiceAssert( dkeepfact );
 
-    if ( dkeepfact && (betaFixUpdate) )
-    {
-        fixbetaFix(Gn,Gpn);
-    }
+    if ( dkeepfact && betaFixUpdate ) { fixbetaFix(Gn,Gpn); }
 
     int retval = (pBetaF.size())-1;
     int i = pivBetaF(retval);
-    int jP;
 
     (GpnFColNorm)("&",i) = 0.0;
 
-    //if ( pAlphaF.size() )
-    {
-	for ( jP = 0 ; jP < pAlphaF.size() ; ++jP )
-	{
-	    (GpnFColNorm)("&",i) += (Gpn(pivAlphaF(jP),i)*Gpn(pivAlphaF(jP),i));
-	}
-    }
+    for ( int jP = 0 ; jP < pAlphaF.size() ; ++jP ) { (GpnFColNorm)("&",i) += (Gpn(pivAlphaF(jP),i)*Gpn(pivAlphaF(jP),i)); }
 
     (betaFix)("&",i) = CALCBETAFIX(i);
 
@@ -831,7 +570,6 @@ int optContext::extendFactBeta(const Matrix<double> &Gp, const Matrix<double> &G
     if ( !(betaFix.v(i)) )
     {
 	int aposdummy = 0;
-
 	fixfact(Gp,Gn,Gpn,apos,bpos,aposdummy,retval);
     }
 
@@ -848,39 +586,16 @@ void optContext::shrinkFactBeta(int iP, const Matrix<double> &Gp, const Matrix<d
     NiceAssert( Gpn.numCols() == bN() );
     NiceAssert( dkeepfact );
 
-    if ( dkeepfact && (betaFixUpdate) )
-    {
-        fixbetaFix(Gn,Gpn);
-    }
+    if ( dkeepfact && betaFixUpdate ) { fixbetaFix(Gn,Gpn); }
 
-    int jP;
     int fpos = fBetaF.v(iP);
 
     fBetaF.remove(iP);
 
     if ( fpos >= 0 )
     {
-	//if ( fAlphaF.size() )
-	{
-	    for ( jP = 0 ; jP < fAlphaF.size() ; ++jP )
-	    {
-		if ( fAlphaF.v(jP) > fpos )
-		{
-		    --(fAlphaF("&",jP));
-		}
-	    }
-	}
-
-	//if ( fBetaF.size() )
-	{
-	    for ( jP = 0 ; jP < fBetaF.size() ; ++jP )
-	    {
-		if ( fBetaF.v(jP) > fpos )
-		{
-		    --(fBetaF("&",jP));
-		}
-	    }
-	}
+        for ( int jP = 0 ; jP < fAlphaF.size() ; ++jP ) { if ( fAlphaF.v(jP) > fpos ) { --(fAlphaF("&",jP)); } }
+        for ( int jP = 0 ; jP < fBetaF. size() ; ++jP ) { if ( fBetaF.v(jP)  > fpos ) { --(fBetaF ("&",jP)); } }
 
         --dnfact;
 
@@ -925,9 +640,9 @@ std::ostream &operator<<(std::ostream &output, const optContext &src)
     output << "Keep factorisation: " << src.dkeepfact     << "\n";
     output << "aNLF:               " << src.daNLF         << "\n";
     output << "aNUF:               " << src.daNUF         << "\n";
-    output << "Gpn column sums:    " << (src.GpnFColNorm)   << "\n";
-    output << "Beta fixing:        " << (src.betaFix)       << "\n";
-    output << "Beta fixing state:  " << (src.betaFixUpdate) << "\n";
+    output << "Gpn column sums:    " << src.GpnFColNorm   << "\n";
+    output << "Beta fixing:        " << src.betaFix       << "\n";
+    output << "Beta fixing state:  " << src.betaFixUpdate << "\n";
     output << "nfact:              " << src.dnfact        << "\n";
     output << "pfact:              " << src.dpfact        << "\n";
     output << "D inter:            " << src.D             << "\n";
@@ -954,9 +669,9 @@ std::istream &operator>>(std::istream &input, optContext &dest)
     input >> dummy; input >> dest.dkeepfact;
     input >> dummy; input >> dest.daNLF;
     input >> dummy; input >> dest.daNUF;
-    input >> dummy; input >> (dest.GpnFColNorm);
-    input >> dummy; input >> (dest.betaFix);
-    input >> dummy; input >> (dest.betaFixUpdate);
+    input >> dummy; input >> dest.GpnFColNorm;
+    input >> dummy; input >> dest.betaFix;
+    input >> dummy; input >> dest.betaFixUpdate;
     input >> dummy; input >> dest.dnfact;
     input >> dummy; input >> dest.dpfact;
     input >> dummy; input >> dest.D;

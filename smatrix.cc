@@ -1309,7 +1309,7 @@ const double &fnBlockDiagElm(int i, int j, const void *args)
     const Vector<Vector<int> *>          &indvect = *((const Vector<Vector<int> *>          *) ((void **) args)[1]);
     const Vector<const Matrix<double> *> &convect = *((const Vector<const Matrix<double> *> *) ((void **) args)[2]);
 
-    static double zres = 0.0;
+    statiic double zres = 0.0;
 
     int ii = rowvect(i);
     int jj = (*(indvect(i)))(j);

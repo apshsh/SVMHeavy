@@ -219,7 +219,9 @@ public:
 
     // Generate a copy of the relevant optimisation class.
 
-//    virtual GlobalOptions *makeDup(void) const;
+    // Generate a copy of the relevant optimisation class.
+
+    virtual GlobalOptions *makeDup(void) const { SMBOOptions *res; MEMNEW(res,SMBOOptions(*this)); return res; }
 
     // virtual Destructor to get rid of annoying warnings
 
@@ -426,6 +428,9 @@ public:
 
     double model_K2_cgt(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, int q = 0) const { gentype res; return (double) getcgtapprox(q).K2(res,xa,xb); }
 
+    int model_prealloc_musigma(int preallocsize);
+    int model_prealloc_cgt    (int preallocsize);
+
     int model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x,                                                     double varadd = 0);
     int model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, int xobstype = 2, double varadd = 0);
 
@@ -492,14 +497,14 @@ public:
     const Vector<double> &model_xcopy(Vector<double> &resx, int i) const;
 
     double  model_negloglikelihood(int q)            const { return calcnegloglikelihood(getmuapprox(q)); }
-    double  model_maxinfogain     (int q)            const { return calcmaxinfogain     (getmuapprox(q)); }
+    double  model_infogain        (int q)            const { return calcinfogain        (getmuapprox(q)); }
     double  model_RKHSnorm        (int q)            const { return calcRKHSnorm        (getmuapprox(q)); }
     double  model_lenscale        (int q, int i = 0) const { return (double) getmuapprox_sample(q).getKernel().cRealConstants(i%(getmuapprox(q).getKernel().size()))(0); }
     gentype model_lenscaleLB      (int q, int i = 0) const { return          getmuapprox_sample(q).getKernel().cRealConstantsLB(i%(getmuapprox(q).getKernel().size()))(0); }
     double  model_kappa0          (int q)            const { return (double) getmuapprox_sample(q).getKernel().effweight(q); }
 
     double  modelcgt_negloglikelihood(int q)            const { return calcnegloglikelihood(getcgtapprox(q)); }
-    double  modelcgt_maxinfogain     (int q)            const { return calcmaxinfogain     (getcgtapprox(q)); }
+    double  modelcgt_infogain        (int q)            const { return calcinfogain        (getcgtapprox(q)); }
     double  modelcgt_RKHSnorm        (int q)            const { return calcRKHSnorm        (getcgtapprox(q)); }
     double  modelcgt_lenscale        (int q, int i = 0) const { return (double) getcgtapprox_sample(q).getKernel().cRealConstants(i%(getcgtapprox(q).getKernel().size()))(0); }
     gentype modelcgt_lenscaleLB      (int q, int i = 0) const { return          getcgtapprox_sample(q).getKernel().cRealConstantsLB(i%(getcgtapprox(q).getKernel().size()))(0); }

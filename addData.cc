@@ -292,40 +292,21 @@ int genericMLDataLoad(int binaryRelabel,
     if ( !mldest ) { realtargtype = mlbase.hOutType();    }
     else           { realtargtype = (*mldest).targType(); }
 
-    if ( coercetosingle && !( realtargtype == 'N' ) )
-    {
-        STRTHROW("Can't use u suffix as ML is not single class.");
-    }
-
-    if ( coercefromsingle && ( realtargtype == 'N' ) )
-    {
-        STRTHROW("Can't use l suffix as ML is single class.");
-    }
-
-    int pointsadded = 0;
-
-    if ( ibase == -1 )
-    {
-        ibase = mlbase.N();
-    }
+    if ( coercetosingle   && !( realtargtype == 'N' ) ) { STRTHROW("Can't use u suffix as ML is not single class."); }
+    if ( coercefromsingle &&  ( realtargtype == 'N' ) ) { STRTHROW("Can't use l suffix as ML is single class.");     }
 
     std::ifstream datfile(trainfile.c_str());
+    if ( !datfile.is_open() ) { STRTHROW("Unable to open training file "+trainfile); }
 
-    if ( !datfile.is_open() )
-    {
-        STRTHROW("Unable to open training file "+trainfile);
-    }
+    if ( ibase == -1 ) {ibase = mlbase.N(); }
 
     std::ofstream *destfile = nullptr;
+    int pointsadded = 0;
 
     if ( savefile.length() )
     {
         MEMNEW(destfile,std::ofstream(savefile.c_str()));
-
-        if ( !destfile || !(*destfile).is_open() )
-        {
-            STRTHROW("Unable to open data save file "+savefile);
-        }
+        if ( !destfile || !(*destfile).is_open() ) { STRTHROW("Unable to open data save file "+savefile); }
     }
 
     SparseVector<gentype> x,y;
@@ -336,8 +317,7 @@ int genericMLDataLoad(int binaryRelabel,
     Vector<int> xi;
     int xk;
 
-    double Cweight;
-    double epsweight;
+    double Cweight,epsweight;
     int d;
     std::string buffer;
     int ij = 0;
@@ -348,42 +328,21 @@ int genericMLDataLoad(int binaryRelabel,
     {
         goover:
 
-        if ( uselinesvector && ( linesread.size() == 0 ) )
-	{
-	    break;
-	}
-
 	buffer = "";
 
-	while ( ( buffer.length() == 0 ) && !datfile.eof() )
-	{
-	    getline(datfile,buffer);
-	}
+        if ( uselinesvector && ( linesread.size() == 0 ) ) { break; }
 
-	if ( buffer.length() == 0 )
-	{
-	    break;
-	}
+	while ( ( buffer.length() == 0 ) && !datfile.eof() ) { getline(datfile,buffer); }
 
-        if ( ( buffer.length() >= 2 ) && ( buffer[0] == '/' ) && ( buffer[1] == '/' ) )
-        {
-            goto goover;
-        }
+	if (   buffer.length() == 0                                                   ) { break;       }
+        if ( ( buffer.length() >= 2 ) && ( buffer[0] == '/' ) && ( buffer[1] == '/' ) ) { goto goover; }
 
 	goahead = 1;
 
 	if ( uselinesvector )
 	{
-	    if ( ij < linesread(0) )
-	    {
-		goahead = 0;
-	    }
-
-	    else
-	    {
-                NiceAssert( linesread(0) == ij );
-		linesread.remove(0);
-	    }
+	    if ( ij < linesread(0) ) { goahead = 0;                                           }
+	    else                     { NiceAssert( linesread(0) == ij ); linesread.remove(0); }
 	}
 
 	if ( goahead && ( ij >= ignoreStart ) )
@@ -393,7 +352,7 @@ int genericMLDataLoad(int binaryRelabel,
 //            if ( !(pointsadded%1000) ) { errstream() << "." << pointsadded; }
 //            else                       { errstream() << ".";                }
 
-            if ( !(pointsadded%1000) ) { errstream() << "." << pointsadded; }
+            if ( !(pointsadded%1000) ) { errstream() << "." << pointsadded;                                         }
             else                       { errstreamunlogged() << "."; nullPrint(errstreamunlogged(),pointsadded,-1); }
 
             // Load training vector from file
@@ -403,27 +362,11 @@ int genericMLDataLoad(int binaryRelabel,
                 // No target given in file
 
                 parselineML_Single(x,Cweight,epsweight,buffer,1); //!(mlbase.xspaceSparse()));
-
                 x.fix(); // get it ready.  This avoids possible non-threadsafe access to vectors
 
-                if ( realtargtype == 'N' )
-                {
-                    // No target for this type, so make target nullptr
-
-                    z.makeNull();
-                }
-
-                else
-                {
-                    // Target not given by file but given by user
-
-                    z = fromsingletarget;
-                }
-
-                if ( z.isValEqnDir() )
-                {
-                    z.scalarfn_setisscalarfn(1);
-                }
+                if ( realtargtype == 'N' ) { z.makeNull();                } // No target for this type, so make target nullptr
+                else                       { z = fromsingletarget;        } // Target not given by file but given by user
+                if ( z.isValEqnDir() )     { z.scalarfn_setisscalarfn(1); }
             }
 
             else
@@ -431,50 +374,26 @@ int genericMLDataLoad(int binaryRelabel,
                 // Target given in file - may or may not actually be used
 
                 parselineML_Generic(z,x,Cweight,epsweight,d,buffer,reverse,1); //!(mlbase.xspaceSparse()));
-
                 x.fix();
 
-                if ( coercetosingle )
-                {
-                    // No target for this type, so make target nullptr
-
-                    z.makeNull();
-                }
+                if ( coercetosingle ) { z.makeNull(); } // No target for this type, so make target nullptr
             }
 
             addtemptox(x,xtemplate);
 
             // Binary relabelling (if any)
 
-            if ( binaryRelabel )
+            if ( binaryRelabel && z.isValInteger() )
             {
-                if ( z.isValInteger() )
-                {
-                    if ( (int) z == binaryRelabel )
-                    {
-                        z = +1;
-                    }
-
-                    else
-                    {
-                        z = -1;
-                    }
-                }
+                if ( (int) z == binaryRelabel ) { z = +1; }
+                else                            { z = -1; }
             }
 
             // Class skipping (if any)
 
-            if ( singleDrop )
+            if ( singleDrop && z.isValInteger() )
             {
-                if ( z.isValInteger() )
-                {
-                    if ( (int) z == singleDrop )
-                    {
-                        // There is surely a nicer way to do this
-
-                        goto goover;
-                    }
-                }
+                if ( (int) z == singleDrop ) { goto goover; } // There is surely a nicer way to do this
             }
 
             // Use for training vector depends on task
@@ -511,6 +430,8 @@ int genericMLDataLoad(int binaryRelabel,
 
             else if ( ( 1 == mode ) || ( 2 == mode ) )
             {
+                gentype dummy;
+
                 // Task is to run tests.  Do not save x as testing file may
                 // be very large, but do keep everything else for reporting.
 
@@ -521,21 +442,12 @@ int genericMLDataLoad(int binaryRelabel,
 
                 outkernind.sv(outkernind.size()-1, x.isf4indpresent(3) ? (int) x.f4(3) : -1 );
 
-                if ( dovartest )
-                {
-                    gvarres.add(gvarres.size());
-                }
+                if ( dovartest ) { gvarres.add(gvarres.size()); }
 
                 ytest.set(ytest.size()-1,z);
-
                 mlbase.gh(ytestresh("&",ytestresh.size()-1),ytestresg("&",ytestresg.size()-1),x);
 
-                if ( dovartest )
-                {
-                    gentype dummy;
-
-                    mlbase.var(gvarres("&",gvarres.size()-1),dummy,x);
-                }
+                if ( dovartest ) { mlbase.var(gvarres("&",gvarres.size()-1),dummy,x); }
 
                 if ( 2 == mode )
                 {
@@ -651,30 +563,15 @@ int genericMLDataLoad(int binaryRelabel,
             //if ( isSVMScalar(mlbase) || isSVMVector(mlbase) || isSVMPlanar(mlbase) || isLSVScalar(mlbase) || isGPRScalar(mlbase) || isSSVScalar(mlbase) || isSVMSimLrn(mlbase) )
             if ( isSVMScalar(mlbase) || isSVMVector(mlbase) || isSVMPlanar(mlbase) || isLSVScalar(mlbase) || isLSVVector(mlbase) || isGPRScalar(mlbase) || isGPRVector(mlbase) || isSVMSimLrn(mlbase) )
             {
-                for ( i = 0 ; i < xi.size() ; ++i )
-                {
-                    xk = xi(i);
-
-                    if ( xd(i) != 2 )
-                    {
-                        (*mldest).setd(xk,xd(i));
-                    }
-                }
+                for ( i = 0 ; i < xi.size() ; ++i ) { xk = xi(i); if ( xd(i) != 2 ) { (*mldest).setd(xk,xd(i)); } }
             }
         }
     }
 
     errstream() << "\n";
 
-    if ( uselinesvector == 2 )
-    {
-        linesread = linesreadatstart;
-    }
-
-    if ( destfile )
-    {
-        MEMDEL(destfile); destfile = nullptr;
-    }
+    if ( uselinesvector == 2 ) { linesread = linesreadatstart;         }
+    if ( destfile            ) { MEMDEL(destfile); destfile = nullptr; }
 
     return pointsadded;
 }
@@ -692,15 +589,8 @@ int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemplate, Vec
 {
     Vector<gentype> y(yy);
 
-    if ( coercetosingle && !( mlbase.targType() == 'N' ) )
-    {
-        STRTHROW("Can't use u suffix as ML is not single class.");
-    }
-
-    if ( coercefromsingle && ( mlbase.targType() == 'N' ) )
-    {
-        STRTHROW("Can't use l suffix as ML is single class.");
-    }
+    if ( coercetosingle   && !( mlbase.targType() == 'N' ) ) { STRTHROW("Can't use u suffix as ML is not single class."); }
+    if ( coercefromsingle &&  ( mlbase.targType() == 'N' ) ) { STRTHROW("Can't use l suffix as ML is single class.");     }
 
     if ( coercefromsingle )
     {
@@ -711,66 +601,34 @@ int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemplate, Vec
 
     NiceAssert( x.size() == y.size() );
 
-    if ( ibase == -1 )
-    {
-        ibase = mlbase.N();
-    }
+    if ( ibase == -1 ) { ibase = mlbase.N(); }
 
     Vector<double> Cweight(sigmaweight.size());
     Vector<double> weightdummy(y.size());
 
     weightdummy = 1.0;
 
-    if ( x.size() )
+    for ( int i = 0 ; i < x.size() ; ++i )
     {
-        int i;
-
-        for ( i = 0 ; i < x.size() ; ++i )
+        for ( int iji = 0 ; iji < x(i).indsize() ; ++iji )
         {
-            if ( x(i).indsize() )
-            {
-                int iji;
-
-                for ( iji = 0 ; iji < x(i).indsize() ; ++iji )
-                {
-                    if ( (x(i).direcref(iji)).isValEqnDir() )
-                    {
-                        (x("&",i).direref(iji)).scalarfn_setisscalarfn(1);
-                    }
-                }
-            }
+            if ( (x(i).direcref(iji)).isValEqnDir() ) { (x("&",i).direref(iji)).scalarfn_setisscalarfn(1); }
         }
     }
 
-    if ( y.size() )
+    for ( int i = 0 ; i < y.size() ; ++i )
     {
-        int i;
-
-        for ( i = 0 ; i < y.size() ; ++i )
-        {
-            if ( y(i).isValEqnDir() )
-            {
-                y("&",i).scalarfn_setisscalarfn(1);
-            }
-        }
+        if ( y(i).isValEqnDir() ) { y("&",i).scalarfn_setisscalarfn(1); }
     }
 
-    if ( sigmaweight.size() )
+    for ( int i = 0 ; i < sigmaweight.size() ; ++i )
     {
-        int i;
-
-        for ( i = 0 ; i < sigmaweight.size() ; ++i )
-        {
-            Cweight.sv(i, 1.0/( ( ((double) sigmaweight(i)) < MINSWEIGHT ) ? MINSWEIGHT : ((double) sigmaweight(i)) ) );
-        }
+        Cweight.sv(i, 1.0/( ( ((double) sigmaweight(i)) < MINSWEIGHT ) ? MINSWEIGHT : ((double) sigmaweight(i)) ) );
     }
 
     int Nnew = mlbase.N() + x.size();
 
-    if ( mlbase.preallocsize() < Nnew )
-    {
-        mlbase.prealloc(Nnew+1);
-    }
+    if ( mlbase.preallocsize() < Nnew ) { mlbase.prealloc(Nnew+1); }
 
     addtemptox(x,xtemplate);
 
@@ -804,25 +662,16 @@ int addbasisdataUU(ML_Base &dest, const std::string &fname)
     {
         buffer = "";
 
-        while ( ( buffer.length() == 0 ) && !srcfile.eof() )
-        {
-            getline(srcfile,buffer);
-        }
+        while ( ( buffer.length() == 0 ) && !srcfile.eof() ) { getline(srcfile,buffer); }
 
-        if ( buffer.length() == 0 )
-        {
-            break;
-        }
+        if ( buffer.length() == 0 ) { break; }
 
         std::stringstream transit;
 
         transit << buffer;
         transit >> tempbasevec;
 
-        if ( tempbasevec.isValEqnDir() )
-        {
-            tempbasevec.scalarfn_setisscalarfn(1);
-        }
+        if ( tempbasevec.isValEqnDir() ) { tempbasevec.scalarfn_setisscalarfn(1); }
 
         dest.addToBasisUU(dest.NbasisUU(),tempbasevec);
         ++pointsadded;
@@ -855,25 +704,16 @@ int addbasisdataVV(ML_Base &dest, const std::string &fname)
     {
         buffer = "";
 
-        while ( ( buffer.length() == 0 ) && !srcfile.eof() )
-        {
-            getline(srcfile,buffer);
-        }
+        while ( ( buffer.length() == 0 ) && !srcfile.eof() ) { getline(srcfile,buffer); }
 
-        if ( buffer.length() == 0 )
-        {
-            break;
-        }
+        if ( buffer.length() == 0 ) { break; }
 
         std::stringstream transit;
 
         transit << buffer;
         transit >> tempbasevec;
 
-        if ( tempbasevec.isValEqnDir() )
-        {
-            tempbasevec.scalarfn_setisscalarfn(1);
-        }
+        if ( tempbasevec.isValEqnDir() ) { tempbasevec.scalarfn_setisscalarfn(1); }
 
         dest.addToBasisVV(dest.NbasisVV(),tempbasevec);
         ++pointsadded;
@@ -889,35 +729,14 @@ int addbasisdataVV(ML_Base &dest, const std::string &fname)
 
 SparseVector<gentype> &addtemptox(SparseVector<gentype> &x, const SparseVector<gentype> &xtemp)
 {
-    if ( xtemp.indsize() )
-    {
-        int i,ii;
-
-        for ( i = 0 ; i < xtemp.indsize() ; ++i )
-        {
-            ii = xtemp.ind(i);
-
-            if ( !(x.isindpresent(ii)) )
-            {
-                x("&",ii) = xtemp.direcref(i);
-            }
-        }
-    }
+    for ( int i = 0 ; i < xtemp.indsize() ; ++i ) { int ii = xtemp.ind(i); if ( !(x.isindpresent(ii)) ) { x("&",ii) = xtemp.direcref(i); } }
 
     return x;
 }
 
 Vector<SparseVector<gentype>> &addtemptox(Vector<SparseVector<gentype>> &x, const SparseVector<gentype> &xtemp)
 {
-    if ( x.size() )
-    {
-        int i;
-
-        for ( i = 0 ; i < x.size() ; ++i )
-        {
-            addtemptox(x("&",i),xtemp);
-        }
-    }
+    for ( int i = 0 ; i < x.size() ; ++i ) { addtemptox(x("&",i),xtemp); }
 
     return x;
 }

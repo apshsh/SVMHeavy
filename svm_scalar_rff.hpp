@@ -332,7 +332,7 @@ public:
     virtual int pretrain(void) override;
 
     virtual double loglikelihood(void) const override;
-    virtual double maxinfogain  (void) const override;
+    virtual double infogain     (void) const override;
     virtual double RKHSnorm     (void) const override;
     virtual double RKHSabs      (void) const override { return sqrt(RKHSnorm()); }
 

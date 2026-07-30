@@ -11,6 +11,9 @@
 #include "hyper_base.hpp"
 #include "randfun.hpp"
 #include "plotml.hpp"
+#include <thread>
+#include <atomic>
+#include <chrono>
 
 bool isisValNone(const gentype &val) { return val.isValNone(); }
 bool isisValNone(const double &)     { return false;           }
@@ -31,8 +34,13 @@ GlobalOptions::GlobalOptions()
         simRmin = 1;
         simRmax = 0;
         logyplot = 1;
+        xgridon = 1;
+        ygridon = 1;
 
         altallxres = nullptr;
+
+//        threadreps = true;
+        threadreps = false;
 
         maxtraintime = 0;
 
@@ -113,6 +121,69 @@ void GlobalOptions::delstuff(void)
 
 GlobalOptions::GlobalOptions(const GlobalOptions &src)
 {
+        ispydirect = false;
+
+        optname = "opt";
+
+        simname = "";
+        simoutformat = 2;
+        simfreq = 1;
+        simFmin = 1;
+        simFmax = 0;
+        simRmin = 1;
+        simRmax = 0;
+        logyplot = 1;
+        xgridon = 1;
+        ygridon = 1;
+
+        altallxres = nullptr;
+
+//        threadreps = true;
+        threadreps = false;
+
+        maxtraintime = 0;
+
+        softmin = valninf(); // 0;
+        softmax = valpinf(); // 1;
+        hardmin = valninf();
+        hardmax = valpinf();
+
+        penterm = 0.0;
+
+        isProjection  = 0;
+        includeConst  = 0;
+        whatConst     = 2.0;
+        randReproject = 0;
+        useScalarFn   = 1;
+        xxSampType    = 3;
+        xNsamp        = DEFAULT_SAMPLES_SAMPLE;
+        xSampSplit    = 1;
+        xSampType     = 0;
+        fnDim         = 1;
+        bernstart     = 1;
+
+//        priorrandDirtemplateFnGP.ssetMLTypeClean("gpr");   // GPR_Scalar
+
+        MLregfn = nullptr;
+
+        xwidth = 0;
+
+        MLregind = DEFAULT_MLREGIND;
+
+        randDirtemplate    = nullptr;
+        randDirtemplateInd = -1;
+        projOp             = nullptr;
+        projOpRaw          = nullptr;
+        projOpInd          = -1;
+
+        randDirtemplate = nullptr;
+
+        overfnitcnt = 0;
+
+        ismodel_convertx_simple = false;
+
+        needsReset = false;
+
     *this = src;
 }
 
@@ -124,16 +195,20 @@ GlobalOptions &GlobalOptions::operator=(const GlobalOptions &src)
 
     optname = src.optname;
 
-        simname = src.simname;
-        simoutformat = src.simoutformat;
-        simfreq = src.simfreq;
-        simFmin = src.simFmin;
-        simFmax = src.simFmax;
-        simRmin = src.simRmin;
-        simRmax = src.simRmax;
-        logyplot = src.logyplot;
+    simname = src.simname;
+    simoutformat = src.simoutformat;
+    simfreq = src.simfreq;
+    simFmin = src.simFmin;
+    simFmax = src.simFmax;
+    simRmin = src.simRmin;
+    simRmax = src.simRmax;
+    logyplot = src.logyplot;
+    xgridon = src.xgridon;
+    ygridon = src.ygridon;
 
     altallxres = src.altallxres;
+
+    threadreps = src.threadreps;
 
     maxtraintime = src.maxtraintime;
 
@@ -269,6 +344,48 @@ void GlobalOptions::reset(void)
 }
 
 
+void locRealOptim(GlobalOptions *that, int j, int numReps,
+                  std::atomic<int> *res, int dim,
+                  Vector<gentype> *xres,
+                  Vector<gentype> *Xres,
+                  gentype         *fres,
+                  Vector<gentype> *cres,
+                  gentype         *Fres,
+                  gentype         *mres,
+                  gentype         *sres,
+                  int             *ires,
+                  int             *mInd,
+                  Vector<Vector<gentype>> *allxres,
+                  Vector<Vector<gentype>> *allXres,
+                  Vector<gentype>         *allfres,
+                  Vector<Vector<gentype>> *allcres,
+                  Vector<gentype>         *allFres,
+                  Vector<gentype>         *allmres,
+                  Vector<gentype>         *allsres,
+                  Vector<double>          *s_score,
+                  Vector<int>             *is_feas,
+                  const Vector<gentype> *xmin,
+                  const Vector<gentype> *xmax,
+                  const Vector<int> *distMode,
+                  const Vector<int> *varsType,
+                  void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
+                  void *fnarg,
+                  svmvolatile int *killSwitch,
+                  std::atomic<int> *finrepcnt,
+                  std::atomic<bool> *alldone)
+{
+    getThreadID(); // make sure this thread ID is allocated first for log-file naming consistency
+
+    res += that->realOptim(dim,
+                           *xres,*Xres,*fres,*cres,*Fres,*mres,*sres,*ires,*mInd,
+                           *allxres,*allXres,*allfres,*allcres,*allFres,*allmres,*allsres,*s_score,*is_feas,
+                           *xmin,*xmax,*distMode,*varsType,fn,fnarg,*killSwitch);
+
+    if ( j != numReps-1 ) { that->reset(); }
+    if ( --(*finrepcnt) == 0 ) { *alldone = true; alldone->notify_one(); }
+}
+
+COMMONOPDEFPT(GlobalOptions);
 
 int GlobalOptions::optim(int dim,
                       Vector<gentype> &xres,
@@ -322,13 +439,37 @@ int GlobalOptions::optim(int dim,
             s_score.resize(nr);
             is_feas.resize(nr);
 
-            Vector<gentype> vecfres(nr);
-            Vector<gentype> vecFres(nr);
-            Vector<gentype> vecires(nr);
-            Vector<gentype> vectres(nr);
-            Vector<gentype> vecTres(nr);
+            Vector<Vector<gentype>> vecxres(nr);
+            Vector<Vector<gentype>> vecXres(nr);
+            Vector<gentype>         vecfres(nr);
+            Vector<Vector<gentype>> veccres(nr);
+            Vector<gentype>         vecFres(nr);
+            Vector<gentype>         vecmres(nr);
+            Vector<gentype>         vectres(nr);
+            Vector<gentype>         vecTres(nr);
+            Vector<gentype>         vecsres(nr);
+            Vector<gentype>         vecires(nr);
+            Vector<int>             vecIres(nr);
+            Vector<int>             vecmInd(nr);
 
             int maxxlen = 0;
+
+            std::atomic<int> locres(0);
+            std::atomic<int> finrepcnt(static_cast<int>(numReps)); // counter of number of threads still to run
+            std::atomic<bool> alldone(false); // set true when finrepcnt reaches zero (which is followed by notify_all)
+
+            Vector<GlobalOptions *> that(threadreps ? nr : 0);
+
+            if ( threadreps )
+            {
+                for ( int j = 0 ; j < that.size() ; ++j )
+                {
+                    if ( !j ) { that("&",j) = makeDup();            }
+                    else      { that("&",j) = that(j-1)->makeDup(); } // ensure seeds properly incremented
+                }
+
+                getThreadID(); // make sure this thread ID is allocated first for log-file naming consistency
+            }
 
             for ( size_t j = 0 ; j < numReps ; ++j )
             {
@@ -336,14 +477,99 @@ int GlobalOptions::optim(int dim,
 
                 //GlobalOptions *locopt = makeDup();
 
+                if ( threadreps )
+                {
+                    if ( j < numReps-1 )
+                    {
+                        std::thread t(locRealOptim,that("&",jj+1),jj+1,static_cast<int>(numReps),&locres,dim,
+                             &vecxres("&",jj+1),&vecXres("&",jj+1),&vecfres("&",jj+1),&veccres("&",jj+1),&vecFres("&",jj+1),&vecmres("&",jj+1),&vecsres("&",jj+1),&vecIres("&",jj+1),&vecmInd("&",jj+1),
+                             &allxres("&",jj+1),&allXres("&",jj+1),&allfres("&",jj+1),&allcres("&",jj+1),&allFres("&",jj+1),&allmres("&",jj+1),&allsres("&",jj+1),&s_score("&",jj+1),&is_feas("&",jj+1),
+                             &xmin,&xmax,&distMode,&varsType,fn,fnarg,&killSwitch,&finrepcnt,&alldone);
+                        t.detach();
+
+                        {
+                            // Brief pause to make sure thread has time to set threadID consistently (not guaranteed but highly likely)
+                            using namespace std::chrono_literals;
+                            std::this_thread::sleep_for(100ms);
+                        }
+                    }
+
+                    else
+                    {
+                        // Do the current thread last for obvious reasons (it blocks).
+
+                        realOptim(dim,
+                             vecxres("&",0),vecXres("&",0),vecfres("&",0),veccres("&",0),vecFres("&",0),vecmres("&",0),vecsres("&",0),vecIres("&",0),vecmInd("&",0),
+                             allxres("&",0),allXres("&",0),allfres("&",0),allcres("&",0),allFres("&",0),allmres("&",0),allsres("&",0),s_score("&",0),is_feas("&",0),
+                             xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+
+                        reset();
+                        if ( --finrepcnt == 0 ) { alldone = true; alldone.notify_one(); }
+                    }
+                }
+
+                else
+                {
+                    realOptim(dim,
+                             vecxres("&",jj),vecXres("&",jj),vecfres("&",jj),veccres("&",jj),vecFres("&",jj),vecmres("&",jj),vecsres("&",jj),vecIres("&",jj),vecmInd("&",jj),
+                             allxres("&",jj),allXres("&",jj),allfres("&",jj),allcres("&",jj),allFres("&",jj),allmres("&",jj),allsres("&",jj),s_score("&",jj),is_feas("&",jj),
+                             xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+
+                    reset();
+                    if ( --finrepcnt == 0 ) { alldone = true; alldone.notify_one(); }
+                }
+
+/*
                 res += realOptim(dim,
-                                 xres,Xres,fres,cres,Fres,mres,sres,ires,mInd,
+                                 vecxres("&",jj),vecXres("&",jj),vecfres("&",jj),veccres("&",jj),vecFres("&",jj),vecmres("&",jj),vecsres("&",jj),vecIres("&",jj),vecmInd("&",jj),
                                  allxres("&",jj),allXres("&",jj),allfres("&",jj),allcres("&",jj),allFres("&",jj),allmres("&",jj),allsres("&",jj),s_score("&",jj),is_feas("&",jj),
                                  xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
-                vecfres("&",jj) = fres;
-                vecFres("&",jj) = Fres;
-                vecires("&",jj) = ires;
+                if ( j != numReps-1 ) { reset(); }
+
+                if ( --finrepcnt == 0 ) { alldone = true; alldone.notify_one(); }
+*/
+            }
+
+            alldone.wait(false); // wait until all threads have finished
+            res = locres;
+
+            if ( threadreps )
+            {
+                for ( int j = 0 ; j < that.size() ; ++j )
+                {
+                    MEMDEL(that("&",j));
+                }
+            }
+
+            for ( size_t j = 0 ; j < numReps ; ++j )
+            {
+                int jj = static_cast<int>(j);
+
+                vecires("&",jj) = vecIres(jj);
+
+                if ( j == numReps-1 ) // !j || ( fres < vecfres(jj) ) )
+                {
+                    xres = vecxres(jj);
+                    Xres = vecXres(jj);
+                    fres = vecfres(jj);
+                    Fres = vecFres(jj);
+                    cres = veccres(jj);
+                    cres = vecFres(jj);
+                    mres = vecmres(jj);
+                    sres = vecsres(jj);
+                    ires = vecIres(jj);
+                    mInd = vecmInd(jj);
+                }
+            }
+
+            for ( size_t j = 0 ; j < numReps ; ++j )
+            {
+                int jj = static_cast<int>(j);
+
+                //vecfres("&",jj) = infres;
+                //vecFres("&",jj) = inFres;
+                //vecires("&",jj) = inires;
 
                 // Sort allmres(j) to be strictly decreasing!
 
@@ -368,8 +594,6 @@ int GlobalOptions::optim(int dim,
 
                 findfirstLT(vectres("&",jj),allmres(jj),softmin);
                 findfirstLT(vecTres("&",jj),allmres(jj),hardmin);
-
-                if ( j != numReps-1 ) { reset(); }
             }
 
             calcmeanvar(meanfres,varfres,vecfres);
@@ -469,7 +693,7 @@ int GlobalOptions::optim(int dim,
 
         if ( simfreq )
         {
-            plotregret(locsimname,resmeanallFres,resmeanallmres,resvarallmres,resname,resallFres,resallfres,1,logyplot);
+            plotregret(locsimname,resmeanallFres,resmeanallmres,resvarallmres,resname,resallFres,resallfres,1,logyplot,xgridon,ygridon);
         }
 
         needsReset = true;
@@ -485,7 +709,9 @@ void GlobalOptions::plotregret(const std::string &locsimname,
                                const Vector<Vector<Vector<gentype>>> &allFres,
                                const Vector<Vector<Vector<gentype>>> &allfres,
                                int plotdata,
-                               int plotlogy)
+                               int plotlogy,
+                               int xgrid,
+                               int ygrid)
 {
     int numcurves = resmeanallFres.size();
 
@@ -607,15 +833,15 @@ void GlobalOptions::plotregret(const std::string &locsimname,
 //errstream() << "xequ = " << xequ << "\n";
 //errstream() << "yequ = " << yequ << "\n";
 //}
-            plot2d(xdata,ydata,yvar,ybaseline,xpos,ypos,xneg,yneg,xequ,yequ,simFmin,simFmax,simRmin,simRmax,plotname,plotname+"_dat",simoutformat,incdata,incvar,plotlogy);
+            plot2d(xdata,ydata,yvar,ybaseline,xpos,ypos,xneg,yneg,xequ,yequ,simFmin,simFmax,simRmin,simRmax,space2under(plotname),space2under(plotname+"_dat"),simoutformat,incdata,incvar,plotlogy,xgrid,ygrid);
         }
     }
 
     if ( numcurves > 1 )
     {
-        std::string title("Regret convergence");
+        std::string title(""); //"Regret convergence");
 
-        multiplot2d(resxdata,resydata,resyvar,resname,simFmin,simFmax,simRmin,simRmax,plotname,plotname+"_dat",simoutformat,title,incvar,plotlogy);
+        multiplot2d(resxdata,resydata,resyvar,resname,simFmin,simFmax,simRmin,simRmax,space2under(plotname),space2under(plotname+"_dat"),simoutformat,title,incvar,plotlogy,xgrid,ygrid);
     }
 
     return;
@@ -1471,8 +1697,8 @@ void overfn(gentype &res, Vector<gentype> &x, void *arg)
     if ( actualtest )
     {
         int &counter = gopts.overfnitcnt;
-//static thread_local int counter = 0;
-////static int lineblank = 0;
+//thread_local int counter = 0;
+////statiic int lineblank = 0;
 counter++;
 resbuffer << " (" << counter << ")"; //                ";
 //blankPrint(outstream(),lineblank);

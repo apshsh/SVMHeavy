@@ -195,7 +195,7 @@ void testSparSens   (                                   std::string &logfile, co
 void testFileVectors(int binaryRelabel, int singleDrop, std::string &logfile, const ML_Mutable &svmbase, std::string &tfilename, int reverse, int ignoreStart, int imax,            int &firstsum, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, gentype &finalresult, int uselinesvector, Vector<int> &linesread,                                                                                                            const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num),                const SparseVector<gentype> &xtemplate);
 void testTest       (                                   std::string &logfile, const ML_Mutable &svmbase, const Vector<SparseVector<gentype>> &xtest, const Vector<gentype> &ytest, int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int startpoint, int suppressfb, int useThreads);
 void testnegloglike (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables,                                            int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
-void testmaxinfogain(                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables,                                            int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
+void testinfogain   (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables,                                            int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
 void testRKHSnorm   (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables,                                            int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
 
 
@@ -7463,7 +7463,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         else if ( (currcommand(0)).substr(0,4) == "-tmg" )
                         {
-                            testmaxinfogain(logfile,getMLrefconst(MLInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
+                            testinfogain(logfile,getMLrefconst(MLInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,6) == "-ta" )
@@ -11232,7 +11232,7 @@ void testnegloglike(std::string &logfile, const ML_Mutable &svmbase, int &firsts
     return;
 }
 
-void testmaxinfogain(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
+void testinfogain(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
 {
     (void) getsetExtVar;
     (void) logfile;
@@ -11240,7 +11240,7 @@ void testmaxinfogain(std::string &logfile, const ML_Mutable &svmbase, int &first
 
     double res = 0.0;
 
-    res = calcmaxinfogain(svmbase.getMLconst());
+    res = calcinfogain(svmbase.getMLconst());
 
     errstream() << "\n";
 
@@ -11779,10 +11779,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         namely -fV n $f  and -fW n f,  which let  you set  var(0,n) = f (with\n" : "" );
     output << ( (          advanced ) ? "         -fV being unevaluated  and -fW evaluated), and  -echo x, which simply\n" : "" );
     output << ( (          advanced ) ? "         evaluates x and echoes it to standard out.                           \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "Python calls: the function  pycall(\"some.py\",x)  lets you  evaluate the python\n" : "" );
-    output << ( (          advanced ) ? "         code some.py x (via  a system call python3 some.py x).  The result is\n" : "" );
-    output << ( (          advanced ) ? "         read from the file pyres.txt, which some.py needs to create.         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "System calls: the function  syscall(\"some.exe\",x) lets you make a  system call\n" : "" );
     output << ( (          advanced ) ? "         code some.exe x.  The result  isread from the  file pyres.txt,  which\n" : "" );

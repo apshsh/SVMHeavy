@@ -23,16 +23,6 @@
 #define _numbase_h
 
 // Assume at least cpp14
-#ifdef IS_CPP11
-#undef IS_CPP11
-#endif
-#define IS_CPP11
-
-#ifdef IS_CPP14
-#undef IS_CPP14
-#endif
-#define IS_CPP14
-
 #ifdef IS_CPP23
 #ifdef IS_CPP20
 #undef IS_CPP20

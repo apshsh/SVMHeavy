@@ -365,8 +365,8 @@ public:
     virtual int setRestrictEpsPos(void) override; // This is the default for regression
     virtual int setRestrictEpsNeg(void) override; // This is used for classification
 
-    virtual int setnu    (double xnuLin)  override { NiceAssert( xnuLin  >= 0 ); isStateOpt = 0; isQuasiLogLikeCalced = 0; isMaxInfGainCalced = 0; nuLin   = xnuLin;  return 0; }
-    virtual int setnuQuad(double xnuQuad) override { NiceAssert( xnuQuad >= 0 ); isStateOpt = 0; isQuasiLogLikeCalced = 0; isMaxInfGainCalced = 0; nuQuadv = xnuQuad; return 0; }
+    virtual int setnu    (double xnuLin)  override { NiceAssert( xnuLin  >= 0 ); isStateOpt = 0; isQuasiLogLikeCalced = 0; isInfGainCalced = 0; nuLin   = xnuLin;  return 0; }
+    virtual int setnuQuad(double xnuQuad) override { NiceAssert( xnuQuad >= 0 ); isStateOpt = 0; isQuasiLogLikeCalced = 0; isInfGainCalced = 0; nuQuadv = xnuQuad; return 0; }
 
     virtual int setatonce(void) override { return 0; }
     virtual int setredbin(void) override { return 0; }
@@ -473,7 +473,7 @@ public:
     virtual Matrix<double> &dedKTrainingVector(Matrix<double> &res) const override;
 
     virtual double loglikelihood(void) const override;
-    virtual double maxinfogain  (void) const override;
+    virtual double infogain     (void) const override;
     virtual double RKHSnorm     (void) const override;
     virtual double RKHSabs      (void) const override { return sqrt(RKHSnorm()); }
 
@@ -742,11 +742,11 @@ private:
 public:
     int isStateOpt;           // set if SVM is in optimal state
     mutable int isQuasiLogLikeCalced; // set if quasi log likelihood is calculated
-    mutable int isMaxInfGainCalced;   // set if max info gain is calculated
+    mutable int isInfGainCalced;      // set if info gain is calculated
 private:
 
     mutable double quasiloglike;
-    mutable double quasimaxinfogain;
+    mutable double quasiinfogain;
 
     // Training data
 
@@ -1003,9 +1003,9 @@ inline void SVM_Scalar::qswapinternal(ML_Base &bb)
         qswap(Nnc                        ,b.Nnc                        );
         qswap(isStateOpt                 ,b.isStateOpt                 );
         qswap(isQuasiLogLikeCalced       ,b.isQuasiLogLikeCalced       );
-        qswap(isMaxInfGainCalced         ,b.isMaxInfGainCalced         );
+        qswap(isInfGainCalced            ,b.isInfGainCalced            );
         qswap(quasiloglike               ,b.quasiloglike               );
-        qswap(quasimaxinfogain           ,b.quasimaxinfogain           );
+        qswap(quasiinfogain              ,b.quasiinfogain              );
         qswap(traintarg                  ,b.traintarg                  );
         qswap(trainclass                 ,b.trainclass                 );
         qswap(Cweightval                 ,b.Cweightval                 );
@@ -1160,10 +1160,10 @@ inline void SVM_Scalar::semicopy(const ML_Base &bb)
     isStateOpt           = b.isStateOpt;
 
     isQuasiLogLikeCalced = b.isQuasiLogLikeCalced;
-    isMaxInfGainCalced   = b.isMaxInfGainCalced;
+    isInfGainCalced      = b.isInfGainCalced;
 
-    quasiloglike     = b.quasiloglike;
-    quasimaxinfogain = b.quasimaxinfogain;
+    quasiloglike  = b.quasiloglike;
+    quasiinfogain = b.quasiinfogain;
 
     linbiasforceval  = b.linbiasforceval;
     CNval            = b.CNval;
@@ -1258,10 +1258,10 @@ inline void SVM_Scalar::assign(const ML_Base &bb, int onlySemiCopy)
     isStateOpt           = src.isStateOpt;
 
     isQuasiLogLikeCalced = src.isQuasiLogLikeCalced;
-    isMaxInfGainCalced   = src.isMaxInfGainCalced;
+    isInfGainCalced      = src.isInfGainCalced;
 
-    quasiloglike     = src.quasiloglike;
-    quasimaxinfogain = src.quasimaxinfogain;
+    quasiloglike  = src.quasiloglike;
+    quasiinfogain = src.quasiinfogain;
 
     traintarg      = src.traintarg;
     trainclass     = src.trainclass;

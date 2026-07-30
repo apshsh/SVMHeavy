@@ -306,7 +306,7 @@ public:
     // Information functions:
 
     virtual double loglikelihood(void) const override;
-    virtual double maxinfogain  (void) const override;
+    virtual double infogain     (void) const override;
     virtual double RKHSnorm     (void) const override;
     virtual double RKHSabs      (void) const override;
 
@@ -446,27 +446,18 @@ private:
     mutable Vector<gentype> localy;
     mutable int localygood; // 0 not good, 1 good, -1 individual components good, sum bad
 
-    int numReps(void) const
-    {
-        return mlqlist().indsize();
-    }
+    int numReps(void) const { return mlqlist().indsize(); }
 
     const ML_Base &getRepConst(int i = -1) const
     {
-        if ( numReps() )
-        {
-            return *(mlqlist().direcref( ( i >= 0 ) ? i : numReps()-1 ));
-        }
+        if ( numReps() ) { return *(mlqlist().direcref( ( i >= 0 ) ? i : numReps()-1 )); }
 
         return defbase;
     }
 
     ML_Base &getRep(int i = -1)
     {
-        if ( numReps() )
-        {
-            return *(mlqlist().direcref( ( i >= 0 ) ? i : numReps()-1 ));
-        }
+        if ( numReps() ) { return *(mlqlist().direcref( ( i >= 0 ) ? i : numReps()-1 )); }
 
         return defbase;
     }
@@ -475,20 +466,9 @@ private:
     {
         double res = 0.0;
 
-        if ( numReps() && !getmlqmode() )
-        {
-            res = (mlqweight().direcref( ( i >= 0 ) ? i : 0 )).cast_double();
-        }
-
-        else if ( numReps() && getmlqmode() && !iscov )
-        {
-            res = 1.0;
-        }
-
-        else if ( numReps() && getmlqmode() && iscov )
-        {
-            res = ( i == numReps()-1 ) ? 1.0 : 0.0; // only the final term contributes to posterior variance
-        }
+        if      ( numReps() && !getmlqmode()           ) { res = (mlqweight().direcref( ( i >= 0 ) ? i : 0 )).cast_double(); }
+        else if ( numReps() &&  getmlqmode() && !iscov ) { res = 1.0;                                                        }
+        else if ( numReps() &&  getmlqmode() &&  iscov ) { res = ( i == numReps()-1 ) ? 1.0 : 0.0; } // only the final term contributes to posterior variance
 
         return res;
     }
@@ -546,6 +526,9 @@ inline void BLK_Conect::qswapinternal(ML_Base &bb)
 
     BLK_Generic::qswapinternal(b);
 
+    qswap(defbase,b.defbase);
+    qswap(combit ,b.combit );
+
     qswap(localy     ,b.localy     );
     qswap(localyparts,b.localyparts);
     qswap(localygood ,b.localygood );
@@ -572,6 +555,9 @@ inline void BLK_Conect::semicopy(const ML_Base &bb)
 
     BLK_Generic::semicopy(b);
 
+    defbase = b.defbase;
+    combit  = b.combit;
+
     localyparts = b.localyparts;
     localy      = b.localy;
     localygood  = b.localygood;
@@ -597,6 +583,9 @@ inline void BLK_Conect::assign(const ML_Base &bb, int onlySemiCopy)
     const BLK_Conect &src = dynamic_cast<const BLK_Conect &>(bb.getMLconst());
 
     BLK_Generic::assign(src,onlySemiCopy);
+
+    defbase = src.defbase;
+    combit  = src.combit;
 
     localyparts = src.localyparts;
     localy      = src.localy;

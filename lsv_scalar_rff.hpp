@@ -102,7 +102,7 @@ public:
     // Likelihood
 
     virtual double loglikelihood(void) const override { return getQQQconst().loglikelihood(); }
-    virtual double maxinfogain  (void) const override { return getQQQconst().maxinfogain  (); }
+    virtual double infogain     (void) const override { return getQQQconst().infogain     (); }
     virtual double RKHSnorm     (void) const override { return getQQQconst().RKHSnorm     (); }
     virtual double RKHSabs      (void) const override { return getQQQconst().RKHSabs      (); }
 

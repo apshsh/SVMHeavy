@@ -261,13 +261,7 @@ public:
     {
         int iP = -1;
 
-        for ( iP = 0 ; iP < aNLB() ; ++iP )
-        {
-            if ( pivAlphaLB(iP) == i )
-            {
-                break;
-            }
-        }
+        for ( iP = 0 ; iP < aNLB() ; ++iP ) { if ( pivAlphaLB(iP) == i ) { break; } }
 
         NiceAssert( iP >= 0 );
         NiceAssert( iP < aNLB() );
@@ -279,13 +273,7 @@ public:
     {
         int iP = -1;
 
-        for ( iP = 0 ; iP < aNZ() ; ++iP )
-        {
-            if ( pivAlphaZ(iP) == i )
-            {
-                break;
-	    }
-        }
+        for ( iP = 0 ; iP < aNZ() ; ++iP ) { if ( pivAlphaZ(iP) == i ) { break; } }
 
         NiceAssert( iP >= 0 );
         NiceAssert( iP < aNZ() );
@@ -297,13 +285,7 @@ public:
     {
         int iP = -1;
 
-        for ( iP = 0 ; iP < aNUB() ; ++iP )
-        {
-            if ( pivAlphaUB(iP) == i )
-            {
-                break;
-	    }
-        }
+        for ( iP = 0 ; iP < aNUB() ; ++iP ) { if ( pivAlphaUB(iP) == i ) { break; } }
 
         NiceAssert( iP >= 0 );
         NiceAssert( iP < aNUB() );
@@ -315,13 +297,7 @@ public:
     {
         int iP = -1;
 
-        for ( iP = 0 ; iP < aNF() ; ++iP )
-        {
-            if ( pivAlphaF(iP) == i )
-            {
-                break;
-	    }
-        }
+        for ( iP = 0 ; iP < aNF() ; ++iP ) { if ( pivAlphaF(iP) == i ) { break; } }
 
         NiceAssert( iP >= 0 );
         NiceAssert( iP < aNF() );
@@ -333,13 +309,7 @@ public:
     {
         int iP = -1;
 
-        for ( iP = 0 ; iP < bNC() ; ++iP )
-        {
-            if ( pivBetaC(iP) == i )
-            {
-                break;
-	    }
-        }
+        for ( iP = 0 ; iP < bNC() ; ++iP ) { if ( pivBetaC(iP) == i ) { break; } }
 
         NiceAssert( iP >= 0 );
         NiceAssert( iP < bNC() );
@@ -351,13 +321,7 @@ public:
     {
         int iP = -1;
 
-        for ( iP = 0 ; iP < bNF() ; ++iP )
-        {
-            if ( pivBetaF(iP) == i )
-            {
-                break;
-            }
-        }
+        for ( iP = 0 ; iP < bNF() ; ++iP ) { if ( pivBetaF(iP) == i ) { break; } }
 
         NiceAssert( iP >= 0 );
         NiceAssert( iP < bNF() );
@@ -404,10 +368,7 @@ public:
         pAlphaF.add(pAlphaF.size());
         pAlphaF.sv(pAlphaF.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -453,10 +414,7 @@ public:
         pAlphaF.add(pAlphaF.size());
         pAlphaF.sv(pAlphaF.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -502,10 +460,7 @@ public:
         pAlphaLB.add(pAlphaLB.size());
         pAlphaLB.sv(pAlphaLB.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -533,10 +488,7 @@ public:
         pAlphaZ.add(pAlphaZ.size());
         pAlphaZ.sv(pAlphaZ.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -578,10 +530,7 @@ public:
         pAlphaUB.add(pAlphaUB.size());
         pAlphaUB.sv(pAlphaUB.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -627,10 +576,7 @@ public:
         pAlphaF.add(pAlphaF.size());
         pAlphaF.sv(pAlphaF.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -658,10 +604,7 @@ public:
         pAlphaF.add(pAlphaF.size());
         pAlphaF.sv(pAlphaF.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -707,10 +650,7 @@ public:
         pAlphaLB.add(pAlphaLB.size());
         pAlphaLB.sv(pAlphaLB.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -752,10 +692,7 @@ public:
         pAlphaZ.add(pAlphaZ.size());
         pAlphaZ.sv(pAlphaZ.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -783,10 +720,7 @@ public:
         pAlphaUB.add(pAlphaUB.size());
         pAlphaUB.sv(pAlphaUB.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { shrinkFactAlpha(i,iP,Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -832,10 +766,7 @@ public:
         pAlphaF.add(pAlphaF.size());
         pAlphaF.sv(pAlphaF.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -881,10 +812,7 @@ public:
         pAlphaF.add(pAlphaF.size());
         pAlphaF.sv(pAlphaF.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { insertPos = extendFactAlpha(Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -910,10 +838,7 @@ public:
         pBetaF.add(pBetaF.size());
         pBetaF.sv(pBetaF.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    insertPos = extendFactBeta(Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { insertPos = extendFactBeta(Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -939,10 +864,7 @@ public:
         pBetaC.add(pBetaC.size());
         pBetaC.sv(pBetaC.size()-1,i);
 
-        if ( dkeepfact )
-        {
-	    shrinkFactBeta(iP,Gp,Gn,Gpn,apos,bpos);
-        }
+        if ( dkeepfact ) { shrinkFactBeta(iP,Gp,Gn,Gpn,apos,bpos); }
 
         return insertPos;
     }
@@ -965,15 +887,8 @@ public:
 
         while ( aNF() )
         {
-	    if ( alphaState(pivAlphaF(aNF()-1)) == -1 )
-	    {
-	        modAlphaLFtoLB(aNF()-1,Gp,Gn,Gpn,apos,bpos);
-	    }
-
-            else
-	    {
-	        modAlphaUFtoZ(aNF()-1,Gp,Gn,Gpn,apos,bpos);
-	    }
+	    if ( alphaState(pivAlphaF(aNF()-1)) == -1 ) { modAlphaLFtoLB(aNF()-1,Gp,Gn,Gpn,apos,bpos); }
+            else                                        { modAlphaUFtoZ (aNF()-1,Gp,Gn,Gpn,apos,bpos); }
         }
 
         return;
@@ -990,15 +905,8 @@ public:
 
         while ( aNF() )
         {
-	    if ( alphaState(pivAlphaF(aNF()-1)) == -1 )
-	    {
-	        modAlphaLFtoZ(aNF()-1,Gp,Gn,Gpn,apos,bpos);
-	    }
-
-	    else
-	    {
-	        modAlphaUFtoUB(aNF()-1,Gp,Gn,Gpn,apos,bpos);
-	    }
+	    if ( alphaState(pivAlphaF(aNF()-1)) == -1 ) { modAlphaLFtoZ (aNF()-1,Gp,Gn,Gpn,apos,bpos); }
+	    else                                        { modAlphaUFtoUB(aNF()-1,Gp,Gn,Gpn,apos,bpos); }
         }
 
         return;
@@ -1115,10 +1023,7 @@ public:
         // No point doing this before the update as we'll need to complete
         // restart afterwards.
         //
-        //if ( dkeepfact && betaFixUpdate )
-        //{
-        //    fixbetaFix(Gn,Gpn);
-        //}
+        //if ( dkeepfact && betaFixUpdate ) { fixbetaFix(Gn,Gpn); }
 
         retVector<double> tmpva;
         retVector<double> tmpvc;
@@ -1198,10 +1103,7 @@ public:
 
         int retval = dnfact;
 
-        if ( fact_nofact(Gn,Gpn) )
-        {
-            retval = fact_pfact(Gn,Gpn);
-        }
+        if ( fact_nofact(Gn,Gpn) ) { retval = fact_pfact(Gn,Gpn); }
 
         return retval;
     }
@@ -1238,23 +1140,11 @@ public:
     {
         NiceAssert( dkeepfact );
 
-        int i;
-
-        if ( betaFixUpdate )
-        {
-            fixbetaFix(Gn,Gpn);
-        }
+        if ( betaFixUpdate ) { fixbetaFix(Gn,Gpn); }
 
         int bNFgood = 0;
 
-	for ( i = 0 ; i < bNF() ; ++i )
-	{
-	    if ( !(betaFix.v(i)) )
-	    {
-		++bNFgood;
-                break; // we have the answer, so get out, no need to waste time.
-	    }
-	}
+	for ( int i = 0 ; i < bNF() ; ++i ) { if ( !(betaFix.v(i)) ) { ++bNFgood; break; } } // we have the answer, so get out, no need to waste time.
 
         return ( !(freeVarChol.ngood()) && aNF() && bNFgood );
     }
@@ -1384,349 +1274,232 @@ private:
 
     void fixfact(const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, int &apos, int &bpos, int &aposalt, int &bposalt)
     {
-      //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
-      NiceAssert( Gn.isSquare() );
-      NiceAssert( Gp.numRows() == Gpn.numRows() );
-      NiceAssert( Gn.numCols() == Gpn.numCols() );
-      NiceAssert( Gpn.numRows() == aN() );
-      NiceAssert( Gpn.numCols() == bN() );
-      NiceAssert( dkeepfact );
+        //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
+        NiceAssert( Gn.isSquare() );
+        NiceAssert( Gp.numRows() == Gpn.numRows() );
+        NiceAssert( Gn.numCols() == Gpn.numCols() );
+        NiceAssert( Gpn.numRows() == aN() );
+        NiceAssert( Gpn.numCols() == bN() );
+        NiceAssert( dkeepfact );
 
-      if ( dkeepfact && (betaFixUpdate) )
-      {
-        fixbetaFix(Gn,Gpn);
-      }
+        if ( dkeepfact && (betaFixUpdate) ) { fixbetaFix(Gn,Gpn); }
 
-      int iP,jP,fpos;
+        int fpos;
 
-      // Clean up the factorisation by removing any betas in the singular
-      // part of the factorisation.
+        // Clean up the factorisation by removing any betas in the singular
+        // part of the factorisation.
 
-      retMatrix<double> tmpmGp;
-      retMatrix<double> tmpmGn;
-      retMatrix<double> tmpmGpn;
+        retMatrix<double> tmpmGp;
+        retMatrix<double> tmpmGn;
+        retMatrix<double> tmpmGpn;
 
-      if ( fBetaF.size() )
-      {
-	while ( ( fpos = max(fBetaF,iP) ) >= freeVarChol.ngood() )
-	{
-	    if ( iP != (pBetaF.size())-1 )
+        if ( fBetaF.size() )
+        {
+            int iP = 0;
+
+            while ( ( fpos = max(fBetaF,iP) ) >= freeVarChol.ngood() )
 	    {
-		if ( bpos == iP )
-		{
-		    bpos = pBetaF.size()-1;
-		}
+	        if ( iP != (pBetaF.size())-1 )
+	        {
+		    if      ( bpos == iP              ) { bpos = pBetaF.size()-1; }
+		    else if ( bpos == pBetaF.size()-1 ) { bpos = iP;              }
 
-		else if ( bpos == pBetaF.size()-1 )
-		{
-		    bpos = iP;
-		}
+		    if      ( bposalt == iP              ) { bposalt = pBetaF.size()-1; }
+		    else if ( bposalt == pBetaF.size()-1 ) { bposalt = iP;              }
 
-		if ( bposalt == iP )
-		{
-		    bposalt = pBetaF.size()-1;
-		}
+		    pBetaF.squareswap(iP,pBetaF.size()-1);
+		    fBetaF.squareswap(iP,pBetaF.size()-1);
+	        }
 
-		else if ( bposalt == pBetaF.size()-1 )
-		{
-		    bposalt = iP;
-		}
+		for ( int jP = 0 ; jP < fAlphaF.size() ; ++jP ) { if ( fAlphaF.v(jP) > fpos ) { --(fAlphaF("&",jP)); } }
 
-		pBetaF.squareswap(iP,pBetaF.size()-1);
-		fBetaF.squareswap(iP,pBetaF.size()-1);
+	        fBetaF.sv(pBetaF.size()-1,-1);
+	        --dnfact;
+
+	        D.remove(fpos);
+	        freeVarChol.remove(fpos,Gp(pAlphaF,pAlphaF,tmpmGp),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1));
+	        dpfact = (freeVarChol.npos())-(freeVarChol.nbadpos());
 	    }
+        }
 
-	    //if ( fAlphaF.size() )
+        NiceAssert( (freeVarChol.ngood()) >= dnfact );
+
+        int outerdone = 0;
+        int innerdone = 0;
+        int newpos;
+        int oldpos;
+
+        retVector<int> tmpva;
+
+        while ( !outerdone )
+        {
+	    outerdone = 1;
+
+	    // add as many elements from pBetaF as possible
+
+	    innerdone = 0;
+
+	    while ( !innerdone && ( dnfact < pBetaF.size() ) )
 	    {
-		for ( jP = 0 ; jP < fAlphaF.size() ; ++jP )
-		{
-		    if ( fAlphaF.v(jP) > fpos )
+                innerdone = 1;
+
+	        for ( int iP = dnfact ; iP < pBetaF.size() ; ++iP )
+	        {
+		    if ( !(betaFix.v(pivBetaF(iP))) )
 		    {
-			--(fAlphaF("&",jP));
-		    }
-		}
-	    }
+		        if ( iP > dnfact )
+		        {
+			    if      ( bpos == iP     ) { bpos = dnfact; }
+			    else if ( bpos == dnfact ) { bpos = iP;     }
 
-	    fBetaF.sv(pBetaF.size()-1,-1);
-	    --dnfact;
+			    if      ( bposalt == iP     ) { bposalt = dnfact; }
+			    else if ( bposalt == dnfact ) { bposalt = iP;     }
 
-	    D.remove(fpos);
-	    freeVarChol.remove(fpos,Gp(pAlphaF,pAlphaF,tmpmGp),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1));
-	    dpfact = (freeVarChol.npos())-(freeVarChol.nbadpos());
-	}
-      }
+			    pBetaF.squareswap(iP,dnfact);
+			    fBetaF.squareswap(iP,dnfact);
+		        }
 
-      NiceAssert( (freeVarChol.ngood()) >= dnfact );
+		        fBetaF.sv(dnfact,freeVarChol.ngood());
+		        ++dnfact;
 
-      int outerdone = 0;
-      int innerdone = 0;
-      int newpos;
-      int oldpos;
+		        D.add(freeVarChol.ngood());
+		        D.sv(freeVarChol.ngood(),-1);
+		        freeVarChol.add(freeVarChol.ngood(),D.v(freeVarChol.ngood()),Gp(pAlphaF,pAlphaF,tmpmGp),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1));
+		        dpfact = (freeVarChol.npos())-(freeVarChol.nbadpos());
 
-      retVector<int> tmpva;
+		        if ( freeVarChol.ngood() > fBetaF.v(dnfact-1) )
+		        {
+			    innerdone = 0;
+                            outerdone = 0;
 
-      while ( !outerdone )
-      {
-	outerdone = 1;
+			    for ( int jP = 0 ; jP < fAlphaF.size() ; ++jP ) { if ( fAlphaF.v(jP) >= fBetaF.v(dnfact-1) ) { ++(fAlphaF("&",jP)); } }
 
-	// add as many elements from pBetaF as possible
+			    break;
+		        }
 
-	innerdone = 0;
+		        else
+		        {
+                            NiceAssert( freeVarChol.ngood() == fBetaF(dnfact-1) );
 
-	while ( !innerdone && ( dnfact < pBetaF.size() ) )
-	{
-            innerdone = 1;
+			    --dnfact;
+			    fBetaF.sv(dnfact,-1);
 
-	    for ( iP = dnfact ; iP < pBetaF.size() ; ++iP )
-	    {
-		if ( !(betaFix.v(pivBetaF(iP))) )
-		{
-		    if ( iP > dnfact )
-		    {
-			if ( bpos == iP )
-			{
-			    bpos = dnfact;
-			}
+			    D.remove(freeVarChol.ngood());
+			    freeVarChol.remove(freeVarChol.ngood(),Gp(pAlphaF,pAlphaF,tmpmGp),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1));
+			    dpfact = (freeVarChol.npos())-(freeVarChol.nbadpos());
 
-			else if ( bpos == dnfact )
-			{
-			    bpos = iP;
-			}
-
-			if ( bposalt == iP )
-			{
-			    bposalt = dnfact;
-			}
-
-			else if ( bposalt == dnfact )
-			{
-			    bposalt = iP;
-			}
-
-			pBetaF.squareswap(iP,dnfact);
-			fBetaF.squareswap(iP,dnfact);
-		    }
-
-		    fBetaF.sv(dnfact,freeVarChol.ngood());
-		    ++dnfact;
-
-		    D.add(freeVarChol.ngood());
-		    D.sv(freeVarChol.ngood(),-1);
-		    freeVarChol.add(freeVarChol.ngood(),D.v(freeVarChol.ngood()),Gp(pAlphaF,pAlphaF,tmpmGp),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1));
-		    dpfact = (freeVarChol.npos())-(freeVarChol.nbadpos());
-
-		    if ( freeVarChol.ngood() > fBetaF.v(dnfact-1) )
-		    {
-			innerdone = 0;
-                        outerdone = 0;
-
-			//if ( fAlphaF.size() )
-			{
-			    for ( jP = 0 ; jP < fAlphaF.size() ; ++jP )
+			    if ( iP > dnfact )
 			    {
-				if ( fAlphaF.v(jP) >= fBetaF.v(dnfact-1) )
-				{
-				    ++(fAlphaF("&",jP));
-				}
-			    }
-			}
+			        if      ( bpos == iP     ) { bpos = dnfact; }
+			        else if ( bpos == dnfact ) { bpos = iP;     }
 
-			break;
+			        if      ( bposalt == iP     ) { bposalt = dnfact; }
+			        else if ( bposalt == dnfact ) { bposalt = iP;     }
+
+			        pBetaF.squareswap(iP,dnfact);
+			        fBetaF.squareswap(iP,dnfact);
+			    }
+		        }
+		    }
+	        }
+	    }
+
+            // add as many elements from pAlphaF as possible
+
+	    innerdone = 0;
+
+	    while ( !innerdone && ( dpfact+1 < pAlphaF.size() ) )
+	    {
+                innerdone = 1;
+
+	        for ( int iP = dpfact+1 ; iP < pAlphaF.size() ; ++iP )
+	        {
+                    oldpos = fAlphaF.v(iP);
+		    newpos = freeVarChol.ngood();
+
+		    if      ( apos == iP ) { apos = (pAlphaF.size())-1; }
+		    else if ( apos >  iP ) { --apos;                    }
+
+ 		    if      ( aposalt == iP ) { aposalt = (pAlphaF.size())-1; }
+		    else if ( aposalt >  iP ) { --aposalt;                    }
+
+		    pAlphaF.blockswap(iP,(pAlphaF.size())-1);
+		    fAlphaF.blockswap(iP,(fAlphaF.size())-1);
+
+		    fAlphaF("&",iP,1,(fAlphaF.size())-2,tmpva) -= 1;
+		    fAlphaF.sv((fAlphaF.size())-1,(D.size())-1);
+
+		    D.remove(oldpos);
+                    freeVarChol.remove(oldpos,Gp(pAlphaF,pAlphaF,tmpmGp,0,1,(pAlphaF.size())-2,0,1,(pAlphaF.size())-2),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-2,0,1,dnfact-1));
+
+		    if      ( apos == (pAlphaF.size())-1 ) { apos = dpfact; }
+		    else if ( apos >= dpfact             ) { ++apos;        }
+
+		    if      ( aposalt == (pAlphaF.size())-1 ) { aposalt = dpfact; }
+		    else if ( aposalt >= dpfact             ) { ++aposalt;        }
+
+		    pAlphaF.blockswap((pAlphaF.size())-1,dpfact);
+		    fAlphaF.blockswap((fAlphaF.size())-1,dpfact);
+
+		    fAlphaF.sv(dpfact,newpos);
+                    fAlphaF("&",dpfact+1,1,(fAlphaF.size())-1,tmpva) += 1;
+
+		    D.add(newpos);
+		    D.sv(newpos,+1);
+		    freeVarChol.add(newpos,D.v(newpos),Gp(pAlphaF,pAlphaF,tmpmGp),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1));
+
+		    if ( freeVarChol.ngood() > newpos )
+		    {
+		        dpfact = (freeVarChol.npos())-(freeVarChol.nbadpos());
+
+		        innerdone = 0;
+		        outerdone = 0;
+
+		        break;
 		    }
 
 		    else
 		    {
-                        NiceAssert( freeVarChol.ngood() == fBetaF(dnfact-1) );
+                        NiceAssert( freeVarChol.ngood() == newpos );
 
-			--dnfact;
-			fBetaF.sv(dnfact,-1);
+		        if      ( apos == dpfact ) { apos = (pAlphaF.size())-1; }
+		        else if ( apos >  dpfact ) { --apos;                    }
 
-			D.remove(freeVarChol.ngood());
-			freeVarChol.remove(freeVarChol.ngood(),Gp(pAlphaF,pAlphaF,tmpmGp),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1));
-			dpfact = (freeVarChol.npos())-(freeVarChol.nbadpos());
+		        if      ( aposalt == dpfact ) { aposalt = (pAlphaF.size())-1; }
+		        else if ( aposalt >  dpfact ) { --aposalt;                    }
 
-			if ( iP > dnfact )
-			{
-			    if ( bpos == iP )
-			    {
-				bpos = dnfact;
-			    }
+		        pAlphaF.blockswap(dpfact,(pAlphaF.size())-1);
+		        fAlphaF.blockswap(dpfact,(fAlphaF.size())-1);
 
-			    else if ( bpos == dnfact )
-			    {
-				bpos = iP;
-			    }
+		        fAlphaF("&",dpfact,1,(fAlphaF.size())-2,tmpva) -= 1;
+		        fAlphaF.sv((fAlphaF.size())-1,(D.size())-1);
 
-			    if ( bposalt == iP )
-			    {
-				bposalt = dnfact;
-			    }
+		        D.remove(newpos);
+		        freeVarChol.remove(newpos,Gp(pAlphaF,pAlphaF,tmpmGp,0,1,(pAlphaF.size())-2,0,1,(pAlphaF.size())-2),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-2,0,1,dnfact-1));
 
-			    else if ( bposalt == dnfact )
-			    {
-				bposalt = iP;
-			    }
+		        if      ( apos == (pAlphaF.size())-1 ) { apos = iP; }
+		        else if ( apos >= iP                 ) { ++apos;    }
 
-			    pBetaF.squareswap(iP,dnfact);
-			    fBetaF.squareswap(iP,dnfact);
-			}
+		        if      ( aposalt == (pAlphaF.size())-1 ) { aposalt = iP; }
+		        else if ( aposalt >= iP                 ) { ++aposalt;    }
+
+		        pAlphaF.blockswap((pAlphaF.size())-1,iP);
+		        fAlphaF.blockswap((fAlphaF.size())-1,iP);
+
+		        fAlphaF.sv(iP,oldpos);
+		        fAlphaF("&",iP+1,1,(fAlphaF.size())-1,tmpva) += 1;
+
+		        D.add(oldpos);
+		        D.sv(oldpos,+1);
+		        freeVarChol.add(oldpos,D.v(oldpos),Gp(pAlphaF,pAlphaF,tmpmGp),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1));
+
+                        NiceAssert( dpfact == (freeVarChol.npos())-(freeVarChol.nbadpos()) );
 		    }
-		}
+	        }
 	    }
-	}
+        }
 
-        // add as many elements from pAlphaF as possible
-
-	innerdone = 0;
-
-	while ( !innerdone && ( dpfact+1 < pAlphaF.size() ) )
-	{
-            innerdone = 1;
-
-	    for ( iP = dpfact+1 ; iP < pAlphaF.size() ; ++iP )
-	    {
-                oldpos = fAlphaF.v(iP);
-		newpos = freeVarChol.ngood();
-
-		if ( apos == iP )
-		{
-                    apos = (pAlphaF.size())-1;
-		}
-
-		else if ( apos > iP )
-		{
-                    --apos;
-		}
-
-		if ( aposalt == iP )
-		{
-                    aposalt = (pAlphaF.size())-1;
-		}
-
-		else if ( aposalt > iP )
-		{
-                    --aposalt;
-		}
-
-		pAlphaF.blockswap(iP,(pAlphaF.size())-1);
-		fAlphaF.blockswap(iP,(fAlphaF.size())-1);
-
-		fAlphaF("&",iP,1,(fAlphaF.size())-2,tmpva) -= 1;
-		fAlphaF.sv((fAlphaF.size())-1,(D.size())-1);
-
-		D.remove(oldpos);
-                freeVarChol.remove(oldpos,Gp(pAlphaF,pAlphaF,tmpmGp,0,1,(pAlphaF.size())-2,0,1,(pAlphaF.size())-2),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-2,0,1,dnfact-1));
-
-		if ( apos == (pAlphaF.size())-1 )
-		{
-                    apos = dpfact;
-		}
-
-		else if ( apos >= dpfact )
-		{
-                    ++apos;
-		}
-
-		if ( aposalt == (pAlphaF.size())-1 )
-		{
-                    aposalt = dpfact;
-		}
-
-		else if ( aposalt >= dpfact )
-		{
-                    ++aposalt;
-		}
-
-		pAlphaF.blockswap((pAlphaF.size())-1,dpfact);
-		fAlphaF.blockswap((fAlphaF.size())-1,dpfact);
-
-		fAlphaF.sv(dpfact,newpos);
-                fAlphaF("&",dpfact+1,1,(fAlphaF.size())-1,tmpva) += 1;
-
-		D.add(newpos);
-		D.sv(newpos,+1);
-		freeVarChol.add(newpos,D.v(newpos),Gp(pAlphaF,pAlphaF,tmpmGp),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1));
-
-		if ( freeVarChol.ngood() > newpos )
-		{
-		    dpfact = (freeVarChol.npos())-(freeVarChol.nbadpos());
-
-		    innerdone = 0;
-		    outerdone = 0;
-
-		    break;
-		}
-
-		else
-		{
-                    NiceAssert( freeVarChol.ngood() == newpos );
-
-		    if ( apos == dpfact )
-		    {
-			apos = (pAlphaF.size())-1;
-		    }
-
-		    else if ( apos > dpfact )
-		    {
-			--apos;
-		    }
-
-		    if ( aposalt == dpfact )
-		    {
-			aposalt = (pAlphaF.size())-1;
-		    }
-
-		    else if ( aposalt > dpfact )
-		    {
-			--aposalt;
-		    }
-
-		    pAlphaF.blockswap(dpfact,(pAlphaF.size())-1);
-		    fAlphaF.blockswap(dpfact,(fAlphaF.size())-1);
-
-		    fAlphaF("&",dpfact,1,(fAlphaF.size())-2,tmpva) -= 1;
-		    fAlphaF.sv((fAlphaF.size())-1,(D.size())-1);
-
-		    D.remove(newpos);
-		    freeVarChol.remove(newpos,Gp(pAlphaF,pAlphaF,tmpmGp,0,1,(pAlphaF.size())-2,0,1,(pAlphaF.size())-2),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-2,0,1,dnfact-1));
-
-		    if ( apos == (pAlphaF.size())-1 )
-		    {
-			apos = iP;
-		    }
-
-		    else if ( apos >= iP )
-		    {
-			++apos;
-		    }
-
-		    if ( aposalt == (pAlphaF.size())-1 )
-		    {
-			aposalt = iP;
-		    }
-
-		    else if ( aposalt >= iP )
-		    {
-			++aposalt;
-		    }
-
-		    pAlphaF.blockswap((pAlphaF.size())-1,iP);
-		    fAlphaF.blockswap((fAlphaF.size())-1,iP);
-
-		    fAlphaF.sv(iP,oldpos);
-		    fAlphaF("&",iP+1,1,(fAlphaF.size())-1,tmpva) += 1;
-
-		    D.add(oldpos);
-		    D.sv(oldpos,+1);
-		    freeVarChol.add(oldpos,D.v(oldpos),Gp(pAlphaF,pAlphaF,tmpmGp),Gn(pBetaF,pBetaF,tmpmGn,0,1,dnfact-1,0,1,dnfact-1),Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,(pAlphaF.size())-1,0,1,dnfact-1));
-
-                    NiceAssert( dpfact == (freeVarChol.npos())-(freeVarChol.nbadpos()) );
-		}
-	    }
-	}
-      }
-
-      return;
+        return;
     }
 
     void fixbetaFix(const Matrix<double> &Gn, const Matrix<double> &Gpn) const // not really const, changes mutable stuff only
@@ -1737,24 +1510,15 @@ private:
         NiceAssert( Gpn.numCols() == bN() );
         NiceAssert( dkeepfact );
 
-        int i,jP;
-
-        //if ( betaFixUpdate && bN() )
-        if ( (betaFixUpdate) )
+        if ( betaFixUpdate )
         {
-            for ( i = 0 ; i < bN() ; ++i )
+            for ( int i = 0 ; i < bN() ; ++i )
             {
                 if ( betaFix.v(i) == -1 )
                 {
                     (GpnFColNorm).sv(i,0.0);
 
-                    //if ( aNF() )
-                    {
-                        for ( jP = 0 ; jP < aNF() ; ++jP )
-                        {
-                            (GpnFColNorm)("&",i) += (Gpn.v(pivAlphaF(jP),i)*Gpn.v(pivAlphaF(jP),i));
-                        }
-                    }
+                    for ( int jP = 0 ; jP < aNF() ; ++jP ) { (GpnFColNorm)("&",i) += (Gpn.v(pivAlphaF(jP),i)*Gpn.v(pivAlphaF(jP),i)); }
 
                     (betaFix).sv(i,CALCBETAFIX(i));
                 }
@@ -1811,53 +1575,15 @@ int optContext::fact_minverse(Vector<S> &ap, Vector<S> &an, const Vector<S> &bp,
     int zp_end = 0;
     int zn_end = 0;
 
-    if ( bpNZ == -2 )
-    {
-	zp_start = 0;
-        zp_end   = 0;
-    }
+    if      ( bpNZ == -2     ) { zp_start = 0;    zp_end = 0;             }
+    else if ( bpNZ == -1     ) { zp_start = 0;    zp_end = dpfact;        }
+    else if ( bpNZ <  dpfact ) { zp_start = bpNZ; zp_end = dpfact-bpNZ-1; }
+    else                       { zp_start = 0;    zp_end = dpfact;        }
 
-    else if ( bpNZ == -1 )
-    {
-        zp_start = 0;
-        zp_end   = dpfact;
-    }
-
-    else if ( bpNZ < dpfact )
-    {
-        zp_start = bpNZ;
-	zp_end   = dpfact-bpNZ-1;
-    }
-
-    else
-    {
-	zp_start = 0;
-        zp_end   = dpfact;
-    }
-
-    if ( bnNZ == -2 )
-    {
-	zn_start = 0;
-        zn_end   = 0;
-    }
-
-    else if ( bnNZ == -1 )
-    {
-        zn_start = 0;
-        zn_end   = dnfact;
-    }
-
-    else if ( bnNZ < dnfact )
-    {
-        zn_start = bnNZ;
-	zn_end   = dnfact-bnNZ-1;
-    }
-
-    else
-    {
-	zn_start = 0;
-        zn_end   = dnfact;
-    }
+    if      ( bnNZ == -2     ) { zn_start = 0;    zn_end = 0;             }
+    else if ( bnNZ == -1     ) { zn_start = 0;    zn_end = dnfact;        }
+    else if ( bnNZ <  dnfact ) { zn_start = bnNZ; zn_end = dnfact-bnNZ-1; }
+    else                       { zn_start = 0;    zn_end = dnfact;        }
 
     if ( freeVarChol.ngood() )
     {
@@ -1882,7 +1608,6 @@ int optContext::fact_minverse(Vector<S> &ap, Vector<S> &an, const Vector<S> &bp,
 	{
             retVector<S> tmpvb;
             retVector<S> tmpvd;
-
             retMatrix<double> tmpmGpn;
 
 	    Matrix<double> Gpninv((Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,nonsingsize-1,0,1,nonsingsize-1)).inve());
@@ -1960,15 +1685,10 @@ template <> inline int optContext::fact_near_invert(Vector<double> &ap, Vector<d
 	{
 	    if ( nonsingsize < aNF() )
 	    {
-		int i;
-
-		//if ( nonsingsize )
+		for ( int i = 0 ; i < nonsingsize ; ++i )
 		{
-		    for ( i = 0 ; i < nonsingsize ; ++i )
-		    {
-			ap.sv(pAlphaF(i),Gpn.v(pAlphaF.v(nonsingsize),pBetaF.v(i)));
-			an.sv(pBetaF(i), Gp.v(pAlphaF.v(nonsingsize),pAlphaF.v(i)));
-		    }
+		    ap.sv(pAlphaF(i),Gpn.v(pAlphaF.v(nonsingsize),pBetaF.v(i)));
+		    an.sv(pBetaF(i), Gp.v(pAlphaF.v(nonsingsize),pAlphaF.v(i)));
 		}
 	    }
 
@@ -1976,17 +1696,11 @@ template <> inline int optContext::fact_near_invert(Vector<double> &ap, Vector<d
 	    {
 		Vector<double> bp(nonsingsize);
 
-		int iP;
-
-		for ( iP = 0 ; iP < nonsingsize ; ++iP )
-		{
-		    bp.sv(iP,Gpn(pAlphaF.v(pAlphaF.v(iP)),pBetaF.v(nonsingsize)));
-		}
+		for ( int iP = 0 ; iP < nonsingsize ; ++iP ) { bp.sv(iP,Gpn(pAlphaF.v(pAlphaF.v(iP)),pBetaF.v(nonsingsize))); }
 
                 retVector<double> tmpvb;
                 retVector<double> tmpvc;
                 retVector<double> tmpvd;
-
                 retMatrix<double> tmpmGn;
 
 		ap("&",pAlphaF,0,1,nonsingsize-1,tmpvb) = Gn(pBetaF,pBetaF,tmpmGn)(nonsingsize,0,1,nonsingsize-1,tmpvc,tmpvd);
@@ -1994,7 +1708,6 @@ template <> inline int optContext::fact_near_invert(Vector<double> &ap, Vector<d
 	    }
 
             retVector<double> tmpvb;
-
             retMatrix<double> tmpmGpn;
 
 	    Matrix<double> Gpninv((Gpn(pAlphaF,pBetaF,tmpmGpn,0,1,nonsingsize-1,0,1,nonsingsize-1)).inve());
@@ -2051,15 +1764,10 @@ template <class S> int optContext::fact_near_invert(Vector<S> &ap, Vector<S> &an
 	{
 	    if ( nonsingsize < aNF() )
 	    {
-		int i;
-
-		//if ( nonsingsize )
+		for ( int i = 0 ; i < nonsingsize ; ++i )
 		{
-		    for ( i = 0 ; i < nonsingsize ; ++i )
-		    {
-			ap("&",pAlphaF(i)) = Gpn(pAlphaF(nonsingsize),pBetaF(i));
-			an("&",pBetaF(i))  = Gp(pAlphaF(nonsingsize),pAlphaF(i));
-		    }
+		    ap("&",pAlphaF(i)) = Gpn(pAlphaF(nonsingsize),pBetaF(i));
+		    an("&",pBetaF(i))  = Gp(pAlphaF(nonsingsize),pAlphaF(i));
 		}
 	    }
 
@@ -2067,12 +1775,7 @@ template <class S> int optContext::fact_near_invert(Vector<S> &ap, Vector<S> &an
 	    {
 		Vector<S> bp(nonsingsize);
 
-		int iP;
-
-		for ( iP = 0 ; iP < nonsingsize ; ++iP )
-		{
-		    bp("&",iP) = Gpn(pAlphaF(pAlphaF(iP)),pBetaF(nonsingsize));
-		}
+		for ( int iP = 0 ; iP < nonsingsize ; ++iP ) { bp("&",iP) = Gpn(pAlphaF(pAlphaF(iP)),pBetaF(nonsingsize)); }
 
                 retVector<S> tmpvb;
                 retVector<S> tmpvc;

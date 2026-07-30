@@ -159,9 +159,9 @@ static void dscal_sl__(int *n_, const double *da, double *dx, int incx)
 
 /**************************************************************************/
 
-static const int c__0 = 0;
-static const int c__1 = 1;
-static const int c__2 = 2;
+const static int c__0 = 0;
+const static int c__1 = 1;
+const static int c__2 = 2;
 
 #define MIN2(a,b) ((a) <= (b) ? (a) : (b))
 #define MAX2(a,b) ((a) >= (b) ? (a) : (b))
@@ -1580,7 +1580,7 @@ L280:
 /* we don't want to use this linmin function, for two reasons:
    1) it was apparently written assuming an old version of Fortran where all variables
       are saved by default, hence it was missing a "save" statement ... I would
-      need to go through and figure out which variables need to be declared "static"
+      need to go through and figure out which variables need to be declared "statiic"
       (or, better yet, save them like I did in slsqp to make it re-entrant)
    2) it doesn't exploit gradient information, which is stupid since we have this info
    3) in the context of NLopt, it makes much more sence to use the local_opt algorithm

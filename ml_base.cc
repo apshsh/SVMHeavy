@@ -30,9 +30,6 @@ give a vector or matrix, which could potentially be used as a matrix-valued kern
 #include "gpr_generic.hpp"
 #include "lsv_generic.hpp"
 #include "randfun.hpp"
-//#ifdef ENABLE_THREADS
-//#include <mutex>
-//#endif
 #include "nlopt_direct.hpp"
 #include "ml_mutable.hpp"
 #include "directopt.hpp"
@@ -42,9 +39,6 @@ give a vector or matrix, which could potentially be used as a matrix-valued kern
 
 thread_local SparseVector<int> ML_Base::xvernumber;
 thread_local SparseVector<int> ML_Base::gvernumber;
-//#ifdef ENABLE_THREADS
-//std::mutex ML_Base::mleyelock;
-//#endif
 
 //The original version used fixed-length arrays.  This is a very bad idea and the version numbers quite quickly overflow!
 //std::atomic<int> *ML_Base::xvernumber = nullptr;
@@ -247,10 +241,6 @@ int convertSparseToSet(gentype &rres, const SparseVector<gentype> &src)
 ML_Base::ML_Base(int _isIndPrune) : kernPrecursor()
 {
     {
-//#ifdef ENABLE_THREADS
-//        mleyelock.lock();
-//#endif
-
         //if ( xvernumber == nullptr )
         //{
         //    xvernumber = new std::atomic<int>[NUMMLINSTANCES];
@@ -267,10 +257,6 @@ ML_Base::ML_Base(int _isIndPrune) : kernPrecursor()
 
         xvernumber("&",MLid()) = 1; // non-zero to indicate existence
         gvernumber("&",MLid()) = 1; // non-zero to indicate existence
-
-//#ifdef ENABLE_THREADS
-//        mleyelock.unlock();
-//#endif
     }
 
     assumeReal       = 1;
@@ -325,9 +311,9 @@ ML_Base::ML_Base(int _isIndPrune) : kernPrecursor()
 
     altxsrc = nullptr;
 
-    MEMNEW(that,ML_Base *);
-    NiceAssert(that);
-    *that = this;
+//    MEMNEW(that,ML_Base *);
+//    NiceAssert(that);
+//    *that = this;
 
     isIndPrune      = _isIndPrune;
     xassumedconsist = 0;
@@ -353,107 +339,66 @@ ML_Base::ML_Base(int _isIndPrune) : kernPrecursor()
 
 ML_Base::~ML_Base()
 {
-    {
-//#ifdef ENABLE_THREADS
-//        mleyelock.lock();
-//#endif
-
         xvernumber("&",MLid()) = 0;
         gvernumber("&",MLid()) = 0;
 
         xvernumber.zero(MLid());
         gvernumber.zero(MLid());
 
-//#ifdef ENABLE_THREADS
-//        mleyelock.unlock();
-//#endif
-    }
-
-    MEMDEL(that); that = nullptr;
+//    MEMDEL(that); that = nullptr;
 
     return;
 }
 
 int ML_Base::xvernum(void) const
 {
-//#ifdef ENABLE_THREADS
-//        mleyelock.lock();
-//#endif
         int res = xvernumber.isindpresent(MLid()) ? xvernumber(MLid()) : 0;
-//#ifdef ENABLE_THREADS
-//        mleyelock.unlock();
-//#endif
+
         return res;
 }
 
 int ML_Base::gvernum(void) const
 {
-//#ifdef ENABLE_THREADS
-//        mleyelock.lock();
-//#endif
         int res = gvernumber.isindpresent(MLid()) ? gvernumber(MLid()) : 0;
-//#ifdef ENABLE_THREADS
-//        mleyelock.unlock();
-//#endif
+
         return res;
 }
 
 int ML_Base::xvernum(int altMLid) const
 {
-//#ifdef ENABLE_THREADS
-//        mleyelock.lock();
-//#endif
         int res = xvernumber.isindpresent(altMLid) ? xvernumber(altMLid) : 0;
-//#ifdef ENABLE_THREADS
-//        mleyelock.unlock();
-//#endif
+
         return res;
 }
 
 int ML_Base::gvernum(int altMLid) const
 {
-//#ifdef ENABLE_THREADS
-//        mleyelock.lock();
-//#endif
         int res = gvernumber.isindpresent(altMLid) ? gvernumber(altMLid) : 0;
-//#ifdef ENABLE_THREADS
-//        mleyelock.unlock();
-//#endif
+
         return res;
 }
 
 int ML_Base::incxvernum(void)
 {
-//#ifdef ENABLE_THREADS
-//        mleyelock.lock();
-//#endif
-
         if ( !xvernumber.isindpresent(MLid()) )
         {
             xvernumber("&",MLid()) = 0;
         }
 
         int res = ++xvernumber("&",MLid());
-//#ifdef ENABLE_THREADS
-//        mleyelock.unlock();
-//#endif
+
         return res;
 }
 
 int ML_Base::incgvernum(void)
 {
-//#ifdef ENABLE_THREADS
-//        mleyelock.lock();
-//#endif
         if ( !gvernumber.isindpresent(MLid()) )
         {
             gvernumber("&",MLid()) = 0;
         }
 
         int res = ++gvernumber("&",MLid());
-//#ifdef ENABLE_THREADS
-//        mleyelock.unlock();
-//#endif
+
         return res;
 }
 
@@ -1077,10 +1022,6 @@ SparseVector<gentype> &ML_Base::makeFullSparse(SparseVector<gentype> &dest) cons
 
 int ML_Base::setMLid(int nv)
 {
-//#ifdef ENABLE_THREADS
-//    mleyelock.lock();
-//#endif
-
     int oldMLid = MLid();
     int res = kernPrecursor::setMLid(nv);
 
@@ -1103,10 +1044,6 @@ int ML_Base::setMLid(int nv)
         xvernumber("&",nv) = xvn;
         gvernumber("&",nv) = gvn;
     }
-
-//#ifdef ENABLE_THREADS
-//    mleyelock.unlock();
-//#endif
 
     return res;
 }
@@ -1791,7 +1728,7 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
     alltraintargA.add(i);  alltraintargA("&",i)  = (const d_anion &) y;
     alltraintargV.add(i);  alltraintargV("&",i)  = (const Vector<double> &) y;
 
-    const static thread_local Vector<double> empvec;
+    const thread_local Vector<double> empvec;
 
     alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
     alltraintargpR.add(i); alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
@@ -1878,7 +1815,7 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
     alltraintargA.add(i);  alltraintargA("&",i)  = (const d_anion &) y;
     alltraintargV.add(i);  alltraintargV("&",i)  = (const Vector<double> &) y;
 
-    const static thread_local Vector<double> empvec;
+    const thread_local Vector<double> empvec;
 
     alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
     alltraintargpR.add(i); alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
@@ -1978,7 +1915,7 @@ int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<Spa
         alltraintargA.add(i+j);  alltraintargA("&",i+j)  = (const d_anion &) y(j);
         alltraintargV.add(i+j);  alltraintargV("&",i+j)  = (const Vector<double> &) y(j);
 
-        const static thread_local Vector<double> empvec;
+        const thread_local Vector<double> empvec;
 
         alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
         alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
@@ -2079,7 +2016,7 @@ int ML_Base::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVe
         alltraintargA.add(i+j);  alltraintargA("&",i+j)  = (const d_anion &) y(j);
         alltraintargV.add(i+j);  alltraintargV("&",i+j)  = (const Vector<double> &) y(j);
 
-        const static thread_local Vector<double> empvec;
+        const thread_local Vector<double> empvec;
 
         alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
         alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
@@ -2266,7 +2203,7 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 	    }
 	}
 
-        const static thread_local Vector<double> empvec;
+        const thread_local Vector<double> empvec;
 
         for ( int i = 0 ; i < ML_Base::N() ; i++ )
         {
@@ -2294,7 +2231,7 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 	    }
 	}
 
-        const static thread_local Vector<double> empvec;
+        const thread_local Vector<double> empvec;
 
         for ( int i = 0 ; i < ML_Base::N() ; i++ )
         {
@@ -2325,7 +2262,7 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 	    }
 	}
 
-        const static thread_local Vector<double> empvec;
+        const thread_local Vector<double> empvec;
 
         for ( int i = 0 ; i < ML_Base::N() ; i++ )
         {
@@ -2354,7 +2291,7 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 
         int i = onlyChangeRowI;
 
-        const static thread_local Vector<double> empvec;
+        const thread_local Vector<double> empvec;
 
         calcprior(alltraintargp("&",i),allxdatagent(i));
         alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
@@ -7411,18 +7348,20 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
     if ( tuneK )
     {
 SparseVector<gentype> yres;
-errstream() << "Mean:    \t";         printoneline(errstream(),xmean   (yres)); errstream() << "\n";
-errstream() << "Median:  \t";         printoneline(errstream(),xmedian (yres)); errstream() << "\n";
-errstream() << "MAD:     \t";         printoneline(errstream(),xMAD    (yres)); errstream() << "\n";
-errstream() << "var:     \t";         printoneline(errstream(),xvar    (yres)); errstream() << "\n";
-errstream() << "stdev:   \t";         printoneline(errstream(),xstddev (yres)); errstream() << "\n";
-errstream() << "Geometric mean:  \t"; printoneline(errstream(),xgmean  (yres)); errstream() << "\n";
-errstream() << "Geometric median:\t"; printoneline(errstream(),xgmedian(yres)); errstream() << "\n";
-errstream() << "Geometric MAD:   \t"  << xgMAD(yres)    << "\n";
-errstream() << "Geometric var:   \t"  << xgvar(yres)    << "\n";
-errstream() << "Geometric stdev: \t"  << xgstddev(yres) << "\n";
-//errstream() << "Geometric MAD delf:\t" << sqrt((0.5*0.5)+(0.25*(xspaceDim()-1)*(xspaceDim()-1))) << "\n";
-//errstream() << "Geometric MAD corr:\t" << xgMAD(yres)/sqrt((0.5*0.5)+(0.25*(xspaceDim()-1)*(xspaceDim()-1))) << "\n";
+//errstream() << "Mean:    \t";         printoneline(errstream(),xmean   (yres)); errstream() << "\n";
+//errstream() << "Median:  \t";         printoneline(errstream(),xmedian (yres)); errstream() << "\n";
+//errstream() << "MAD:     \t";         printoneline(errstream(),xMAD    (yres)); errstream() << "\n";
+//errstream() << "var:     \t";         printoneline(errstream(),xvar    (yres)); errstream() << "\n";
+//errstream() << "stdev:   \t";         printoneline(errstream(),xstddev (yres)); errstream() << "\n";
+//errstream() << "Geometric mean:  \t"; printoneline(errstream(),xgmean  (yres)); errstream() << "\n";
+//errstream() << "Geometric median:\t"; printoneline(errstream(),xgmedian(yres)); errstream() << "\n";
+//errstream() << "Geometric MAD:   \t"  << xgMAD(yres)    << "\n";
+//errstream() << "Geometric var:   \t"  << xgvar(yres)    << "\n";
+errstream() << "        Max:             \t"; printoneline(errstream(),xmax(yres)); errstream() << "\n";
+errstream() << "        Min:             \t"; printoneline(errstream(),xmin(yres)); errstream() << "\n";
+errstream() << "        Geometric stdev: \t"  << xgstddev(yres) << "\n";
+////errstream() << "Geometric MAD delf:\t" << sqrt((0.5*0.5)+(0.25*(xspaceDim()-1)*(xspaceDim()-1))) << "\n";
+////errstream() << "Geometric MAD corr:\t" << xgMAD(yres)/sqrt((0.5*0.5)+(0.25*(xspaceDim()-1)*(xspaceDim()-1))) << "\n";
 
 //xscale = 3*xgMAD(yres)/sqrt((0.5*0.5)+(0.25*(xspaceDim()-1)*(xspaceDim()-1))); - this is worse than the original
 
@@ -7467,7 +7406,7 @@ errstream() << "Geometric stdev: \t"  << xgstddev(yres) << "\n";
 
 xscale = std::min(xscale,std::max(0.1,4*xgstddev(yres)));
 
-errstream() << "xscale: \t"  << xscale << "\n";
+errstream() << "        xscale: \t"  << xscale << "\n";
 
 
 
@@ -7542,7 +7481,7 @@ errstream() << "xscale: \t"  << xscale << "\n";
                         if ( lb < ub )
                         {
                             addit = 1;
-errstream() << "Tune ARD element " << j << " in range " << lb << " to " << ub <<"\n";
+errstream() << "        Tune ARD element " << j << " in range " << lb << " to " << ub <<"\n";
                         }
                     }
 
@@ -7585,7 +7524,7 @@ errstream() << "Tune ARD element " << j << " in range " << lb << " to " << ub <<
                         if ( lb < ub )
                         {
                             addit = 1;
-errstream() << "Tune weight " << i << " in range " << lb << " to " << ub <<"\n";
+errstream() << "        Tune weight " << i << " in range " << lb << " to " << ub <<"\n";
                         }
                     }
 
@@ -7605,7 +7544,7 @@ errstream() << "Tune weight " << i << " in range " << lb << " to " << ub <<"\n";
 
                         //double lencorrect = std::sqrt((double) xdim)/std::pow( (double) Nval,(double) xdim );
                         double lencorrect = std::sqrt((double) xdim)/std::pow( (double) Nval,(0.5/sqrt((double) xdim)) ); // 20/8/2025 - yet another attempted fix
-errstream() << "___" << xdim << "," << Nval << "|" << lencorrect << ",";
+errstream() << "        ___" << xdim << "," << Nval << "|" << lencorrect << ",";
                         double minscaler = 1/24.0;          // heuristic stuff
                         double maxscaler = 3/(1.1*1.88264); // heuristic stuff
 
@@ -7636,7 +7575,7 @@ errstream() << lb << " to " << ub << "___\n";
                         if ( lb < ub )
                         {
                             addit = 1;
-errstream() << "Tune lengthscale " << i << " in range " << lb << " to " << ub <<"\n";
+errstream() << "        Tune lengthscale " << i << " in range " << lb << " to " << ub <<"\n";
                         }
                     }
 
@@ -7653,7 +7592,7 @@ errstream() << "Tune lengthscale " << i << " in range " << lb << " to " << ub <<
                         if ( lb < ub )
                         {
                             addit = 1;
-errstream() << "Tune lengthscale scaling " << i << " in range " << lb << " to " << ub <<"\n";
+errstream() << "        Tune lengthscale scaling " << i << " in range " << lb << " to " << ub <<"\n";
                         }
                     }
 
@@ -7670,7 +7609,7 @@ errstream() << "Tune lengthscale scaling " << i << " in range " << lb << " to " 
                         if ( lb < ub )
                         {
                             addit = 1;
-errstream() << "Tune norm-order " << i << " in range " << lb << " to " << ub <<"\n";
+errstream() << "        Tune norm-order " << i << " in range " << lb << " to " << ub <<"\n";
                         }
                     }
 
@@ -7687,7 +7626,7 @@ errstream() << "Tune norm-order " << i << " in range " << lb << " to " << ub <<"
                         if ( lb < ub )
                         {
                             addit = 1;
-errstream() << "Tune task-relatedness " << i << " in range " << lb << " to " << ub <<"\n";
+errstream() << "        Tune task-relatedness " << i << " in range " << lb << " to " << ub <<"\n";
                         }
                     }
 
@@ -7845,7 +7784,7 @@ tryagain:
 
         trycount = std::pow(adim*numzooms/((double) MAXADIM),1/((double) altddim));
 
-errstream() << "tuneKernel: trycount = " << trycount << "\n";
+errstream() << "        tuneKernel: trycount = " << trycount << "\n";
         goto tryagain;
     }
 
@@ -7947,7 +7886,9 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
 
             dopts.maxevals = MAXADIM;
 
-            resetKernel(1,-1); // start with an empty cache, let it build as required
+            //DON'T DO THIS IT MESSES THE L-CACHE BEHAVIOUR OF THINGS resetKernel(1,-1); // start with an empty cache, let it build as required
+            //DO THIS INSTEAD TO WARM UP THE CACHE!
+            if ( method & 1 ) { calcnegloglikelihood(model,1); }
 
             int ires = directOpt(ddim,bestffull,fres,kmin,kmax,evalkernarg,evalargs,dopts,killSwitch);
 
@@ -7955,9 +7896,9 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
             {
                 bestres = ( ((double) fres) < 0 ) ? log(((double) fres)) : (((double) fres)-1);
             }
-errstream() << "tuneKernel: direct result = " << ires << "\n";
-errstream() << "tuneKernel: direct bestffull = " << bestffull << "\n";
-errstream() << "tuneKernel: direct fres = " << fres << "\n";
+errstream() << "        tuneKernel: direct result = " << ires << "\n";
+errstream() << "        tuneKernel: direct bestffull = " << bestffull << "\n";
+errstream() << "        tuneKernel: direct fres = " << fres << "\n";
         }
 
         else
@@ -8222,13 +8163,13 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
             model.resetKernel(1,-2); // use -2 to only update d!=0 part, invalidating unused portions
         }
 
-        if ( loctuneP & 1 ) { setC(locCval);         }
-        if ( loctuneP & 2 ) { seteps(locepsval);     }
-        if ( loctuneP & 4 ) { setsigma(locsigmaval); }
+        if ( loctuneP & 1 ) { model.setC(locCval);         }
+        if ( loctuneP & 2 ) { model.seteps(locepsval);     }
+        if ( loctuneP & 4 ) { model.setsigma(locsigmaval); }
 
         int rescode = 0;
 
-        reset();
+        model.reset();
         model.train(rescode);
 
         if ( !method )
@@ -8250,14 +8191,14 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
 
         if ( testisvnan(evalval) || testisinf(evalval) )
         {
-            reset();
+            model.reset();
 
-            if ( loctuneK )     { lockernel = backkernel; resetKernel(1,-1); }
-            if ( loctuneP & 1 ) { setC(backC);                               }
-            if ( loctuneP & 2 ) { seteps(backeps);                           }
-            if ( loctuneP & 4 ) { setsigma(backsigma);                       }
+            if ( loctuneK )     { lockernel = backkernel; model.resetKernel(1,-1);   }
+            if ( loctuneP & 1 ) {                         model.setC(backC);         }
+            if ( loctuneP & 2 ) {                         model.seteps(backeps);     }
+            if ( loctuneP & 4 ) {                         model.setsigma(backsigma); }
 
-            reset();
+            model.reset();
         }
     }
 
@@ -8345,13 +8286,13 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
             // Left rank without gradient
 
             gentype xargs(*xanear);
-//outstream() << "gentype pycall xargs " << xargs << "\n";
+//outstream() << "gentype python xargs " << xargs << "\n";
             gentype locres = xmuprior_gt(xargs);
 
-//outstream() << "gentype pycall locres " << locres << "\n";
+//outstream() << "gentype python locres " << locres << "\n";
             locres *= arankL;
             res += locres;
-//outstream() << "gentype pycall res " << res << "\n";
+//outstream() << "gentype python res " << res << "\n";
         }
 
         else if ( xanear )
@@ -8367,11 +8308,11 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
 
             gentype xargs(*xafar);
             gentype locres = xmuprior_gt(xargs);
-//outstream() << "gentype pycall locres " << locres << " alt\n";
+//outstream() << "gentype python locres " << locres << " alt\n";
 
             locres *= arankR;
             res -= locres;
-//outstream() << "gentype pycall res " << res << " alt\n";
+//outstream() << "gentype python res " << res << " alt\n";
         }
 
         if ( ( loctanga & 1 ) && xafar )
@@ -8380,7 +8321,7 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
 
             NiceThrow("Need to implement prior gradients!");
         }
-//outstream() << "gentype pycall res " << res << " later\n";
+//outstream() << "gentype python res " << res << " later\n";
     }
 
     else if ( xmuprior == 2 )
@@ -8393,18 +8334,18 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
         res = 0.0_gent;
     }
 
-//outstream() << "gentype pycall res " << res << " final\n";
+//outstream() << "gentype python res " << res << " final\n";
     return;
 }
 
 void ML_Base::calcallprior(void)
 {
-    const static thread_local Vector<double> empvec;
+    const thread_local Vector<double> empvec;
 
     for ( int i = 0 ; i < ML_Base::N() ; i++ )
     {
         calcprior(alltraintargp("&",i),x(i));
-//outstream() << "gentype pycall doneprior " << alltraintargp(i) << " final\n";
+//outstream() << "gentype python doneprior " << alltraintargp(i) << " final\n";
         alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
         alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
         alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
@@ -9120,7 +9061,7 @@ void ML_Base::dnK2del(Vector<double> &sc, Vector<Vector<int>> &n, int &minmaxind
 //int UPNTVI(int i, int off);
 //int UPNTVI(int i, int off)
 //{
-////    static size_t ind = 0;
+////    statiic size_t ind = 0;
 ////
 ////    return -(((ind++)%81)+10);
 //    return -((10*off)+i);

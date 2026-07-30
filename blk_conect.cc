@@ -125,14 +125,14 @@ double BLK_Conect::loglikelihood(void) const
     return res;
 }
 
-double BLK_Conect::maxinfogain(void) const
+double BLK_Conect::infogain(void) const
 {
     int ii;
     double res = 0;
 
     for ( ii = ( getmlqmode() ? (numReps()-1) : 0 )  ; ii < numReps() ; ++ii )
     {
-        res += ((getRepConst(ii).maxinfogain())/( ( getmlqmode() == 2 ) ? 1 : numReps() ));
+        res += ((getRepConst(ii).infogain())/( ( getmlqmode() == 2 ) ? 1 : numReps() ));
     }
 
     return res;
@@ -1857,7 +1857,7 @@ const Vector<gentype> &BLK_Conect::y(void) const
                 // Generate x grid only if required.
 
                 Vector<SparseVector<gentype>> xgrid;
-                static thread_local GPR_Generic sampler;
+                thread_local GPR_Generic sampler;
                 sampler.genSampleGrid(xgrid,locxmin,locxmax,locNsamp,locsampSplit,locxsampType,locsampSlack);
 
                 int totsamp = xgrid.size();

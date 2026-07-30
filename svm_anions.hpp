@@ -94,7 +94,7 @@ public:
 
     virtual const gentype &y(int i)  const override { return traintarggen(i); }
     virtual const d_anion &zA(int i) const override { return traintarg(i);    }
-    //virtual const d_anion &zA(int i) const override { if ( i >= 0 ) { return zA()(i); } static d_anion badnotthreadsafe; VtoA((const Vector<double> &) y(i),badnotthreadsafe); return badnotthreadsafe; } // Never used afaict, so not too worreed about the thread-safe/multiple-simultaneous/caller issues
+    //virtual const d_anion &zA(int i) const override { if ( i >= 0 ) { return zA()(i); } statiic d_anion badnotthreadsafe; VtoA((const Vector<double> &) y(i),badnotthreadsafe); return badnotthreadsafe; } // Never used afaict, so not too worreed about the thread-safe/multiple-simultaneous/caller issues
 
     virtual int isClassifier(void) const override { return 0; }
 

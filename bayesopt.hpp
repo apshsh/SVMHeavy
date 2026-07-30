@@ -1,3 +1,22 @@
+//FIXME: you can put a delay in overfn to simulate batched BO. Basically store
+//       a LIFO buffer of Q observations, where each observation goes into the
+//       buffer and you return the oldest observation in the buffer (or some
+//       sort of "no observation" if there are fewer than Q observations in the
+//       buffer). Or you could just submit jobs to a queue for evaluation,
+//       delay when Q jobs are in the queue, keep a buffer of results as they
+//       are generated, and return the oldest with a query.
+
+//FIXME: if x = [] then don't add it to the model or test it: treat it as a
+//       non-observation (ie nothing to report)
+
+//FIXME see Sattar Vakili, Henry Moss, Artem Artemev, Vincent Dutordoir, and Victor Picheny. Scalable
+//        Thompson sampling using sparse Gaussian process models. In Advances in Neural Information
+//        Processing Systems, volume 34, pages 5631–5643. Curran Associates, Inc., 2021.
+//      - Thomas Desautels, Andreas Krause, and Joel W. Burdick. Parallelizing exploration-exploitation
+//        tradeoffs in Gaussian process bandit optimization. Journal of Machine Learning Research, 15:
+//        4053–4103, 2014.
+//      - Sayak Ray Chowdhury and Aditya Gopalan. On batch Bayesian optimization.
+//        arXiv:1911.01032, 2019.
 
 //
 // Bayesian Optimiser
@@ -128,6 +147,7 @@ public:
     //            4 - Thompson sample c(x) at each iteration
     //            5 - Thompson sample c(x) at each iteration, scaling variance
     //            6 - like 0, but rather than P(c(x)>=0) use level set of c(x) - set scq 0 unless in level set c(x)>=0 with confidence cgtcertain
+    //            1xx - correct by lseeps
     // cgtmargin: margin for cgt pass used in acquisiton function
     // cgtcertain: beta confidence factor for cgtmethod == 6
     //
@@ -356,6 +376,8 @@ public:
     double cgtcertain;
     double h;
     double hcgt;
+    double hstep;
+    double hcgtstep;
     double lseeps;
     int    norepeats;
     double norepdist;
@@ -396,6 +418,10 @@ public:
     double weightmain;
     double weightcgt;
     double weightmisc;
+    int randweights; // usually 0. If 1 then randomly select based on weightmain, weightcgt or weightmisc
+    double minrandweight;
+    double maxrandweight;
+    double upsrandweight;
 
     double alphascale;
     double betascale;
@@ -475,6 +501,8 @@ public:
         cgtcertain        = 2;
         h                 = 0;
         hcgt              = 0;
+        hstep             = 0;
+        hcgtstep          = 0;
         lseeps            = 0.01;
         norepeats         = 0;
         norepdist         = 0;
@@ -486,6 +514,11 @@ public:
         weightmain = 1.0;
         weightcgt  = 1.0;
         weightmisc = 1.0;
+
+        randweights   = 0;
+        minrandweight = 0.25;
+        maxrandweight = 0.75;
+        upsrandweight = 10;
 
         alphascale    = 1;
         betascale     = 1;
@@ -557,6 +590,117 @@ public:
 
     BayesOptions(const BayesOptions &src) : SMBOOptions(src)
     {
+        optname = "opt_BO";
+
+        acq               = 1;
+        acqcgt            = 22;
+        cgtscale          = 1;
+        acqvalexp         = 25;
+        intrinbatch       = 1;
+        intrinbatchmethod = 0;
+        randsearch        = 0;
+        //evaluse           = 0;
+        //sigmuseparate     = 0;
+        startpoints       = -1; //5; //500; //10;
+        startpointsalt    = 0; //5; //500; //10;
+        startseed         = 42;
+        algseed           = 69;
+        totiters          = -1; //100; //200; //500;
+        itcntmethod       = 0;
+        err               = 1e-1;
+        minstdev          = 0;
+        humanfreq         = 0;
+        cgtmethod         = 0;
+        cgtmargin         = 0; //0.1; //1;
+        cgtcertain        = 2;
+        h                 = 0;
+        hcgt              = 0;
+        hstep             = 0;
+        hcgtstep          = 0;
+        lseeps            = 0.01;
+        norepeats         = 0;
+        norepdist         = 0;
+        blockdist         = 0;
+        cgtepsgreedypof   = 0;
+        maxresamp         = 10;
+        tailweight        = 0;
+
+        weightmain = 1.0;
+        weightcgt  = 1.0;
+        weightmisc = 1.0;
+
+        randweights   = 0;
+        minrandweight = 0.25;
+        maxrandweight = 0.75;
+        upsrandweight = 5;
+
+        alphascale    = 1;
+        betascale     = 1;
+        alphascalecgt = 1;
+        betascalecgt  = 1;
+
+        ztol     = DEFAULT_BAYES_ZTOL;
+        delta    = DEFAULT_BAYES_DELTA;
+        zeta     = 0; //0.01; use true EI as default, even if it's a bit slow
+        gamma    = 0; //0.01; use true EI as default, even if it's a bit slow
+        gammacgt = 1e-6; //0.01; use true EI as default, even if it's a bit slow
+        gammaheuristic = 0;
+        numain   = DEFAULT_BAYES_NU;
+        nucgt    = DEFAULT_BAYES_NU;
+        nuvalexp = DEFAULT_BAYES_NU;
+        modD     = -1; // this is entirely arbitrary and must be set by the user
+        a        = DEFAULT_BAYES_A; // a value
+        b        = DEFAULT_BAYES_B; // another value
+        r        = DEFAULT_BAYES_R; // This is basically the width of our search region in
+                                  // any given dimension.  Usually you would want to
+                                  // normalise to 0->1, so 1 is correct.
+        p            = DEFAULT_BAYES_P;
+        betafn       = 0;
+        betafncgt    = 0;
+        betafnvalexp = 0;
+        R            = 1;
+        //B            = 1; // small positive value or things get weird.
+        B            = -1; // use actual norm
+
+        numfids    = 0;
+        dimfid     = 1;
+        fidbudget  = -1;
+        fidpenalty = 1;
+        fidvar     = 0;
+        fidover    = 0;
+        fidmode    = 21;
+
+        cgtVarScale = 1;
+
+        impmeasu       = nullptr;
+        direcpre       = nullptr;
+        direcsubseqpre = nullptr;
+        direcdim       = 0;
+//        direcmin.resize(direcdim);
+//        direcmax.resize(direcdim);
+
+        gridsource = nullptr;
+
+        startpointsmultiobj    = startpoints;
+        startpointsaltmultiobj = startpointsalt;
+        totitersmultiobj       = totiters;
+        ehimethodmultiobj      = 0;
+
+        stabpmax    = DEFAULT_BAYES_STABPMAX;
+        stabpmin    = DEFAULT_BAYES_STABPMIN;
+        stabUseSig  = DEFAULT_BAYES_STABUSESIG;
+        stabA       = DEFAULT_BAYES_STABA;
+        stabB       = DEFAULT_BAYES_STABB;
+        stabF       = DEFAULT_BAYES_STABF;
+        stabbal     = DEFAULT_BAYES_STABBAL;
+        stabZeroPt  = DEFAULT_BAYES_STABZEROPT;
+        stabDelrRep = DEFAULT_BAYES_STABDELRREP;
+        stabDelRep  = DEFAULT_BAYES_STABDELREP;
+        stabThresh  = DEFAULT_BAYES_STABTHRESH;
+
+        unscentUse = 0;
+        unscentK   = 0;
+
         *this = src;
     }
 
@@ -594,6 +738,8 @@ public:
         cgtcertain        = src.cgtcertain;
         h                 = src.h;
         hcgt              = src.hcgt;
+        hstep             = src.hstep;
+        hcgtstep          = src.hcgtstep;
         lseeps            = src.lseeps;
         norepeats         = src.norepeats;
         norepdist         = src.norepdist;
@@ -606,6 +752,11 @@ public:
         weightmain = src.weightmain;
         weightcgt  = src.weightcgt;
         weightmisc = src.weightmisc;
+
+        randweights   = src.randweights;
+        minrandweight = src.minrandweight;
+        maxrandweight = src.maxrandweight;
+        upsrandweight = src.upsrandweight;
 
         alphascale    = src.alphascale;
         betascale     = src.betascale;
@@ -752,14 +903,25 @@ public:
 
     // Generate a copy of the relevant optimisation class.
 
-//    virtual GlobalOptions *makeDup(void) const
-//    {
-//        BayesOptions *newver;
-//
-//        MEMNEW(newver,BayesOptions(*this));
-//
-//        return newver;
-//    }
+    virtual GlobalOptions *makeDup(void) const
+    {
+        BayesOptions *res;
+        MEMNEW(res,BayesOptions(*this));
+
+        if ( res->startseed >= 0 )
+        {
+            res->startseed += 12;
+            res->startseed = ( res->startseed < 0 ) ? 42 : res->startseed;
+        }
+
+        if ( res->algseed >= 0 )
+        {
+            res->algseed += 12;
+            res->algseed = ( res->algseed == -1 ) ? 42 : res->algseed;
+        }
+
+        return res;
+    }
 
     // allsres: [ see .cc file ] for each evaluation of (*fn),
     //         where beta is the value used to find the point being

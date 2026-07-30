@@ -336,6 +336,8 @@ struct DynArray
     // Need specialised versions, so no default arguments allowed!
     // Note that the general version does not do suggestedallocsize == -2 (only works for the int override)
 
+    void locresizecntintarray(int) { ; } // specialized for <int> case in .cc suggestedallocsize = -2, fillval = nullptr, leavemen = true
+
     void locresize(int size, int suggestedallocsize, const T *fillval, bool leavemem)
     {
         NiceAssert( suggestedallocsize != -2 );
@@ -521,58 +523,69 @@ struct DynArray
 
     // Only delete dyncontent if set - *only* set false for zerointarray etc.
 
-    bool notdelcontent; // default initialised to 0... = false;
+    bool notdelcontent;  // default initialised to 0... = false;
+    bool iscntintarray;  // default initialised to 0... = false;
+    bool iszerointarray; // default initialised to 0... = false;
 };
 
-template <> void DynArray<int>::locresize(   int size, int suggestedallocsize, const int    *fillval, bool leavemem);
+template <> void DynArray<int>::locresize(int size, int suggestedallocsize, const int *fillval, bool leavemem);
+template <> void DynArray<int>::locresizecntintarray(int size);
 
 
-
+//NB: under certain circumstances these may be shared between threads. If we store
+//    them thread_local then eg cntintarray might cease to exist when thread a exits
+//    but still be referred to in thread b, which will cause a segfault when access
+//    occurs in thread b. The workaround is to make them static (not thread_local)
+//    and do a setup call in svmheavyv7.cc or pyheavy.cc
+//
+//    It seems likely that cntintarray and zerointarray are the only ones for which
+//    this really matters right now, but I can't guarantee this so we take the
+//    slightly non-optimal approach.
 
 inline const DynArray<int> *zerointarray(void)
 {
-    static thread_local int dyncontent[2] = { 0, 0 };
-    static thread_local DynArray<int> zeroarray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
+    static int dyncontent[2] = { 0, 0 };
+    static DynArray<int> zeroarray = { dyncontent,1,1,1,true,true,true,false,true }; // final notdelcontent
 
     return &zeroarray;
 }
 
 inline const DynArray<int> *oneintarray(void)
 {
-    static thread_local int dyncontent[2] = { 0, 1 };
-    static thread_local DynArray<int> onearray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
+    static int dyncontent[2] = { 0, 1 };
+    static DynArray<int> onearray = { dyncontent,1,1,1,true,true,true,false,false }; // final notdelcontent
 
     return &onearray;
 }
 
 inline const DynArray<double> *zerodoublearray(void)
 {
-    static thread_local double dyncontent[2] = { 0, 0 };
-    static thread_local DynArray<double> zeroarray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
+    static double dyncontent[2] = { 0, 0 };
+    static DynArray<double> zeroarray = { dyncontent,1,1,1,true,true,true,false,false }; // final notdelcontent
 
     return &zeroarray;
 }
 
 inline const DynArray<double> *onedoublearray(void)
 {
-    static thread_local double dyncontent[2] = { 0, 1 };
-    static thread_local DynArray<double> onearray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
+    static double dyncontent[2] = { 0, 1 };
+    static DynArray<double> onearray = { dyncontent,1,1,1,true,true,true,false,false }; // final notdelcontent
 
     return &onearray;
 }
 
 inline const DynArray<double> *ninfdoublearray(void)
 {
-    static thread_local double dyncontent[2] = { 0, -INFINITY };
-    static thread_local DynArray<double> ninfarray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
+    static double dyncontent[2] = { 0, -INFINITY };
+    static DynArray<double> ninfarray = { dyncontent,1,1,1,true,true,true,false,false }; // final notdelcontent
 
     return &ninfarray;
 }
 
 inline const DynArray<double> *pinfdoublearray(void)
 {
-    static thread_local double dyncontent[2] = { 0, INFINITY };
-    static thread_local DynArray<double> pinfarray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
+    static double dyncontent[2] = { 0, INFINITY };
+    static DynArray<double> pinfarray = { dyncontent,1,1,1,true,true,true,false,false }; // final notdelcontent
 
     return &pinfarray;
 }
@@ -581,10 +594,11 @@ inline const DynArray<double> *pinfdoublearray(void)
 
 inline const DynArray<int> *cntintarray(int size)
 {
-    static thread_local int maxsize = 0;
-    static thread_local std::unique_ptr<DynArray<int>> vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,true})); // deletion is automatic thanks to unique_ptr ownership
-//    static thread_local std::unique_ptr<DynArray<int>> vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,false})); // deletion is automatic thanks to unique_ptr ownership
-    static thread_local DynArray<int> *cntarray = vogonpoetry.get();
+    static int maxsize = 0;
+    // deletion of vogonpoetry is automatic thanks to unique_ptr ownership
+    static std::unique_ptr<DynArray<int>> vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,true,true,false}));
+//    static std::unique_ptr<DynArray<int>> vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,false,true}));
+    static DynArray<int> *cntarray = vogonpoetry.get();
 
     NiceAssert( size >= 0 );
 
@@ -592,7 +606,7 @@ inline const DynArray<int> *cntintarray(int size)
     {
         int newsize = size+MAXHACKYHEAD;
 
-        (*cntarray).resize(newsize,-2,nullptr,true); // -2 used here to force the resize function to do the counting
+        (*cntarray).locresizecntintarray(newsize); //,-2,nullptr,true); // -2 used here to force the resize function to do the counting
 
         maxsize = newsize;
     }

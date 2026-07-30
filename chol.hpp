@@ -357,15 +357,15 @@ public:
     //
     // Return value: all return dnbad
 
-    int add(int i, double Di, const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matrix<T> &Gn, const Matrix<T> &Gpn) { Gpntmp.addRow(i); return xadd(i,Di,Gp,Gn   ,Gpn   ,&Gpoff); }
-    int add(int i, double Di, const Matrix<T> &Gp,                              const Matrix<T> &Gn, const Matrix<T> &Gpn) { Gpntmp.addRow(i); return xadd(i,Di,Gp,Gn   ,Gpn   ,nullptr  ); }
-    int add(int i,            const Matrix<T> &Gp, const Vector<double> &Gpoff                                           ) { Gpntmp.addRow(i); return xadd(i,+1,Gp,Gntmp,Gpntmp,&Gpoff); }
-    int add(int i,            const Matrix<T> &Gp                                                                        ) { Gpntmp.addRow(i); return xadd(i,+1,Gp,Gntmp,Gpntmp,nullptr  ); }
+    int add(int i, double Di, const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matrix<T> &Gn, const Matrix<T> &Gpn) { if ( Di > 0.0 ) { Gpntmp.addRow(0); } return xadd(i,Di,Gp,Gn   ,Gpn   ,&Gpoff); }
+    int add(int i, double Di, const Matrix<T> &Gp,                              const Matrix<T> &Gn, const Matrix<T> &Gpn) { if ( Di > 0.0 ) { Gpntmp.addRow(0); } return xadd(i,Di,Gp,Gn   ,Gpn   ,nullptr  ); }
+    int add(int i,            const Matrix<T> &Gp, const Vector<double> &Gpoff                                           ) {                 { Gpntmp.addRow(0); } return xadd(i,+1,Gp,Gntmp,Gpntmp,&Gpoff); }
+    int add(int i,            const Matrix<T> &Gp                                                                        ) {                 { Gpntmp.addRow(0); } return xadd(i,+1,Gp,Gntmp,Gpntmp,nullptr  ); }
 
-    int remove(int i, const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matrix<T> &Gn, const Matrix<T> &Gpn) { Gpntmp.removeRow(i); return xremove(i,Gp,Gn   ,Gpn   ,&Gpoff); }
-    int remove(int i, const Matrix<T> &Gp,                              const Matrix<T> &Gn, const Matrix<T> &Gpn) { Gpntmp.removeRow(i); return xremove(i,Gp,Gn   ,Gpn   ,nullptr  ); }
-    int remove(int i, const Matrix<T> &Gp, const Vector<double> &Gpoff                                           ) { Gpntmp.removeRow(i); return xremove(i,Gp,Gntmp,Gpntmp,&Gpoff); }
-    int remove(int i, const Matrix<T> &Gp                                                                        ) { Gpntmp.removeRow(i); return xremove(i,Gp,Gntmp,Gpntmp,nullptr  ); }
+    int remove(int i, const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matrix<T> &Gn, const Matrix<T> &Gpn) { if ( d(i) > 0.0 ) { Gpntmp.removeRow(0); } return xremove(i,Gp,Gn   ,Gpn   ,&Gpoff); }
+    int remove(int i, const Matrix<T> &Gp,                              const Matrix<T> &Gn, const Matrix<T> &Gpn) { if ( d(i) > 0.0 ) { Gpntmp.removeRow(0); } return xremove(i,Gp,Gn   ,Gpn   ,nullptr  ); }
+    int remove(int i, const Matrix<T> &Gp, const Vector<double> &Gpoff                                           ) { if ( d(i) > 0.0 ) { Gpntmp.removeRow(0); } return xremove(i,Gp,Gntmp,Gpntmp,&Gpoff); }
+    int remove(int i, const Matrix<T> &Gp                                                                        ) { if ( d(i) > 0.0 ) { Gpntmp.removeRow(0); } return xremove(i,Gp,Gntmp,Gpntmp,nullptr  ); }
 
     // Information functions
     //
@@ -813,6 +813,9 @@ Chol<T>::Chol(double xzt, int fudgeit) : zt(fudgeit ? xzt*100 : xzt),
     ddpnset.useSlackAllocation();
     dposind.useSlackAllocation();
     dnegind.useSlackAllocation();
+
+    Gpntmp.useSlackAllocation();
+    Gntmp. useSlackAllocation();
 }
 
 template <class T>
@@ -973,7 +976,7 @@ int Chol<T>::remake(const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matr
     dnbadneg = Gn.numRows();
 
     Gntmp.resize(0,0);
-    Gpntmp.resize(dsize,0);
+    Gpntmp.resize(dnpos,0);
 
     L.resize(0,0);
     d.resize(0);
@@ -1010,7 +1013,7 @@ int Chol<T>::remake(const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &G
     dnbadneg = Gn.numRows();
 
     Gntmp.resize(0,0);
-    Gpntmp.resize(dsize,0);
+    Gpntmp.resize(dnpos,0);
 
     L.resize(0,0);
     d.resize(0);
@@ -1043,7 +1046,7 @@ int Chol<T>::remake(const Matrix<T> &Gp, const Vector<double> &Gpoff, double xzt
     dnbadneg = 0;
 
     Gntmp.resize(0,0);
-    Gpntmp.resize(dsize,0);
+    Gpntmp.resize(dnpos,0);
 
     L.resize(0,0);
     d.resize(0);
@@ -1080,7 +1083,7 @@ int Chol<T>::remake(const Matrix<T> &Gp, double xzt, int fudgeit)
     dnbadneg = 0;
 
     Gntmp.resize(0,0);
-    Gpntmp.resize(dsize,0);
+    Gpntmp.resize(dnpos,0);
 
     L.resize(0,0);
     d.resize(0);
@@ -1233,9 +1236,9 @@ template <> inline int Chol<double>::minverse(Vector<double> &ap, Vector<double>
 
     if ( zp_start+zp_end+zn_start+zn_end < dsize-dnbad )
     {
-	static thread_local Vector<double> a("&",2);
-	static thread_local Vector<double> b("&",2);
-	static thread_local Vector<double> ce("&",2);
+	thread_local Vector<double> a("&",2);
+	thread_local Vector<double> b("&",2);
+	thread_local Vector<double> ce("&",2);
 
         retVector<double> tmpva;
         retVector<double> tmpvb;
@@ -1360,8 +1363,8 @@ template <> inline int Chol<double>::forwardElim(Vector<double> &ap, Vector<doub
 
     if ( zp_start+zp_end+zn_start+zn_end < dsize-dnbad )
     {
-	static thread_local Vector<double> a("&",2);
-	static thread_local Vector<double> b("&",2);
+	thread_local Vector<double> a("&",2);
+	thread_local Vector<double> b("&",2);
 
         retVector<double> tmpva;
         retVector<double> tmpvb;
@@ -1490,8 +1493,8 @@ template <> inline int Chol<double>::backwardSubst(Vector<double> &ap, Vector<do
 
     if ( zp_start+zp_end+zn_start+zn_end < dsize-dnbad )
     {
-	static thread_local Vector<double> a("&",2);
-	static thread_local Vector<double> b("&",2);
+	thread_local Vector<double> a("&",2);
+	thread_local Vector<double> b("&",2);
 
         retVector<double> tmpva;
         retVector<double> tmpvb;
@@ -1541,8 +1544,8 @@ template <class S> int Chol<T>::minverseOffset(Vector<S> &ap, const Vector<S> &b
 
     int size = bp.size();
 
-    static thread_local Vector<T> xi("&",2);
-    static thread_local Vector<T> q("&",2);
+    thread_local Vector<T> xi("&",2);
+    thread_local Vector<T> q("&",2);
 
     // Calculate x0 and ensure that the factorisation is ready for use
 
@@ -1610,8 +1613,8 @@ template <> inline int Chol<double>::minverseOffset(Vector<double> &ap, const Ve
 {
     int size = bp.size();
 
-    static thread_local Vector<double> xi("&",2);
-    static thread_local Vector<double> q("&",2);
+    thread_local Vector<double> xi("&",2);
+    thread_local Vector<double> q("&",2);
 
     xi.resize(size,-3);
 
@@ -1787,7 +1790,7 @@ template <> inline int Chol<double>::near_invert(Vector<double> &ap, Vector<doub
 
     if ( dsize-dnbad )
     {
-	static thread_local Vector<double> a("&",2);
+	thread_local Vector<double> a("&",2);
 
         a.resize(dsize-dnbad,-3);
 
@@ -1831,7 +1834,7 @@ int Chol<T>::xrankone(const Vector<T> &bp, const Vector<T> &bn, double c, const 
 
     if ( ( c != 0.0 ) && ( zp_start+zp_end+zn_start+zn_end < dsize ) )
     {
-        static thread_local Vector<T> b("&",2);
+        thread_local Vector<T> b("&",2);
         b.resize(dsize,-3);
 
 	for ( int i = 0 ; i < dsize ; ++i )
@@ -1869,7 +1872,7 @@ inline int Chol<double>::xrankone(const Vector<double> &bp, const Vector<double>
 
     if ( ( c != 0.0 ) && ( zp_start+zp_end+zn_start+zn_end < dsize ) )
     {
-        static thread_local Vector<double> b("&",2);
+        thread_local Vector<double> b("&",2);
         b.resize(dsize,-3);
 
 	for ( int i = 0 ; i < dsize ; ++i )
@@ -2649,7 +2652,7 @@ int Chol<T>::xremove(int ix, const Matrix<T> &Gp, const Matrix<T> &Gn, const Mat
 	// That is: we need to do a rank-one upate on the factorised part that
 	//          comes after the removed row/column.
 
-	static thread_local Vector<T> q("&",2);
+	thread_local Vector<T> q("&",2);
         q.resize(dsize,-3);
         double db;
 
@@ -2742,7 +2745,7 @@ inline int Chol<double>::xremove(int ix, const Matrix<double> &Gp, const Matrix<
 
     else
     {
-	static thread_local Vector<double> q("&",2);
+	thread_local Vector<double> q("&",2);
         q.resize(dsize,-3);
         double db;
 
@@ -2856,7 +2859,7 @@ int Chol<T>::xadd(int ix, double Dix, const Matrix<T> &Gp, const Matrix<T> &Gn, 
     NiceAssert( Gp.numRows() == dnpos );
     NiceAssert( Gn.numRows() == dnneg );
 
-    static thread_local Vector<T> g("&",2);
+    thread_local Vector<T> g("&",2);
     g.resize(dsize,-3);
 
     for ( i = 0 ; i < dsize ; ++i )
@@ -3190,7 +3193,7 @@ inline int Chol<double>::xadd(int ix, double Dix, const Matrix<double> &Gp, cons
     NiceAssert( Gp.numRows() == dnpos );
     NiceAssert( Gn.numRows() == dnneg );
 
-    static thread_local Vector<double> g("&",2);
+    thread_local Vector<double> g("&",2);
     g.resize(dsize,-3);
 
     for ( i = 0 ; i < dsize ; ++i )
@@ -3391,7 +3394,7 @@ int Chol<T>::xxrankone(const Vector<T> &ax, double bx, const Matrix<T> &Gp, cons
     {
 	int i,j,k;
 
-        static thread_local Vector<T> a("&",2);
+        thread_local Vector<T> a("&",2);
 	double b;
 
 	a = ax;
@@ -3424,7 +3427,7 @@ int Chol<T>::xxrankone(const Vector<T> &ax, double bx, const Matrix<T> &Gp, cons
 
 	if ( dsize-dnbad > z_start )
 	{
-	    static thread_local Vector<T> aaz("&",2);
+	    thread_local Vector<T> aaz("&",2);
 
 	    aaz = a;
 
@@ -3605,7 +3608,7 @@ inline int Chol<double>::xxrankone(const Vector<double> &ax, double bx, const Ma
     {
 	int i,j,k;
 
-        static thread_local Vector<double> a("&",2);
+        thread_local Vector<double> a("&",2);
 	double b;
 
 	a = ax;
@@ -3634,7 +3637,7 @@ inline int Chol<double>::xxrankone(const Vector<double> &ax, double bx, const Ma
 
 	if ( dsize-dnbad > z_start )
 	{
-	    static thread_local Vector<double> aaz("&",2);
+	    thread_local Vector<double> aaz("&",2);
 
 	    aaz = a;
 
@@ -3781,8 +3784,8 @@ andagain:
     // lf = sqrt( df.gf - df.lm'.Du.lm )
     // lp = ( gp - Lb.Du.lm ) / ( df.lf )
 
-    static thread_local Vector<T> b("&",2);
-    static thread_local Vector<T> bd("&",2);
+    thread_local Vector<T> b("&",2);
+    thread_local Vector<T> bd("&",2);
 
     b.resize(dsize-dnbad,-3);
     bd.resize(dsize-dnbad,-3);
@@ -3894,8 +3897,8 @@ inline int Chol<double>::xxfact(void)
     int i,j;
     double f,g,temp;
 
-    static thread_local Vector<double> b("&",2);
-    static thread_local Vector<double> bd("&",2);
+    thread_local Vector<double> b("&",2);
+    thread_local Vector<double> bd("&",2);
 
     retVector<double> tmpva;
     retVector<double> tmpvcc;

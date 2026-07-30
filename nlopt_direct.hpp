@@ -127,7 +127,7 @@
 // ||                                                                                 ||
 // || /* has two global minima at (0.09,-0.71) and (-0.09,0.71), plus                 ||
 // ||    4 additional local minima */                                                 ||
-// || static int cnt=0;                                                               ||
+// || statiic int cnt=0;                                                               ||
 // || double tst_obj(int n, const double *xy, int *undefined_flag, void *unused)      ||
 // || {                                                                               ||
 // ||   double x, y, f;                                                               ||

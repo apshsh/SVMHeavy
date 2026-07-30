@@ -90,7 +90,7 @@ inline double TIMEDIFFSEC(const time_used &a, const time_used &b)
 
 inline double TIMEABSSEC(const time_used &b)
 {
-    static thread_local time_used a = b; // this will only initialise once, so the value
+    thread_local time_used a = b; // this will only initialise once, so the value
                                          // will be whatever b is on the first call to
                                          // this function.
                                          // NB: THIS TIMER IS PER THREAD!

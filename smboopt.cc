@@ -108,6 +108,92 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
 
 SMBOOptions::SMBOOptions(const SMBOOptions &src) : GlobalOptions(src)
 {
+/*
+    priormuapprox.ssetMLTypeClean("gpr");
+    priorcgtapprox.ssetMLTypeClean("gpr");
+    prioraugxapprox.ssetMLTypeClean("gpr");
+
+    priordiffmodel.ssetMLTypeClean("gpr");
+    priorsrcmodel.ssetMLTypeClean("gpr");
+    priorsigmaapprox.ssetMLTypeClean("gpr");
+
+    diffmodel.ssetMLTypeClean("gpr");
+    srcmodel.ssetMLTypeClean("gpr");
+    sigmaapprox.ssetMLTypeClean("gpr");
+*/
+
+#ifndef USE_MEX
+    modelname      = ""; //"smbomodel";
+    modeloutformat = 2; // pdf by default
+    plotfreq       = 0; // don't plot by default
+    modelsave      = 0; // don't save models by default
+    modelbaseline.force_null();
+    cgtsave        = 0; // don't save models by default
+    cgtbaseline.force_null();
+#endif
+
+#ifdef USE_MEX
+    modelname      = ""; //"smbomodel";
+    modeloutformat = 3; // matlab plot if system is matlab
+    plotfreq       = 0; // don't plot by default
+    modelsave      = 0; // don't save models by default
+    modelbaseline.force_null();
+    cgtsave        = 0; // don't save models by default
+    cgtbaseline.force_null();
+#endif
+
+    sigmuseparate = 0;
+    moodim        = 1;
+    numcgt        = 0;
+    modeltype     = 0;
+    oracleMode    = 0;
+
+    TSmode      = 1; //3;
+    TSNsamp     = 0; //DEFAULT_SAMPLES_SAMPLE;
+    TSsampType  = 0;
+    TSxsampType = 0;
+    sigma_cut   = DEFAULT_SIGMA_CUT;
+
+    tranmeth = 0;
+    alpha0   = 0.1;
+    beta0    = 1;
+
+    kernapprox = nullptr;
+    kxfnum     = 801;
+    kxfnorm    = 1;
+
+    tunemu      = 1; //2;
+    tunesigma   = 1; //2;
+    tunecgt     = 1; //2;
+    tunesrcmod  = 1; //2;
+    tunediffmod = 1; //2;
+    tuneaugxmod = 1; //2;
+
+    tunemu_sigma      = 0;
+    tunesigma_sigma   = 0;
+    tunecgt_sigma     = 0;
+    tunesrcmod_sigma  = 0;
+    tunediffmod_sigma = 0;
+    tuneaugxmod_sigma = 0;
+
+    usemodelaugx = 0;
+    modelnaive   = 0;
+    makenoise    = 0;
+    ennornaive   = 0;
+
+    PIscale = 0;
+
+    Nbasemu = 0;
+
+    alpha = alpha0;
+    beta  = beta0;
+
+    firsttrain = 0;
+
+//    xshortcutenabled = 0;
+
+    locdim = 0;
+
     locires.useTightAllocation();
     locxres.useTightAllocation();
     locxresunconv.useTightAllocation();
@@ -123,78 +209,25 @@ SMBOOptions::~SMBOOptions()
 
 void SMBOOptions::delreps(void)
 {
-    if ( muapproxRaw.size() )
-    {
-        for ( int i = 0 ; i < muapproxRaw.size() ; ++i )
-        {
-            if ( muapproxRaw(i) )
-            {
-                MEMDEL(muapproxRaw("&",i)); muapproxRaw("&",i) = nullptr;
-            }
-        }
+    for ( int i = 0 ; i < muapproxRaw.     size() ; ++i ) { if ( muapproxRaw     (i) ) { MEMDEL(muapproxRaw     ("&",i)); muapproxRaw     ("&",i) = nullptr; } }
+    for ( int i = 0 ; i < cgtapproxRaw.    size() ; ++i ) { if ( cgtapproxRaw    (i) ) { MEMDEL(cgtapproxRaw    ("&",i)); cgtapproxRaw    ("&",i) = nullptr; } }
+    for ( int i = 0 ; i < augxapproxRaw.   size() ; ++i ) { if ( augxapproxRaw   (i) ) { MEMDEL(augxapproxRaw   ("&",i)); augxapproxRaw   ("&",i) = nullptr; } }
+    for ( int i = 0 ; i < muapprox_sample. size() ; ++i ) { if ( muapprox_sample (i) ) { MEMDEL(muapprox_sample ("&",i)); muapprox_sample ("&",i) = nullptr; } }
+    for ( int i = 0 ; i < cgtapprox_sample.size() ; ++i ) { if ( cgtapprox_sample(i) ) { MEMDEL(cgtapprox_sample("&",i)); cgtapprox_sample("&",i) = nullptr; } }
 
-        muapproxRaw.resize(0);
-    }
+    muapproxRaw.     resize(0);
+    cgtapproxRaw.    resize(0);
+    augxapproxRaw.   resize(0);
+    muapprox_sample. resize(0);
+    cgtapprox_sample.resize(0);
 
-    if ( cgtapproxRaw.size() )
-    {
-        for ( int i = 0 ; i < cgtapproxRaw.size() ; ++i )
-        {
-            if ( cgtapproxRaw(i) )
-            {
-                MEMDEL(cgtapproxRaw("&",i)); cgtapproxRaw("&",i) = nullptr;
-            }
-        }
-
-        cgtapproxRaw.resize(0);
-    }
-
-    if ( augxapproxRaw.size() )
-    {
-        for ( int i = 0 ; i < augxapproxRaw.size() ; ++i )
-        {
-            if ( augxapproxRaw(i) )
-            {
-                MEMDEL(augxapproxRaw("&",i)); augxapproxRaw("&",i) = nullptr;
-            }
-        }
-
-        augxapproxRaw.resize(0);
-    }
-
-    if ( muapprox_sample.size() )
-    {
-        for ( int i = 0 ; i < muapprox_sample.size() ; ++i )
-        {
-            if ( muapprox_sample(i) )
-            {
-                MEMDEL(muapprox_sample("&",i)); muapprox_sample("&",i) = nullptr;
-            }
-        }
-
-        muapprox_sample.resize(0);
-    }
-
-    if ( cgtapprox_sample.size() )
-    {
-        for ( int i = 0 ; i < cgtapprox_sample.size() ; ++i )
-        {
-            if ( cgtapprox_sample(i) )
-            {
-                MEMDEL(cgtapprox_sample("&",i)); cgtapprox_sample("&",i) = nullptr;
-            }
-        }
-
-        cgtapprox_sample.resize(0);
-    }
-
-    muapprox   = nullptr; muapprox.resize(0);
+    muapprox   = nullptr; muapprox.  resize(0);
     augxapprox = nullptr; augxapprox.resize(0);
-    cgtapprox  = nullptr; cgtapprox.resize(0);
+    cgtapprox  = nullptr; cgtapprox. resize(0);
 
     sigmaapprox.reset();
-    srcmodel.reset();
-    diffmodel.reset();
+    srcmodel.   reset();
+    diffmodel.  reset();
 }
 
 SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
@@ -206,49 +239,40 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
     priormuapprox.setMLTypeClean(src.priormuapprox.type());
     priormuapprox.getML() = src.priormuapprox;
 
-    if ( src.muapproxRaw.size() )
-    {
-        muapproxRaw.resize(src.muapproxRaw.size()) = nullptr;
+    muapproxRaw.resize(src.muapproxRaw.size()) = nullptr;
 
-        for ( int i = 0 ; i < src.muapproxRaw.size() ; ++i )
-        {
-            MEMNEW(muapproxRaw("&",i),ML_Mutable);
-            (*(muapproxRaw("&",i))).setMLTypeClean((*(src.muapproxRaw(i))).type());
-            (*(muapproxRaw("&",i))).getML() = (*(src.muapproxRaw(i)));
-            muapprox("&",i) = &((*(muapproxRaw("&",i))).getML());
-        }
+    for ( int i = 0 ; i < src.muapproxRaw.size() ; ++i )
+    {
+        MEMNEW(muapproxRaw("&",i),ML_Mutable);
+        (*(muapproxRaw("&",i))).setMLTypeClean((*(src.muapproxRaw(i))).type());
+        (*(muapproxRaw("&",i))).getML() = (*(src.muapproxRaw(i)));
+        muapprox("&",i) = &((*(muapproxRaw("&",i))).getML());
     }
 
     priorcgtapprox.setMLTypeClean(src.priorcgtapprox.type());
     priorcgtapprox.getML() = src.priorcgtapprox;
 
-    if ( src.cgtapproxRaw.size() )
-    {
-        cgtapproxRaw.resize(src.cgtapproxRaw.size()) = nullptr;
+    cgtapproxRaw.resize(src.cgtapproxRaw.size()) = nullptr;
 
-        for ( int i = 0 ; i < src.cgtapproxRaw.size() ; ++i )
-        {
-            MEMNEW(cgtapproxRaw("&",i),ML_Mutable);
-            (*(cgtapproxRaw("&",i))).setMLTypeClean((*(src.cgtapproxRaw(i))).type());
-            (*(cgtapproxRaw("&",i))).getML() = (*(src.cgtapproxRaw(i)));
-            cgtapprox("&",i) = &((*(cgtapproxRaw("&",i))).getML());
-        }
+    for ( int i = 0 ; i < src.cgtapproxRaw.size() ; ++i )
+    {
+        MEMNEW(cgtapproxRaw("&",i),ML_Mutable);
+        (*(cgtapproxRaw("&",i))).setMLTypeClean((*(src.cgtapproxRaw(i))).type());
+        (*(cgtapproxRaw("&",i))).getML() = (*(src.cgtapproxRaw(i)));
+        cgtapprox("&",i) = &((*(cgtapproxRaw("&",i))).getML());
     }
 
     prioraugxapprox.setMLTypeClean(src.prioraugxapprox.type());
     prioraugxapprox.getML() = src.prioraugxapprox;
 
-    if ( src.augxapproxRaw.size() )
-    {
-        augxapproxRaw.resize(src.augxapproxRaw.size()) = nullptr;
+    augxapproxRaw.resize(src.augxapproxRaw.size()) = nullptr;
 
-        for ( int i = 0 ; i < src.augxapproxRaw.size() ; ++i )
-        {
-            MEMNEW(augxapproxRaw("&",i),ML_Mutable);
-            (*(augxapproxRaw("&",i))).setMLTypeClean((*(src.augxapproxRaw(i))).type());
-            (*(augxapproxRaw("&",i))).getML() = (*(src.augxapproxRaw(i)));
-            augxapprox("&",i) = &((*(augxapproxRaw("&",i))).getML());
-        }
+    for ( int i = 0 ; i < src.augxapproxRaw.size() ; ++i )
+    {
+        MEMNEW(augxapproxRaw("&",i),ML_Mutable);
+        (*(augxapproxRaw("&",i))).setMLTypeClean((*(src.augxapproxRaw(i))).type());
+        (*(augxapproxRaw("&",i))).getML() = (*(src.augxapproxRaw(i)));
+        augxapprox("&",i) = &((*(augxapproxRaw("&",i))).getML());
     }
 
     priorsigmaapprox.setMLTypeClean(src.priorsigmaapprox.type());
@@ -755,7 +779,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 {
     std::string stagestr = ( stage == 0 ) ? "pre" : ( ( stage == 1 ) ? "mid" : "post" );
 
-//    static const gentype zg(0.0);
+//    statiic const gentype zg(0.0);
 //    int debugit = 0;
 //    int debugit = 1;
 
@@ -1323,7 +1347,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
 void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, int incbaselinefn, double xmin, double xmax, double ymin, double ymax, int j, const std::string &nameof, int xind, int yind, const std::string &stagestr, double sf, double dsf)
 {
-//    static int lognum = 0;
+//    statiic int lognum = 0;
 
     ++lognum;
 
@@ -1893,10 +1917,10 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
             }
         }
 
-errstream() << "-:" << tunecgt << ":-";
+//errstream() << "-:" << tunecgt << ":-";
         if ( tunecgt && cgtapprox.size() )
         {
-errstream() << ":woot:-";
+//errstream() << ":woot:-";
             for ( i = 0 ; i < cgtapprox.size() ; ++i )
             {
                 tkBounds tuneBounds(getcgtapprox(i).getKernel());
@@ -1923,9 +1947,9 @@ errstream() << ":woot:-";
                     }
                 }
 
-errstream() << ":!" << i << ",";
+//errstream() << ":!" << i << ",";
                 getcgtapprox("&",i).tuneKernel(tunecgt,CGOFFsCALE*getxwidth(),1,( tunecgt_sigma ? 4 : 0 ),&tuneBounds);
-errstream() << "!:";
+//errstream() << "!:";
             }
         }
 
@@ -2164,6 +2188,35 @@ int SMBOOptions::model_setsigmaweight_addvar(int imu, int isigma, double addvar)
     }
 
     return res;
+}
+
+int SMBOOptions::model_prealloc_musigma(int preallocsize)
+{
+    int ires = 0;
+
+    for ( int i = 0 ; i < muapprox.size() ; ++i )
+    {
+        ires |= getmuapprox("&",i).prealloc(preallocsize);
+    }
+
+    if ( sigmuseparate )
+    {
+        ires |= sigmaapprox.prealloc(preallocsize);
+    }
+
+    return ires;
+}
+
+int SMBOOptions::model_prealloc_cgt(int preallocsize)
+{
+    int ires = 0;
+
+    for ( int i = 0 ; i < cgtapprox.size() ; ++i )
+    {
+        ires |= getcgtapprox("&",i).prealloc(preallocsize);
+    }
+
+    return ires;
 }
 
 int SMBOOptions::model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, double varadd)
