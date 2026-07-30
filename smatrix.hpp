@@ -17,7 +17,7 @@
 #include <string.h>
 #include "matrix.hpp"
 
-
+//
 // smIdent: m*n identity matrix
 // smConst: m*n diagonal matrix with const on the diagonal
 // smOnes:  m*n matrix of ones

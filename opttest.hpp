@@ -19,6 +19,8 @@
 
 // fnnum values (acronyms as per DTLZ)
 //
+// 
+//
 // * 1: Rastrigin function        - range -5.12   <= x_i <= 5.12 - opt f(0,...) = 0
 // * 2: Ackley's function         - range -5      <= x_i <= 5    - opt f(0,...) = 0
 // # 3: Sphere function           - range -inf    <= x_i <= inf  - opt f(0,...) = 0
