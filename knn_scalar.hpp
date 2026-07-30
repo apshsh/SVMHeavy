@@ -23,6 +23,7 @@
 class KNN_Scalar;
 
 
+//
 // Swap and zeroing (restarting) functions
 
 inline void qswap(KNN_Scalar &a, KNN_Scalar &b);

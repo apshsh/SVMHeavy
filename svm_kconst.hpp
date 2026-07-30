@@ -26,6 +26,7 @@
 #include "svm_generic.hpp"
 
 
+//
 // Swap function
 
 class SVM_KConst;

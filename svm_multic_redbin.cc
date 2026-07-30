@@ -30,6 +30,7 @@
 
 
 
+//
 // In the individual binary SVMs C and eps are set using C_CALC and EPS_CALC,
 // Cclass and epsclass are left as 1, and Cweight and epsweight are set using
 // CWEIGH_CALC and EPSWEIGH_CALS.  Finally the actual class (-1,0,+1) used by

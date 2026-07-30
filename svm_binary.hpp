@@ -28,6 +28,7 @@
 class SVM_Binary;
 
 
+//
 // Swap function
 
 inline void qswap(SVM_Binary &a, SVM_Binary &b);

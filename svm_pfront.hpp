@@ -12,6 +12,7 @@
 //NB: changed so that x -> -x.  Net result is kernel 65x -> 60x
 
 //
+//
 // - K(x,y) = k(min(x_i-y_i))
 // - k(a) assumed decreasing, range +1 -> 0
 // - So use kernels 402-404

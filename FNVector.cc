@@ -10,6 +10,7 @@
 
 #include "FNVector.hpp"
 
+//
 // Get Func/RKHS part of vector
 
 const FuncVector &getFuncpart(const Vector<gentype> &src);

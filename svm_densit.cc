@@ -28,6 +28,7 @@ SVM_Densit::SVM_Densit(const SVM_Densit &src) : SVM_Scalar(src)
     return;
 
 }
+//
 SVM_Densit::SVM_Densit(const SVM_Densit &src, const ML_Base *xsrc) : SVM_Scalar(src,xsrc)
 {
     set1NormCost();

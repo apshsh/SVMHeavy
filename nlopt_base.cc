@@ -10,6 +10,7 @@ std::ostream &directstream(void)
 //    return errstream();
 }
 
+//
 /* utility routines to implement the various stopping criteria */
 
 int relstop(double vold, double vnew, double reltol, double abstol)

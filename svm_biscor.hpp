@@ -17,6 +17,7 @@
 // [ 5 4 ] x4
 // [ 4 4 ] x5
 //
+//
 // Generates the inequalities from component 1 of the target:
 //
 // g(x3) >= 1+g(x1)

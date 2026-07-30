@@ -14,6 +14,7 @@
 #include <math.h>
 #include <time.h>
 
+//
 // STEPSCALETOL: tolerance level before which a constraint is inactivated
 // STEPPT: value at which step is considered "significant"
 // BOUNDMAXITCNT: maximum number of iterations on the inner loop before we give up

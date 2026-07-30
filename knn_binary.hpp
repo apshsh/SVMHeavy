@@ -23,6 +23,7 @@
 class KNN_Binary;
 
 
+//
 // Swap and zeroing (restarting) functions
 
 inline void qswap(KNN_Binary &a, KNN_Binary &b);

@@ -16,6 +16,7 @@
 #include "knn_vector.hpp"
 
 
+//
 std::ostream &KNN_Vector::printstream(std::ostream &output, int dep) const
 {
     repPrint(output,'>',dep) << "Vector KNN\n\n";

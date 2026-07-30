@@ -13,6 +13,7 @@
 
 double calcK(int samekern, const ML_Base &ml, const MercerKernel &distkern, int i, int j);
 
+//
 int calcFuzzML(ML_Base &ml, const gentype &fuzzfn, const SparseVector<SparseVector<gentype>> &argvariables, const MercerKernel &distkern, double f, double m, double nu, int setCoreps)
 {
     int res = 0;

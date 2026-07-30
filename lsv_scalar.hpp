@@ -21,6 +21,7 @@
 
 class LSV_Scalar;
 
+//
 // Swap and zeroing (restarting) functions
 
 inline void qswap(LSV_Scalar &a, LSV_Scalar &b);

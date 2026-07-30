@@ -23,6 +23,7 @@
 class KNN_Vector;
 
 
+//
 // Swap and zeroing (restarting) functions
 
 inline void qswap(KNN_Vector &a, KNN_Vector &b);

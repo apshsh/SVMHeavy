@@ -31,6 +31,7 @@ void evalSigmaSVM_MultiC_redbin(double &res, int i, int j, const gentype **pxypr
 class SVM_MultiC_redbin;
 class SVM_MultiC;
 
+//
 // Swap function
 
 inline void qswap(SVM_MultiC_redbin &a, SVM_MultiC_redbin &b);

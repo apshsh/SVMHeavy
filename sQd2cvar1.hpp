@@ -19,6 +19,7 @@
 // Pretty self explanatory: you give is a state and relevant matrices and it
 // will solve the coupled optimisation problems:
 //
+//
 // [ alpha_s ]' [ Gp   Gpn ] [ alpha_s ] + [ alpha_s ]' [ gp_s ] + | alpha_s' |' [ hp_s ]
 // [ beta_s  ]  [ Gpn' Gn  ] [ beta_s  ]   [ beta_s  ]  [ gn_s ]   | beta_s   |  [ 0    ]
 //

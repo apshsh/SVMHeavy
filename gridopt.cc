@@ -14,6 +14,7 @@
 #define MAJOR_FEEDBACK_CYCLE 1000
 #define LOGZTOL 1e-8
 
+//
 int GridOptions::optim(int dim,
                        Vector<gentype> &Xres,
                        gentype         &fres,

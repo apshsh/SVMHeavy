@@ -30,6 +30,7 @@
 // int type(void)    const { return 800; }
 // int subtype(void) const { return 0;   }
 //
+//
 // virtual int train(int &res, svmvolatile int &killSwitch);
 //
 

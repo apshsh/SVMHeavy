@@ -17,6 +17,7 @@
 #include "blk_system.hpp"
 
 
+//
 std::ostream &BLK_System::printstream(std::ostream &output, int dep) const
 {
     repPrint(output,'>',dep) << "User wrapper block\n";

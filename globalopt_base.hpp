@@ -13,6 +13,7 @@
 #include "vector.hpp"
 #include "gentype.hpp"
 
+//
 
 class GlobalOptions_base;
 class GlobalOptions_base

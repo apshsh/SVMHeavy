@@ -24,6 +24,7 @@ SVM_MulBin::SVM_MulBin() : SVM_MvRank()
     return;
 }
 
+//
 SVM_MulBin::SVM_MulBin(const SVM_MulBin &src) : SVM_MvRank()
 {
     setaltx(nullptr);

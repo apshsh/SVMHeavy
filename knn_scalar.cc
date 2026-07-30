@@ -16,6 +16,7 @@
 #include "knn_scalar.hpp"
 
 
+//
 std::ostream &KNN_Scalar::printstream(std::ostream &output, int dep) const
 {
     repPrint(output,'>',dep) << "Scalar KNN\n\n";

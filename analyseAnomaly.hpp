@@ -13,6 +13,7 @@
 
 #include "svm_generic.hpp"
 
+//
 // Given an ML (assumed classifier with anomaly detection) analyse the set
 // of vectors x (unlabelled) to find anonalies:
 //

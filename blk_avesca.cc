@@ -15,6 +15,7 @@
 #include <string>
 #include "blk_avesca.hpp"
 
+//
 
 std::ostream &BLK_AveSca::printstream(std::ostream &output, int dep) const
 {

@@ -36,6 +36,7 @@ SVM_Cyclic::SVM_Cyclic() : SVM_Planar()
     return;
 }
 
+//
 SVM_Cyclic::SVM_Cyclic(const SVM_Cyclic &src) : SVM_Planar()
 {
     cyceps = DEFAULTCYCEPS;

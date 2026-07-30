@@ -16,6 +16,7 @@
 #include "knn_multic.hpp"
 
 
+//
 std::ostream &KNN_MultiC::printstream(std::ostream &output, int dep) const
 {
     repPrint(output,'>',dep) << "Binary KNN\n\n";

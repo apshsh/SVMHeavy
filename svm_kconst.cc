@@ -32,6 +32,7 @@ int SVM_KConst::setAlphaR(const Vector<double> &newAlpha)
         }
     }
 
+//
     if ( useKwe )
     {
         Vector<gentype> kernweight(newAlpha.size());

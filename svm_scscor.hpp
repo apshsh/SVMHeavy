@@ -15,6 +15,7 @@
 //
 // whereas if the target is a vector then this is interpretted as a score
 // and enforced as per svm_biscor.
+//
 
 #ifndef _svm_scscor_h
 #define _svm_scscor_h

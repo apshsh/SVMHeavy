@@ -21,6 +21,7 @@
 // If traverse > 1 then this will first do hill climb (descent), then reverse
 // direction and do hill descent (climb) and so on traverse times.
 //
+//
 // If startdirst then will start with whatever indices are already selected
 // and build on that rather than start from scratch.
 

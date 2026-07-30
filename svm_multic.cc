@@ -40,6 +40,7 @@ int SVM_MultiC::addTrainingVector (int i, const Vector<gentype> &z, const Vector
         }
     }
 
+//
     return SVM_MultiC::addTrainingVector(i,zz,x,Cweigh,epsweigh);
 }
 

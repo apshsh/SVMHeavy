@@ -15,6 +15,7 @@
 #include <string>
 #include "blk_aveani.hpp"
 
+//
 
 std::ostream &BLK_AveAni::printstream(std::ostream &output, int dep) const
 {

@@ -28,6 +28,7 @@
 class SVM_MulBin;
 
 
+//
 // Swap function
 
 inline void qswap(SVM_MulBin &a, SVM_MulBin &b);

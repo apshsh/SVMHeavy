@@ -38,6 +38,7 @@ void evalSubsigmaSVM_MultiC_atonce(double &res, int i, int j, const gentype **px
 class SVM_MultiC_atonce;
 class SVM_MultiC;
 
+//
 // Swap function
 
 inline void qswap(SVM_MultiC_atonce &a, SVM_MultiC_atonce &b);

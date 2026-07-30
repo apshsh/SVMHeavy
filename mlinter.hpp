@@ -32,6 +32,7 @@
 class SVMThreadContext;
 
 
+//
 // Core function
 // =============
 //

@@ -30,6 +30,7 @@ class SVM_Vector;
 class LSV_Gentyp;
 
 
+//
 // Swap function
 
 inline void qswap(SVM_Vector &a, SVM_Vector &b);

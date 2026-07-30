@@ -7,6 +7,7 @@
 // Written by: Alistair Shilton (AlShilton@gmail.com)
 // Copyright: all rights reserved
 //
+//
 
 #include "svm_vector_atonce_template.hpp"
 

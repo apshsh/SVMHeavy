@@ -27,6 +27,7 @@
 
 
 
+//
 // Defines blocks used as mono-surrogates in multitarget bayesian
 // optimisation.  It is assumed that we are trying to solve the multi-
 // objective minimisation problem:

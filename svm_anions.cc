@@ -21,6 +21,7 @@ void VtoAvect(const Vector<Vector<double>> &src, Vector<d_anion> &dest);
 void AtoVvect(const Vector<d_anion> &src, Vector<Vector<double>> &dest);
 void VtoAvect(const Vector<Vector<double>> &src, Vector<gentype> &dest);
 
+//
 void AtoV(const d_anion &src, Vector<double> &dest)
 {
     dest.resize(src.size());

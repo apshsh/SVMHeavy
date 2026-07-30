@@ -30,6 +30,7 @@
 class SVM_MultiC;
 
 
+//
 // Swap function
 
 inline void qswap(SVM_MultiC &a, SVM_MultiC &b);

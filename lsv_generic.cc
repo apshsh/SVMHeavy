@@ -15,6 +15,7 @@
 #include <string>
 #include "lsv_generic.hpp"
 
+//
 std::ostream &LSV_Generic::printstream(std::ostream &output, int dep) const
 {
     repPrint(output,'>',dep) << "Base training alpha:            " << dalpha       << "\n";

@@ -17,6 +17,7 @@
 
 class SVM_Single;
 
+//
 // the zcalc macro effectively calculates what we want gp to be to take into
 // account both z and tube factors, allowing hp == 0 which results in faster
 // optimisation.  The functions below are those that need to use this translation

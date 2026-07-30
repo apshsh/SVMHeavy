@@ -23,6 +23,7 @@
 class KNN_Densit;
 
 
+//
 // Swap and zeroing (restarting) functions
 
 inline void qswap(KNN_Densit &a, KNN_Densit &b);

@@ -24,6 +24,7 @@
 class KNN_MultiC;
 
 
+//
 // Swap and zeroing (restarting) functions
 
 inline void qswap(KNN_MultiC &a, KNN_MultiC &b);

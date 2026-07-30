@@ -19,6 +19,7 @@
 #define IQFIX(_xclass_,_i_,_q_)                ( ( (_i_) * ( numClasses() - 1 ) ) + ( ( (_q_) < label_placeholder.findID(_xclass_) ) ? (_q_) : (_q_)-1 ) )
 #define MODPOS(_xclass_)                       ( (_xclass_) ? label_placeholder.findID(_xclass_) : 0 )
 
+//
 //#define C_CALC                                 ( isLinearCost() ? ( CNval *( ( isrecdiv() && ( numClasses() > 1 ) ) ? ( sqrt(((double) (numClasses()-1))/((double) numClasses())) ) : 1.0 ) ) : (MAXBOUND) )
 //#define EPS_CALC                               (                  ( epsval*( ( isrecdiv() && ( numClasses() > 1 ) ) ? ( sqrt(((double) numClasses())/((double) (numClasses()-1))) ) : 1.0 ) )              )
 //#define CWEIGH_CALC(_xclass_,_Cweigh_,_s_)     ( (_xclass_) ? (   (_Cweigh_)*  mulCclass(label_placeholder.findID(_xclass_))/(                                       ( isrecdiv() ? ( ( ( (label_placeholder.findID(_xclass_)) != (_s_) ) && ( numClasses() > 1 ) ) ? ((double) (numClasses()-1)) : 1.0 ) : ( ismaxwins() ? ( ( (label_placeholder.findID(_xclass_)) == (_s_) ) ? 1.0 : ( ( numClasses() > 1 ) ? (1.0/(numClasses()-1)) : 1.0 ) ) : 1.0 ) ) ) ) : 1.0 )

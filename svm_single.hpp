@@ -7,6 +7,7 @@
 // Written by: Alistair Shilton (AlShilton@gmail.com)
 // Copyright: all rights reserved
 //
+//
 
 #ifndef _svm_single_h
 #define _svm_single_h

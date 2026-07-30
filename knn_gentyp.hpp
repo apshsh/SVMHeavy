@@ -23,6 +23,7 @@
 class KNN_Gentyp;
 
 
+//
 // Swap and zeroing (restarting) functions
 
 inline void qswap(KNN_Gentyp &a, KNN_Gentyp &b);

@@ -20,6 +20,7 @@
 
 
 
+//
 // This is basically SVM_Scalar, except that targets are a function of "x".
 // For example if x is 1-dimensional:
 //

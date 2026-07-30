@@ -21,6 +21,7 @@
 
 class LSV_Anions;
 
+//
 // Swap and zeroing (restarting) functions
 
 inline void qswap(LSV_Anions &a, LSV_Anions &b);

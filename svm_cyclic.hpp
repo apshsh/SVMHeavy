@@ -9,6 +9,7 @@
 //
 
 //
+//
 // Basic idea: take a dataset
 //
 // (x_i vector, y_i n-dim unit vector, d_i) i=1,2,...,N

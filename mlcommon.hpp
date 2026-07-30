@@ -22,6 +22,7 @@
 
 // MINSWEIGHT: minimum "s" weight in parseline
 //
+//
 // DEFAULT_ZTOL: default zero tolerance (|a| == 0 if |a| < DEFAULT_ZTOL)
 // DEFAULT_EMM: default norm for m-norm optimisation
 // DEFAULT_C: default C value (empirical risk tradeoff)

@@ -23,6 +23,7 @@
 class KNN_Anions;
 
 
+//
 // Swap and zeroing (restarting) functions
 
 inline void qswap(KNN_Anions &a, KNN_Anions &b);

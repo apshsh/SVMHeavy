@@ -20,6 +20,7 @@
 
 void evalKKNN_dist(double &res, int i, int j, const gentype **pxyprod, const void *owner)
 {
+//
     (void) pxyprod;
 
     KNN_Generic *realOwner = (KNN_Generic *) owner;

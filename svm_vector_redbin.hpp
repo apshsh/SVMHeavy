@@ -7,6 +7,7 @@
 // Written by: Alistair Shilton (AlShilton@gmail.com)
 // Copyright: all rights reserved
 //
+//
 
 #ifndef _svm_vector_redbin_h
 #define _svm_vector_redbin_h

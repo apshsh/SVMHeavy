@@ -18,6 +18,7 @@
 #include "hyper_base.hpp"
 
 
+//
 IMP_NLSamp::IMP_NLSamp(int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(nullptr);

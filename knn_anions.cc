@@ -16,6 +16,7 @@
 #include "knn_anions.hpp"
 
 
+//
 std::ostream &KNN_Anions::printstream(std::ostream &output, int dep) const
 {
     repPrint(output,'>',dep) << "Anionic KNN\n\n";

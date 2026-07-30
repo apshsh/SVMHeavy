@@ -55,6 +55,7 @@ std::istream &IMP_Generic::inputstream(std::istream &input )
 IMP_Generic::IMP_Generic(int _isIndPrune) : ML_Base_Deref(_isIndPrune)
 {
     //setaltx(nullptr);
+//
 
     xzref      = 0; // typically, at top level, we minimise f(x) in [-1,0]^d.  This is negated to get what we model here, so -f(x) in [0,1]^d > 0, so zref = 0
     xehimethod = 0;

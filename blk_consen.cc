@@ -16,6 +16,7 @@
 #include "blk_consen.hpp"
 
 
+//
 BLK_Consen::BLK_Consen(int xisIndPrune) : BLK_Generic(xisIndPrune)
 {
     Nnc.resize(1);

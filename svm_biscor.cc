@@ -15,6 +15,7 @@
 #include <typeinfo>
 
 
+//
 SVM_BiScor::SVM_BiScor() : SVM_Binary()
 {
     setaltx(nullptr);

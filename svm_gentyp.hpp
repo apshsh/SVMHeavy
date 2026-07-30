@@ -23,6 +23,7 @@
 class SVM_Gentyp;
 
 
+//
 // Swap and zeroing (restarting) functions
 
 inline void qswap(SVM_Gentyp &a, SVM_Gentyp &b);

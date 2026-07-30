@@ -15,6 +15,7 @@
 #include <string>
 #include "blk_avevec.hpp"
 
+//
 
 std::ostream &BLK_AveVec::printstream(std::ostream &output, int dep) const
 {

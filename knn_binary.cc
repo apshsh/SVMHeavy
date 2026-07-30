@@ -16,6 +16,7 @@
 #include "knn_binary.hpp"
 
 
+//
 std::ostream &KNN_Binary::printstream(std::ostream &output, int dep) const
 {
     repPrint(output,'>',dep) << "Binary KNN\n\n";

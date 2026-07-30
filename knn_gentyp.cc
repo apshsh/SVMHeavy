@@ -32,6 +32,7 @@ std::istream &KNN_Gentyp::inputstream(std::istream &input )
 {
     wait_dummy dummy;
 
+//
     input >> dummy; input >> classlabels;
     input >> dummy; input >> classcnt;
 

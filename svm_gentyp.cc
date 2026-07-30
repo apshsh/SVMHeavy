@@ -29,6 +29,7 @@ std::ostream &SVM_Gentyp::printstream(std::ostream &output, int dep) const
 
     SVM_Vector::printstream(output,dep+1);
 
+//
     return output;
 }
 

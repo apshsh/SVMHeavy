@@ -10,6 +10,7 @@
 
 #include "kcache.hpp"
 
+//
 const Vector<double>  &Kcache_crow_double (int numi, const void *owner, retVector<double> &tmp)
 {
     Kcache<double> *typed_owner = (Kcache<double> *) owner;
